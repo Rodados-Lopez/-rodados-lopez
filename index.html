@@ -256,7 +256,7 @@ input[type=file]{display:none;}
   display:none;position:fixed;inset:0;background:#0a0a0a;
   font-family:'Barlow Condensed',sans-serif;overflow:hidden;z-index:10000;
 }
-#screen-monitor.on{display:flex;flex-direction:column;}
+#screen-monitor.on{display:flex !important;flex-direction:column;}
 
 /* header monitor */
 .mon-header{
@@ -1470,11 +1470,16 @@ function isScreen(id) {
 }
 
 function go(screen) {
+  // ocultar todo
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   document.getElementById('screen-inicio').style.display = 'none';
   document.getElementById('screen-monitor').classList.remove('on');
+
   if (screen === 'inicio') {
     document.getElementById('screen-inicio').style.display = 'flex';
+    // detener monitor si estaba activo
+    if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
+    if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
   } else if (screen === 'monitor') {
     document.getElementById('screen-monitor').classList.add('on');
     initMonitor();
