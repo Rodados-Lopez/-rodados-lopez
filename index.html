@@ -143,16 +143,16 @@ tr:hover td{background:rgba(255,98,0,.03);}
 .tbl-empty{text-align:center;padding:32px;color:var(--text3);}
 
 /* ── MODAL ── */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:500;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
 .modal-bg.on{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:28px;max-width:440px;width:100%;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:24px;max-width:440px;width:100%;margin:auto;}
 .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;}
 .modal p{color:var(--text2);font-size:13px;margin-bottom:20px;}
 
 /* ── ALERTA TALLER ── */
-#alerta-taller{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9990;align-items:center;justify-content:center;padding:16px;}
+#alerta-taller{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9990;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
 #alerta-taller.on{display:flex;}
-.alerta-box{background:var(--bg2);border:2px solid var(--orange);border-radius:8px;padding:36px;text-align:center;max-width:460px;width:100%;animation:pop .3s ease;}
+.alerta-box{background:var(--bg2);border:2px solid var(--orange);border-radius:8px;padding:28px;text-align:center;max-width:460px;width:100%;animation:pop .3s ease;margin:auto;}
 @keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
 .alerta-icon{font-size:52px;animation:pulse 1s infinite;}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
@@ -244,9 +244,9 @@ input[type=file]{display:none;}
 .timer-badge{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:rgba(61,139,255,.12);color:var(--blue);border:1px solid var(--blue);}
 
 /* ── ALERTA VENDEDOR (sin stock) ── */
-#alerta-vendedor{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9991;align-items:center;justify-content:center;padding:16px;}
+#alerta-vendedor{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9991;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
 #alerta-vendedor.on{display:flex;}
-.alerta-box-r{background:var(--bg2);border:2px solid var(--red);border-radius:8px;padding:36px;text-align:center;max-width:480px;width:100%;animation:pop .3s ease;}
+.alerta-box-r{background:var(--bg2);border:2px solid var(--red);border-radius:8px;padding:28px;text-align:center;max-width:480px;width:100%;animation:pop .3s ease;margin:auto;}
 .alerta-box-r h2{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red);margin:12px 0;}
 
 /* ══════════════════════════════════════
@@ -412,7 +412,7 @@ input[type=file]{display:none;}
   transition:all .2s;z-index:10001;font-family:'Barlow',sans-serif;
 }
 .mon-exit:hover{background:rgba(255,61,61,.15);color:var(--red);border-color:var(--red);}
-</style>
+
 .dup-warning{background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;margin-top:12px;font-size:13px;color:var(--red);display:none;}
 .dup-warning.on{display:block;}
 
@@ -986,9 +986,21 @@ input[type=file]{display:none;}
       ⚠️ <strong>¡N° de Cuadro ya registrado!</strong><br>
       Este número de cuadro ya tiene un armado previo en el salón. <strong>No se sumará comisión adicional</strong> para evitar duplicación. Verificá si es la misma bici o ingresá el número correcto.
     </div>
-    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+    <!-- Observaciones para devolución (oculto por defecto, se muestra al hacer clic en Sin Stock) -->
+    <div id="sinstock-obs-wrap" style="display:none;margin-top:14px;background:rgba(255,61,61,.07);border:1px solid rgba(255,61,61,.3);border-radius:4px;padding:14px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px">❌ DEVOLVER POR FALTA DE STOCK</div>
+      <div class="fld">
+        <label>Motivo de la devolución <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+        <textarea id="sinstock-obs" rows="3" placeholder="Indicá el motivo: qué modelo/color/talle no hay en stock, qué alternativa hay, etc." style="resize:vertical;min-height:70px"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="cancelarSinStock()" style="flex:0 0 auto">Cancelar</button>
+        <button class="btn btn-r" style="flex:1" onclick="confirmarDevolverSinStock()">❌ CONFIRMAR DEVOLUCIÓN</button>
+      </div>
+    </div>
+    <div id="completar-actions" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="closeModal('modal-completar')">Cancelar</button>
-      <button class="btn btn-r btn-sm" onclick="devolverSinStock()" style="padding:12px 14px">❌ Sin Stock</button>
+      <button class="btn btn-r btn-sm" onclick="mostrarSinStockForm()" style="padding:12px 14px">❌ Sin Stock</button>
       <button class="btn btn-g" style="flex:1" onclick="confirmarCompletado()">🎉 COMPLETADO</button>
     </div>
   </div>
@@ -1356,6 +1368,18 @@ function startPolling() {
       nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
     }
     DB.ordenes = freshArr;
+
+    // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
+    const ahora10 = Date.now();
+    let autoEntregaHecha = false;
+    DB.ordenes.forEach(o => {
+      if (o.estado === 'completada' && !o.entregada && o.fechaCompletado) {
+        const diff = ahora10 - new Date(o.fechaCompletado).getTime();
+        if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregaHecha = true; }
+      }
+    });
+    if (autoEntregaHecha) saveKey('ordenes');
+
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
     if (isScreen('taller'))   tRenderAll();
   });
@@ -1535,11 +1559,11 @@ function monRender(ordenes) {
     .filter(o => !o.esSalon && o.estado === 'en-proceso')
     .sort((a,b) => new Date(a.fechaAsignado||a.fechaCreacion) - new Date(b.fechaAsignado||b.fechaCreacion));
 
-  // Completadas recientes: últimas 10 horas, mostrar máx 15
+  // Completadas recientes: últimas 10 MINUTOS, mostrar máx 15 (o marcadas como entregadas)
   const ahora = Date.now();
   const completadas = ordenes
-    .filter(o => !o.esSalon && o.estado === 'completada' && o.fechaCompletado &&
-      (ahora - new Date(o.fechaCompletado).getTime()) < 10 * 3600 * 1000)
+    .filter(o => !o.esSalon && o.estado === 'completada' && o.fechaCompletado && !o.entregada &&
+      (ahora - new Date(o.fechaCompletado).getTime()) < 10 * 60 * 1000)
     .sort((a,b) => new Date(b.fechaCompletado) - new Date(a.fechaCompletado))
     .slice(0, 15);
 
@@ -1709,11 +1733,14 @@ function vRenderOrdenes() {
         <div class="ocard-sub">
           ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}${o.cuadro ? ` · N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
           <br>${fmtHora(o.fechaCreacion)}
+          ${o.estado==='sin-stock' && o.motivoSinStock ? `<br><span style="color:var(--red);font-weight:600">⚠️ Motivo sin stock: ${o.motivoSinStock}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         ${estadoBadge(o)}
         ${(o.estado==='pendiente'||o.estado==='en-proceso') ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})" style="font-size:12px;padding:5px 10px">✏️ Modificar</button>` : ''}
+        ${o.estado==='completada' && !o.entregada ? `<button class="btn btn-g btn-sm" onclick="marcarEntregada(${o.id})" style="font-size:12px;padding:5px 10px">✅ Entregado</button>` : ''}
+        ${o.estado==='completada' && o.entregada ? `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -1736,12 +1763,23 @@ function vRenderInbox() {
         ${a.talle ? `Talle: <strong>${a.talle}</strong> · ` : ''}${a.rodado ? `Rodado: <strong>${a.rodado}</strong> · ` : ''}Color: <strong>${a.color}</strong>${a.cliente ? ` · Cliente: <strong>${a.cliente}</strong>` : ''}<br>
         Devuelto por taller: <strong>${fmtHora(a.fecha)}</strong> · Orden original #${a.ordenId}
       </div>
+      ${a.motivoSinStock ? `<div style="margin-top:8px;background:rgba(255,61,61,.12);border:1px solid var(--red);border-radius:4px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px">⚠️ Motivo de la devolución</div><div style="font-size:14px;font-weight:600;color:#fff">${a.motivoSinStock}</div></div>` : ''}
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-o btn-sm" onclick="abrirAlertaVendedorDesdeInbox(${i})">✏️ Modificar y Reenviar</button>
         <button class="btn btn-ghost btn-sm" onclick="vDismissAlerta(${i})">✕ Descartar</button>
       </div>
     </div>
   `).join('');
+}
+
+async function marcarEntregada(id) {
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  o.entregada = true;
+  o.fechaEntregada = new Date().toISOString();
+  await saveKey('ordenes');
+  vRenderOrdenes();
+  toast('✅ Bicicleta marcada como entregada');
 }
 
 async function vDismissAlerta(idx) {
@@ -1771,11 +1809,18 @@ function mostrarAlertaVendedor(alerta) {
 }
 
 function _mostrarAlertaVendedorConDatos(alerta) {
+  const motivoHtml = alerta.motivoSinStock
+    ? `<div style="margin:8px 0 4px;background:rgba(255,61,61,.15);border:2px solid var(--red);border-radius:5px;padding:10px 14px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:4px">⚠️ MOTIVO DE LA DEVOLUCIÓN</div>
+        <div style="font-size:15px;font-weight:700;color:#fff;line-height:1.5">${alerta.motivoSinStock}</div>
+       </div>`
+    : '';
   document.getElementById('alerta-vendedor-detalle').innerHTML = `
     <strong>${alerta.marca} ${alerta.modelo}</strong><br>
     ${alerta.talle ? `Talle: ${alerta.talle}<br>` : ''}${alerta.rodado ? `Rodado: ${alerta.rodado}<br>` : ''}Color: <strong>${alerta.color}</strong><br>
     ${alerta.cliente ? `Cliente: ${alerta.cliente}<br>` : ''}
     Devuelto: ${fmtHora(alerta.fecha)} · Orden #${alerta.ordenId}
+    ${motivoHtml}
   `;
   // pre-cargar formulario de edición
   fillMarcasSelect('av-marca');
@@ -1958,8 +2003,8 @@ function abrirModalAsignar(id) {
   const mostrarTipo = biciCatalogo ? biciCatalogo.tieneKitPre === true : false;
   const wrapTipo = document.getElementById('modal-tipo-armado-wrap');
   if (wrapTipo) wrapTipo.style.display = mostrarTipo ? 'block' : 'none';
-  // si no tiene kitPre, auto-asignar tipo 'kit' (comisión única)
-  if (!mostrarTipo) document.getElementById('modal-tipo-armado').value = 'kit';
+  // si no tiene kitPre, auto-asignar tipo 'prearmada' (comisión única = prearmado por defecto)
+  if (!mostrarTipo) document.getElementById('modal-tipo-armado').value = 'prearmada';
 
   document.getElementById('modal-asignar').classList.add('on');
 }
@@ -1977,7 +2022,7 @@ async function confirmarAsignacion() {
   if (o) { 
     o.estado='en-proceso'; 
     o.armador=armador; 
-    o.tipoArmado = tipoArmado || 'kit';
+    o.tipoArmado = tipoArmado || 'prearmada';
     o.fechaAsignado=new Date().toISOString();
     if(cuadro) o.cuadro=cuadro; 
   }
@@ -1995,14 +2040,17 @@ function abrirModalCompletar(id) {
   document.getElementById('modal-comp-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${o.tipoArmado ? ` — ${o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearmada'}` : ''}`;
   document.getElementById('modal-comp-cuadro').value = o.cuadro || '';
   document.getElementById('dup-warning').classList.remove('on');
+  document.getElementById('sinstock-obs-wrap').style.display = 'none';
+  document.getElementById('completar-actions').style.display = 'flex';
   document.getElementById('modal-completar').classList.add('on');
 }
 
 function checkCuadroDuplicado(cuadro) {
-  if (!cuadro) { document.getElementById('dup-warning').classList.remove('on'); return; }
+  const val = (cuadro || '').trim();
+  if (!val) { document.getElementById('dup-warning').classList.remove('on'); return; }
   // Buscar si ese cuadro ya existe en órdenes completadas de salón
   const existeEnSalon = DB.ordenes.some(o => 
-    o.esSalon && o.cuadro && o.cuadro.toLowerCase() === cuadro.toLowerCase() && o.estado === 'completada'
+    o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada'
   );
   document.getElementById('dup-warning').classList.toggle('on', existeEnSalon);
 }
@@ -2035,14 +2083,32 @@ async function confirmarCompletado() {
   }
 }
 
-// DEVOLVER SIN STOCK AL VENDEDOR
-async function devolverSinStock() {
+// DEVOLVER SIN STOCK — mostrar formulario con obs obligatorio
+function mostrarSinStockForm() {
+  document.getElementById('sinstock-obs-wrap').style.display = 'block';
+  document.getElementById('completar-actions').style.display = 'none';
+  document.getElementById('sinstock-obs').value = '';
+  document.getElementById('sinstock-obs').focus();
+}
+
+function cancelarSinStock() {
+  document.getElementById('sinstock-obs-wrap').style.display = 'none';
+  document.getElementById('completar-actions').style.display = 'flex';
+}
+
+async function confirmarDevolverSinStock() {
+  const motivo = document.getElementById('sinstock-obs').value.trim();
+  if (!motivo) { toast('⚠️ Escribí el motivo de la devolución (obligatorio)','var(--red)'); document.getElementById('sinstock-obs').focus(); return; }
+  await devolverSinStock(motivo);
+}
+
+async function devolverSinStock(motivo) {
   const o = DB.ordenes.find(x => x.id===ordenCompletarId);
   if (!o) return;
-  if (!confirm(`¿Devolver al vendedor por falta de stock?\n${o.marca} ${o.modelo}`)) return;
 
   // marcar orden como sin-stock (sale de pendientes y en-proceso)
   o.estado = 'sin-stock';
+  o.motivoSinStock = motivo;
   o.armador = null;
   o.fechaAsignado = null;
   o.tipoArmado = null;
@@ -2054,6 +2120,7 @@ async function devolverSinStock() {
     vendedor: o.vendedor || 'vendedor',
     marca: o.marca, modelo: o.modelo, talle: o.talle, rodado: o.rodado,
     color: o.color, cliente: o.cliente, obs: o.obs,
+    motivoSinStock: motivo,
     cantidad: o.cantidad, destino: o.destino,
     fecha: new Date().toISOString(),
     vista: false,
@@ -2667,9 +2734,14 @@ function renderReporte() {
     if (o.esSalon) porArmador[o.armador].salon += o.cantidad;
     else porArmador[o.armador].ventas += o.cantidad;
     const dk = `${o.marca}|${o.modelo}`;
-    if (!porArmador[o.armador].detalle[dk]) porArmador[o.armador].detalle[dk]={cantidad:0,ganado:0,comUn:DB.comisiones[dk]||0};
-    porArmador[o.armador].detalle[dk].cantidad += o.cantidad;
-    porArmador[o.armador].detalle[dk].ganado += com;
+    const tipo = o.tipoArmado || 'prearmada';
+    const comKey = `${dk}||${tipo}`;
+    if (!porArmador[o.armador].detalle[comKey]) {
+      const comUn = com > 0 ? Math.round(com / o.cantidad) : 0;
+      porArmador[o.armador].detalle[comKey]={marca:o.marca,modelo:o.modelo,tipo,cantidad:0,ganado:0,comUn};
+    }
+    porArmador[o.armador].detalle[comKey].cantidad += o.cantidad;
+    porArmador[o.armador].detalle[comKey].ganado += com;
   });
 
   // ranking modelos
@@ -2729,11 +2801,12 @@ function renderReporte() {
             <div class="rcard-total">$${r.total.toLocaleString('es-AR')}</div>
           </div>
           <table class="rcard-rows">
-            <thead><tr><th style="padding:4px 8px;font-size:10px;color:var(--text3)">Modelo</th><th>Cant.</th><th>Com. Unit.</th><th>Subtotal</th></tr></thead>
+            <thead><tr><th style="padding:4px 8px;font-size:10px;color:var(--text3)">Modelo</th><th>Tipo</th><th>Cant.</th><th>Com. Unit.</th><th>Subtotal</th></tr></thead>
             <tbody>
               ${Object.entries(r.detalle).map(([k,d])=>`
                 <tr>
-                  <td>${k.replace('|',' ')}</td>
+                  <td>${d.marca} ${d.modelo}</td>
+                  <td>${d.tipo==='kit' ? '<span style="color:var(--blue);font-size:11px;font-weight:700">📦 Kit</span>' : '<span style="color:var(--purple);font-size:11px;font-weight:700">🚲 Prearmado</span>'}</td>
                   <td><strong>${d.cantidad}</strong></td>
                   <td style="color:var(--text2)">$${d.comUn.toLocaleString('es-AR')}</td>
                   <td><strong style="color:var(--green)">$${d.ganado.toLocaleString('es-AR')}</strong></td>
@@ -2878,12 +2951,14 @@ function comisionOrden(o) {
   if (o.estado !== 'completada') return 0;
   if (o.comisionDuplicada) return 0; // N° cuadro ya armado para salón, no duplicar
   const key = `${o.marca}|${o.modelo}`;
+  const biciCat = DB.catalogo.find(b => b.marca===o.marca && b.modelo===o.modelo);
+  const tieneKitPre = biciCat ? biciCat.tieneKitPre === true : false;
   let comUnitaria = 0;
-  if (o.tipoArmado === 'prearmada') {
-    comUnitaria = (DB.comisionesPre||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
-  } else {
-    // kit o sin tipo (legacy)
+  if (tieneKitPre && o.tipoArmado === 'kit') {
     comUnitaria = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+  } else {
+    // prearmada (o sin distinción → default prearmada)
+    comUnitaria = (DB.comisionesPre||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
   }
   return comUnitaria * o.cantidad;
 }
