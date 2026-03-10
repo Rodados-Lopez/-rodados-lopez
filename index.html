@@ -1,0 +1,3229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rodados Lopez</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #0d0d0d;
+  --bg2: #161616;
+  --bg3: #1e1e1e;
+  --bg4: #262626;
+  --border: #2e2e2e;
+  --border2: #3a3a3a;
+  --text: #f0f0f0;
+  --text2: #999;
+  --text3: #666;
+  --orange: #ff6200;
+  --orange2: #ff8533;
+  --green: #00c853;
+  --green2: #00e676;
+  --red: #ff3d3d;
+  --blue: #3d8bff;
+  --yellow: #ffc107;
+  --purple: #a855f7;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+
+/* ── LOADER ── */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
+#loader h1{font-family:'Barlow Condensed',sans-serif;font-size:52px;font-weight:900;letter-spacing:-1px;}
+#loader h1 span{color:var(--orange);}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── INICIO ── */
+#screen-inicio{display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:36px;}
+.brand h1{font-family:'Barlow Condensed',sans-serif;font-size:80px;font-weight:900;letter-spacing:-3px;line-height:1;text-align:center;}
+.brand h1 em{color:var(--orange);font-style:normal;}
+.brand p{text-align:center;font-size:13px;letter-spacing:4px;text-transform:uppercase;color:var(--text2);margin-top:6px;}
+.inicio-btns{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+.ibtn{padding:20px 40px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:none;cursor:pointer;border-radius:3px;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:160px;}
+.ibtn small{font-size:11px;font-weight:400;letter-spacing:2px;opacity:.7;}
+.ibtn-v{background:var(--orange);color:#000;}
+.ibtn-v:hover{background:var(--orange2);transform:translateY(-3px);}
+.ibtn-t{background:var(--green);color:#000;}
+.ibtn-t:hover{background:var(--green2);transform:translateY(-3px);}
+.ibtn-a{background:var(--bg3);color:var(--text);border:1px solid var(--border2);}
+.ibtn-a:hover{background:var(--bg4);transform:translateY(-3px);}
+.sync-status{font-size:12px;color:var(--text3);letter-spacing:1px;display:flex;align-items:center;gap:6px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── PANTALLA ── */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.on{display:flex;}
+
+/* ── HEADER ── */
+.hdr{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.hdr-left{display:flex;align-items:center;gap:16px;}
+.hdr h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.hdr-accent{color:var(--orange);}
+.hdr-accent-g{color:var(--green);}
+.hdr-accent-s{color:var(--text2);}
+.back-btn{background:transparent;color:var(--text2);border:1px solid var(--border2);padding:7px 14px;font-size:12px;cursor:pointer;border-radius:2px;transition:all .15s;font-family:'Barlow',sans-serif;}
+.back-btn:hover{color:var(--text);border-color:var(--text2);}
+.live-badge{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:5px;}
+.live-badge::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;}
+
+/* ── BODY ── */
+.body{flex:1;overflow-y:auto;padding:20px;max-width:1000px;width:100%;margin:0 auto;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px;margin-bottom:18px;overflow-x:auto;}
+.tab{flex:1;min-width:max-content;padding:9px 14px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:transparent;color:var(--text2);border:none;cursor:pointer;border-radius:3px;transition:all .15s;white-space:nowrap;}
+.tab.on{background:var(--orange);color:#000;}
+.tab-body{display:none;}
+.tab-body.on{display:block;}
+
+/* ── PANEL ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:20px;margin-bottom:16px;}
+.ptitle{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.ptitle-g{color:var(--green);}
+
+/* ── FORM ── */
+.fg{display:grid;gap:12px;}
+.fg2{grid-template-columns:1fr 1fr;}
+.fg3{grid-template-columns:1fr 1fr 1fr;}
+.fg4{grid-template-columns:1fr 1fr 1fr 1fr;}
+@media(max-width:600px){.fg2,.fg3,.fg4{grid-template-columns:1fr;}}
+.fld{display:flex;flex-direction:column;gap:5px;}
+.fld label{font-size:10px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);}
+.fld input,.fld select,.fld textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:11px 13px;font-family:'Barlow',sans-serif;font-size:14px;border-radius:3px;outline:none;transition:border-color .15s;appearance:none;-webkit-appearance:none;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--orange);}
+.fld select option{background:var(--bg3);}
+.opt-label{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── BOTONES ── */
+.btn{padding:12px 22px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:none;cursor:pointer;border-radius:3px;transition:all .15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-o{background:var(--orange);color:#000;}
+.btn-o:hover{background:var(--orange2);}
+.btn-g{background:var(--green);color:#000;}
+.btn-g:hover{background:var(--green2);}
+.btn-r{background:var(--red);color:#fff;}
+.btn-r:hover{background:#e53935;}
+.btn-b{background:var(--blue);color:#fff;}
+.btn-b:hover{background:#5c9fff;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{color:var(--text);border-color:var(--text2);}
+.btn-full{width:100%;justify-content:center;margin-top:8px;}
+.btn-sm{padding:7px 14px;font-size:13px;}
+
+/* ── ORDEN CARD ── */
+.ocard{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;animation:fadeUp .2s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.ocard.pendiente{border-left:3px solid var(--yellow);}
+.ocard.en-proceso{border-left:3px solid var(--blue);}
+.ocard.completada{border-left:3px solid var(--green);opacity:.65;}
+.ocard-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.ocard-sub{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;}
+.ocard-sub strong{color:var(--text);}
+.ocard-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.qty{background:var(--orange);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.badge{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;}
+.badge-y{background:rgba(255,193,7,.12);color:var(--yellow);border:1px solid var(--yellow);}
+.badge-b{background:rgba(61,139,255,.12);color:var(--blue);border:1px solid var(--blue);}
+.badge-g{background:rgba(0,200,83,.12);color:var(--green);border:1px solid var(--green);}
+.badge-p{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid var(--purple);}
+
+/* ── TABLA ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--bg);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--orange);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:hover td{background:rgba(255,98,0,.03);}
+.tbl-empty{text-align:center;padding:32px;color:var(--text3);}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.on{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:28px;max-width:440px;width:100%;}
+.modal h3{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;}
+.modal p{color:var(--text2);font-size:13px;margin-bottom:20px;}
+
+/* ── ALERTA TALLER ── */
+#alerta-taller{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9990;align-items:center;justify-content:center;padding:16px;}
+#alerta-taller.on{display:flex;}
+.alerta-box{background:var(--bg2);border:2px solid var(--orange);border-radius:8px;padding:36px;text-align:center;max-width:460px;width:100%;animation:pop .3s ease;}
+@keyframes pop{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+.alerta-icon{font-size:52px;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.alerta-box h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:var(--orange);margin:12px 0;}
+.alerta-detail{background:var(--bg3);border-radius:4px;padding:16px;margin:14px 0;text-align:left;font-size:14px;line-height:1.9;}
+.alerta-detail strong{color:var(--orange);font-family:'Barlow Condensed',sans-serif;font-size:18px;}
+
+/* ── REPORTE ── */
+.rcard{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:18px 20px;margin-bottom:12px;}
+.rcard-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.rcard-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;}
+.rcard-total{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:800;color:var(--green);}
+.rcard-rows td{padding:5px 8px;font-size:13px;color:var(--text2);}
+.rcard-rows td strong{color:var(--text);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;}
+.stat-num{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;}
+.stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-top:2px;}
+.stat-o .stat-num{color:var(--orange);}
+.stat-g .stat-num{color:var(--green);}
+.stat-b .stat-num{color:var(--blue);}
+.stat-p .stat-num{color:var(--purple);}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9999;display:none;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;padding:13px 22px;border-radius:3px;animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:36px;color:var(--text3);}
+.empty-icon{font-size:36px;margin-bottom:8px;}
+
+/* ── MISC ── */
+.separator{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.chip{display:inline-block;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:2px 7px;font-size:11px;color:var(--text2);margin:1px;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+input[type=file]{display:none;}
+.file-label{display:inline-flex;align-items:center;gap:8px;background:var(--bg3);border:1px dashed var(--border2);color:var(--text2);padding:11px 18px;border-radius:3px;cursor:pointer;font-size:13px;transition:all .15s;}
+.file-label:hover{border-color:var(--orange);color:var(--text);}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:var(--orange);border-radius:2px;transition:width .3s;}
+
+/* ── CHART SIMPLE ── */
+.bar-chart{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.bar-row{display:flex;align-items:center;gap:10px;}
+.bar-label{width:90px;font-size:12px;color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;background:var(--bg4);border-radius:2px;height:18px;position:relative;}
+.bar-fill{height:100%;border-radius:2px;background:var(--orange);transition:width .5s ease;display:flex;align-items:center;padding:0 6px;}
+.bar-val{font-size:11px;font-weight:600;color:#000;white-space:nowrap;}
+.bar-fill-g{background:var(--green);}
+.bar-fill-b{background:var(--blue);}
+
+/* ── LOGIN ── */
+#screen-login{display:none;position:fixed;inset:0;background:var(--bg);z-index:8000;align-items:center;justify-content:center;flex-direction:column;gap:0;}
+#screen-login.on{display:flex;}
+.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:36px 40px;width:100%;max-width:380px;}
+.login-brand{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;}
+.login-brand em{color:var(--orange);font-style:normal;}
+.login-role{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--text2);margin-bottom:28px;}
+.login-error{background:rgba(255,61,61,.1);border:1px solid var(--red);color:var(--red);padding:10px 14px;border-radius:3px;font-size:13px;margin-bottom:14px;display:none;}
+.login-error.on{display:block;}
+.login-input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:13px 14px;font-family:'Barlow',sans-serif;font-size:15px;border-radius:3px;outline:none;width:100%;transition:border-color .15s;margin-bottom:12px;}
+.login-input:focus{border-color:var(--orange);}
+.login-btn{width:100%;padding:14px;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--orange);color:#000;border:none;cursor:pointer;border-radius:3px;transition:background .15s;}
+.login-btn:hover{background:var(--orange2);}
+.login-back{text-align:center;margin-top:14px;font-size:12px;color:var(--text3);cursor:pointer;transition:color .15s;}
+.login-back:hover{color:var(--text2);}
+
+/* ── BADGE CANCELADA ── */
+.badge-r{background:rgba(255,61,61,.12);color:var(--red);border:1px solid var(--red);}
+.ocard.cancelada{border-left:3px solid var(--red);opacity:.5;}
+
+/* ── USER BADGE HEADER ── */
+.user-chip{font-size:11px;background:var(--bg4);border:1px solid var(--border2);padding:4px 10px;border-radius:20px;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.user-chip strong{color:var(--text);}
+
+/* ── DELIVERY BADGE ── */
+.badge-env{background:rgba(255,193,7,.12);color:var(--yellow);border:1px solid var(--yellow);}
+.badge-sal{background:rgba(0,200,83,.12);color:var(--green);border:1px solid var(--green);}
+.ocard.envio{border-left:3px solid var(--yellow);}
+
+/* ── INBOX VENDEDOR ── */
+.inbox-item{background:var(--bg3);border:1px solid var(--red);border-radius:4px;padding:14px 18px;margin-bottom:10px;animation:fadeUp .2s ease;}
+.inbox-item .inbox-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.inbox-item .inbox-body{font-size:13px;color:var(--text2);line-height:1.8;}
+.inbox-badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.inbox-btn-wrap{position:relative;display:inline-flex;}
+
+/* ── TIMER ARMADO ── */
+.timer-badge{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:rgba(61,139,255,.12);color:var(--blue);border:1px solid var(--blue);}
+
+/* ── ALERTA VENDEDOR (sin stock) ── */
+#alerta-vendedor{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9991;align-items:center;justify-content:center;padding:16px;}
+#alerta-vendedor.on{display:flex;}
+.alerta-box-r{background:var(--bg2);border:2px solid var(--red);border-radius:8px;padding:36px;text-align:center;max-width:480px;width:100%;animation:pop .3s ease;}
+.alerta-box-r h2{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red);margin:12px 0;}
+
+/* ══════════════════════════════════════
+   MONITOR DE SALON — pantalla pública
+══════════════════════════════════════ */
+#screen-monitor{
+  display:none;position:fixed;inset:0;background:#0a0a0a;
+  font-family:'Barlow Condensed',sans-serif;overflow:hidden;z-index:10000;
+}
+#screen-monitor.on{display:flex;flex-direction:column;}
+
+/* header monitor */
+.mon-header{
+  background:linear-gradient(135deg,#1a0500 0%,#2d0d00 50%,#1a0500 100%);
+  border-bottom:3px solid var(--orange);
+  padding:0 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:90px;flex-shrink:0;
+  position:relative;overflow:hidden;
+}
+.mon-header::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(255,98,0,.04) 60px,rgba(255,98,0,.04) 61px);
+}
+.mon-brand{
+  font-size:38px;font-weight:900;letter-spacing:-1px;line-height:1;
+  text-shadow:0 0 30px rgba(255,98,0,.5);
+}
+.mon-brand em{color:var(--orange);font-style:normal;}
+.mon-brand small{display:block;font-size:13px;letter-spacing:5px;color:rgba(255,255,255,.4);font-weight:400;margin-top:2px;}
+.mon-clock{
+  font-size:52px;font-weight:800;color:var(--orange);
+  text-shadow:0 0 20px rgba(255,98,0,.6);letter-spacing:-1px;
+  font-variant-numeric:tabular-nums;
+}
+.mon-live{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;letter-spacing:3px;color:var(--green);
+  border:1px solid var(--green);padding:5px 12px;border-radius:20px;
+}
+.mon-live::before{content:'';width:8px;height:8px;background:var(--green);border-radius:50%;animation:blink 1.2s infinite;}
+
+/* columnas */
+.mon-body{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;}
+.mon-col{display:flex;flex-direction:column;overflow:hidden;}
+.mon-col-en-proceso{border-right:1px solid rgba(255,98,0,.15);}
+.mon-col-header{
+  padding:18px 32px;display:flex;align-items:center;gap:12px;
+  flex-shrink:0;
+}
+.mon-col-header-inner{display:flex;align-items:center;gap:14px;flex:1;}
+.mon-col-icon{font-size:32px;animation:pulse 2s infinite;}
+.mon-col-title{font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;}
+.mon-col-count{
+  font-size:18px;font-weight:800;
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.mon-col-en-proceso .mon-col-header{background:linear-gradient(90deg,rgba(61,139,255,.08),transparent);}
+.mon-col-en-proceso .mon-col-title{color:var(--blue);}
+.mon-col-en-proceso .mon-col-count{background:rgba(61,139,255,.2);color:var(--blue);}
+.mon-col-completada .mon-col-header{background:linear-gradient(90deg,rgba(0,200,83,.08),transparent);}
+.mon-col-completada .mon-col-title{color:var(--green);}
+.mon-col-completada .mon-col-count{background:rgba(0,200,83,.2);color:var(--green);}
+
+/* divisor animado */
+.mon-col-divider{height:2px;flex-shrink:0;margin:0 24px;}
+.mon-col-en-proceso .mon-col-divider{background:linear-gradient(90deg,transparent,var(--blue),transparent);animation:shimmer 2s linear infinite;}
+.mon-col-completada .mon-col-divider{background:linear-gradient(90deg,transparent,var(--green),transparent);animation:shimmer 2.5s linear infinite;}
+@keyframes shimmer{0%{background-position:-200px 0;}100%{background-position:200px 0;}}
+
+/* lista de items */
+.mon-lista{flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;}
+.mon-lista::-webkit-scrollbar{width:4px;}
+.mon-lista::-webkit-scrollbar-track{background:transparent;}
+.mon-lista::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+
+/* tarjeta de orden */
+.mon-card{
+  border-radius:8px;padding:18px 22px;
+  display:flex;align-items:center;gap:16px;
+  animation:monCardIn .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+@keyframes monCardIn{
+  from{opacity:0;transform:translateY(-20px) scale(.95);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.mon-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.mon-card-proceso{
+  background:linear-gradient(135deg,rgba(61,139,255,.1),rgba(61,139,255,.04));
+  border:1px solid rgba(61,139,255,.25);
+}
+.mon-card-proceso::before{background:var(--blue);box-shadow:0 0 8px var(--blue);}
+.mon-card-completada{
+  background:linear-gradient(135deg,rgba(0,200,83,.1),rgba(0,200,83,.04));
+  border:1px solid rgba(0,200,83,.25);
+}
+.mon-card-completada::before{background:var(--green);box-shadow:0 0 8px var(--green);}
+
+/* número de orden */
+.mon-num{
+  font-size:26px;font-weight:900;
+  width:46px;height:46px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;letter-spacing:-1px;
+}
+.mon-card-proceso .mon-num{background:rgba(61,139,255,.2);color:var(--blue);}
+.mon-card-completada .mon-num{background:rgba(0,200,83,.2);color:var(--green);}
+
+/* texto principal */
+.mon-card-body{flex:1;min-width:0;}
+.mon-nombre{
+  font-size:26px;font-weight:800;letter-spacing:.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.1;
+}
+.mon-bici{
+  font-size:17px;color:rgba(255,255,255,.6);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mon-bici strong{color:rgba(255,255,255,.85);}
+.mon-destino{
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:2px 8px;border-radius:10px;display:inline-block;margin-top:5px;
+}
+.mon-destino-envio{background:rgba(255,193,7,.15);color:var(--yellow);}
+.mon-destino-salon{background:rgba(168,85,247,.15);color:var(--purple);}
+
+/* ícono estado derecho */
+.mon-estado-icon{font-size:28px;flex-shrink:0;}
+.mon-card-proceso .mon-estado-icon{animation:spin 3s linear infinite;}
+
+/* empty state */
+.mon-empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.12);gap:10px;
+}
+.mon-empty-icon{font-size:52px;opacity:.3;}
+.mon-empty-txt{font-size:16px;letter-spacing:3px;text-transform:uppercase;}
+
+/* ticker inferior */
+.mon-footer{
+  height:44px;flex-shrink:0;background:var(--orange);
+  display:flex;align-items:center;overflow:hidden;
+  border-top:1px solid rgba(0,0,0,.2);
+}
+.mon-ticker-track{display:flex;white-space:nowrap;animation:ticker 30s linear infinite;}
+.mon-ticker-track:hover{animation-play-state:paused;}
+.mon-ticker-item{
+  padding:0 48px;font-size:14px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:#000;display:flex;align-items:center;gap:10px;
+}
+.mon-ticker-sep{color:rgba(0,0,0,.3);}
+@keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* botón salir monitor */
+.mon-exit{
+  position:fixed;bottom:14px;right:14px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.3);padding:7px 14px;border-radius:3px;
+  font-size:11px;letter-spacing:2px;cursor:pointer;
+  transition:all .2s;z-index:10001;font-family:'Barlow',sans-serif;
+}
+.mon-exit:hover{background:rgba(255,61,61,.15);color:var(--red);border-color:var(--red);}
+</style>
+.dup-warning{background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;margin-top:12px;font-size:13px;color:var(--red);display:none;}
+.dup-warning.on{display:block;}
+
+/* ── SERVICE / GARANTÍA ── */
+.garantia-vigente{background:rgba(0,200,83,.08);border:1px solid var(--green);border-radius:4px;padding:12px 16px;font-size:13px;}
+.garantia-vencida{background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;font-size:13px;}
+.garantia-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;}
+.garantia-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+.service-result{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:16px;margin-top:12px;display:none;}
+.service-result.on{display:block;}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <h1>RODADOS <span>LOPEZ</span></h1>
+  <div class="spinner"></div>
+  <span style="font-size:12px;color:var(--text3);letter-spacing:2px">CARGANDO DATOS...</span>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-brand">RODADOS <em>LOPEZ</em></div>
+    <div class="login-role" id="login-role-label">Iniciando sesión</div>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+    <input type="text" class="login-input" id="login-user" placeholder="Usuario" autocomplete="off" onkeydown="if(event.key==='Enter')loginSubmit()">
+    <input type="password" class="login-input" id="login-pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')loginSubmit()">
+    <button class="login-btn" onclick="loginSubmit()">🔐 INGRESAR</button>
+    <div class="login-back" onclick="loginCancel()">← Volver al inicio</div>
+  </div>
+</div>
+
+<!-- INICIO -->
+<div id="screen-inicio" style="display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:32px;">
+  <div class="brand">
+    <h1>RODADOS <em>LOPEZ</em></h1>
+    <p>Sistema de Armado · Tiempo Real · Cloud</p>
+  </div>
+  <div class="inicio-btns">
+    <button class="ibtn ibtn-v" onclick="loginPedir('vendedor')">🛒 Vendedor<small>Panel de Ventas</small></button>
+    <button class="ibtn ibtn-t" onclick="loginPedir('taller')">🔧 Taller<small>Armadores</small></button>
+    <button class="ibtn ibtn-a" onclick="loginPedir('admin')">⚙️ Admin<small>Gestión & Reportes</small></button>
+    <button class="ibtn" onclick="go('monitor')" style="background:linear-gradient(135deg,#1a0a2e,#2d1854);color:#c084fc;border:1px solid rgba(168,85,247,.4);">📺 Monitor<small>Pantalla Salón</small></button>
+  </div>
+  <div class="sync-status"><span class="sync-dot"></span> Datos sincronizados en la nube</div>
+</div>
+
+<!-- ═══════════════ VENDEDOR ═══════════════ -->
+<div id="screen-vendedor" class="screen">
+  <div class="hdr">
+    <div class="hdr-left">
+      <h2>🛒 <span class="hdr-accent">Vendedor</span></h2>
+      <span class="live-badge">EN VIVO</span>
+      <span class="user-chip" id="v-user-chip"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="inbox-btn-wrap">
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('v','v-inbox-tab')" id="v-inbox-btn" style="position:relative">
+          📬 Bandeja
+          <span class="inbox-badge" id="v-inbox-count" style="display:none">0</span>
+        </button>
+      </div>
+      <button class="back-btn" onclick="logout()">🔒 Cerrar sesión</button>
+    </div>
+  </div>
+  <div class="body">
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab('v','v-nueva-tab')">📋 Nueva Orden</button>
+      <button class="tab" onclick="switchTab('v','v-mis-ordenes-tab')">📦 Mis Órdenes</button>
+      <button class="tab" onclick="switchTab('v','v-inbox-tab')">📬 Bandeja <span id="v-inbox-tab-count" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
+    </div>
+
+    <!-- NUEVA ORDEN TAB -->
+    <div id="v-nueva-tab" class="tab-body on">
+
+    <div class="panel">
+      <div class="ptitle">📋 Nueva Orden de Armado</div>
+      <div class="fg fg2" style="margin-bottom:12px">
+        <div class="fld">
+          <label>Nombre del Cliente <span class="opt-label">(opcional)</span></label>
+          <input type="text" id="v-cliente" placeholder="ej: Juan Pérez">
+        </div>
+        <div class="fld">
+          <label>Cantidad</label>
+          <select id="v-cantidad">
+            <option value="1">1 bicicleta</option>
+            <option value="2">2 bicicletas</option>
+            <option value="3">3 bicicletas</option>
+            <option value="4">4 bicicletas</option>
+            <option value="5">5 bicicletas</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg fg2" style="margin-bottom:12px">
+        <div class="fld">
+          <label>Marca</label>
+          <select id="v-marca" onchange="vFillModelos()">
+            <option value="">— Elegí marca —</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Modelo</label>
+          <select id="v-modelo" onchange="vFillVariants()">
+            <option value="">— Primero elegí marca —</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Talle</label>
+          <select id="v-talle"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld">
+          <label>Rodado</label>
+          <select id="v-rodado"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld">
+          <label>Color</label>
+          <select id="v-color"><option value="">— Seleccioná —</option></select>
+        </div>
+      </div>
+      <div class="fg fg2" style="margin-bottom:12px">
+        <div class="fld">
+          <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
+          <select id="v-destino">
+            <option value="salon">🏪 Para el Salón</option>
+            <option value="envio">🚚 Envío a Domicilio</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Observaciones <span class="opt-label">(opcional)</span></label>
+          <input type="text" id="v-obs" placeholder="Accesorios, urgente, etc.">
+        </div>
+      </div>
+      <button class="btn btn-o btn-full" onclick="vEnviarOrden()">🚀 ENVIAR ORDEN AL TALLER</button>
+    </div>
+    </div><!-- /v-nueva-tab -->
+
+    <!-- MIS ÓRDENES TAB -->
+    <div id="v-mis-ordenes-tab" class="tab-body">
+    <div class="panel">
+      <div class="ptitle">📦 Órdenes del Día</div>
+      <div id="v-lista-ordenes"><div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div></div>
+    </div>
+    </div><!-- /v-mis-ordenes-tab -->
+
+    <!-- BANDEJA TAB -->
+    <div id="v-inbox-tab" class="tab-body">
+    <div class="panel">
+      <div class="ptitle" style="color:var(--red)">📬 Alertas de Sin Stock</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">El taller te devolvió estas solicitudes porque no tiene stock. Modificá el pedido y reenvíalo.</p>
+      <div id="v-inbox-lista"><div class="empty"><div class="empty-icon">✅</div>Sin alertas pendientes</div></div>
+    </div>
+    </div><!-- /v-inbox-tab -->
+
+  </div>
+</div>
+
+<!-- ═══════════════ TALLER ═══════════════ -->
+<div id="screen-taller" class="screen">
+  <div class="hdr" style="border-color:var(--border);border-bottom-color:var(--green);">
+    <div class="hdr-left">
+      <h2>🔧 <span class="hdr-accent-g">Taller</span></h2>
+      <span class="live-badge" style="color:var(--green);border-color:var(--green);">EN VIVO</span>
+      <span class="user-chip" id="t-user-chip"></span>
+    </div>
+    <button class="back-btn" onclick="logout()">🔒 Cerrar sesión</button>
+  </div>
+  <div class="body">
+
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab('t','ordenes-tab')">📋 Órdenes</button>
+      <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
+      <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
+      <button class="tab" onclick="switchTab('t','service-tab')">🔩 Service</button>
+    </div>
+
+    <!-- ÓRDENES TAB -->
+    <div id="ordenes-tab" class="tab-body on">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--yellow)">⏳ Pendientes</div>
+        <div id="t-pendientes"><div class="empty"><div class="empty-icon">✅</div>Sin órdenes pendientes</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle" style="color:var(--blue)">🔧 En Proceso</div>
+        <div id="t-en-proceso"><div class="empty"><div class="empty-icon">💤</div>Nada en proceso</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptitle ptitle-g">✅ Completadas Hoy</div>
+        <div id="t-completadas"><div class="empty"><div class="empty-icon">🏁</div>Nada aún</div></div>
+      </div>
+    </div>
+
+    <!-- ENVÍOS TAB -->
+    <div id="envios-tab" class="tab-body">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--yellow)">🚚 Bicis para Envío a Domicilio</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Estas órdenes fueron marcadas como envío a domicilio por el vendedor. Prestá especial atención al armado y preparación para despacho.</p>
+        <div id="t-envios-lista"><div class="empty"><div class="empty-icon">🚚</div>Sin pedidos de envío</div></div>
+      </div>
+    </div>
+
+    <!-- SALÓN TAB -->
+    <div id="salon-tab" class="tab-body">
+      <div class="panel">
+        <div class="ptitle ptitle-g">🏪 Registrar Armado para Exposición</div>
+        <div class="fg fg2" style="margin-bottom:12px">
+          <div class="fld">
+            <label>Armador</label>
+            <select id="s-armador"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fld">
+            <label>Cantidad</label>
+            <select id="s-cantidad">
+              <option value="1">1</option><option value="2">2</option>
+              <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg fg2" style="margin-bottom:12px">
+          <div class="fld">
+            <label>Marca</label>
+            <select id="s-marca" onchange="sFillModelos()"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fld">
+            <label>Modelo</label>
+            <select id="s-modelo" onchange="sFillVariants()"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fld">
+            <label>Talle</label>
+            <select id="s-talle"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fld">
+            <label>Rodado</label>
+            <select id="s-rodado"><option value="">— Seleccioná —</option></select>
+          </div>
+          <div class="fld">
+            <label>Color</label>
+            <select id="s-color"><option value="">— Seleccioná —</option></select>
+          </div>
+        </div>
+        <div class="fld" style="margin-bottom:12px">
+          <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+          <input type="text" id="s-cuadro" placeholder="ej: A123456 — requerido para identificar la bici en el salón">
+        </div>
+        <button class="btn btn-g btn-full" onclick="sRegistrar()">✅ REGISTRAR ARMADO PARA SALÓN</button>
+      </div>
+      <div class="panel">
+        <div class="ptitle ptitle-g">📋 Historial Salón</div>
+        <div id="s-lista"><div class="empty"><div class="empty-icon">🚲</div>Sin registros</div></div>
+      </div>
+    </div>
+
+    <!-- SERVICE TAB -->
+    <div id="service-tab" class="tab-body">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--blue)">🔩 Registrar Service / Garantía</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Ingresá el N° de cuadro de la bici que llegó para service. El sistema buscará los datos del cliente automáticamente.</p>
+
+        <div class="fg fg2" style="margin-bottom:0">
+          <div class="fld">
+            <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+            <input type="text" id="srv-cuadro" placeholder="ej: A123456" oninput="srvBuscarCuadro(this.value)" autocomplete="off">
+          </div>
+          <div class="fld" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-b" onclick="srvBuscarCuadro(document.getElementById('srv-cuadro').value, true)">🔍 BUSCAR</button>
+          </div>
+        </div>
+
+        <!-- Resultado búsqueda -->
+        <div id="srv-result" class="service-result">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="screen-admin" class="screen">
+  <div class="hdr" style="border-bottom-color:var(--text2)">
+    <div class="hdr-left">
+      <h2>⚙️ <span class="hdr-accent-s">Administración</span></h2>
+      <span class="user-chip" id="a-user-chip"></span>
+    </div>
+    <button class="back-btn" onclick="logout()">🔒 Cerrar sesión</button>
+  </div>
+  <div class="body">
+
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab('a','a-catalogo')">🚲 Catálogo</button>
+      <button class="tab" onclick="switchTab('a','a-comisiones')">💰 Comisiones</button>
+      <button class="tab" onclick="switchTab('a','a-armadores')">👥 Armadores</button>
+      <button class="tab" onclick="switchTab('a','a-usuarios')">🔐 Usuarios</button>
+      <button class="tab" onclick="switchTab('a','a-reportes')">📊 Reportes</button>
+      <button class="tab" onclick="switchTab('a','a-historial')">📁 Historial</button>
+      <button class="tab" onclick="switchTab('a','a-garantias')">🛡️ Garantías</button>
+    </div>
+
+    <!-- CATÁLOGO -->
+    <div id="a-catalogo" class="tab-body on">
+      <div class="panel">
+        <div class="ptitle">➕ Agregar Bicicleta</div>
+        <div class="fg fg2">
+          <div class="fld"><label>Marca</label><input type="text" id="c-marca" placeholder="Trek, Giant..."></div>
+          <div class="fld"><label>Modelo</label><input type="text" id="c-modelo" placeholder="FX3, Marlin..."></div>
+        </div>
+        <div class="fg fg3" style="margin-top:10px">
+          <div class="fld"><label>Talles <span class="opt-label">letras — separados por coma</span></label><input type="text" id="c-talles" placeholder="S, M, L, XL"></div>
+          <div class="fld"><label>Rodados <span class="opt-label">números — separados por coma</span></label><input type="text" id="c-rodados" placeholder="R26, R27.5, R29"></div>
+          <div class="fld"><label>Colores <span class="opt-label">separados por coma</span></label><input type="text" id="c-colores" placeholder="Negro, Rojo, Blanco..."></div>
+        </div>
+        <div style="margin-top:14px;margin-bottom:2px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">¿Esta bicicleta se arma como Kit Y Prearmada?</div>
+          <div style="display:flex;gap:10px">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:9px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;font-size:14px;transition:all .15s" id="lbl-kit-si">
+              <input type="radio" name="c-kit-pre" id="c-kit-pre-si" value="si" onchange="toggleComisionesForm()" style="accent-color:var(--orange)"> Sí — tiene ambas
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:9px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;font-size:14px;transition:all .15s" id="lbl-kit-no">
+              <input type="radio" name="c-kit-pre" id="c-kit-pre-no" value="no" onchange="toggleComisionesForm()" checked style="accent-color:var(--orange)"> No — solo una comisión
+            </label>
+          </div>
+        </div>
+        <!-- Solo comisión única -->
+        <div id="c-com-simple-wrap" style="margin-top:12px">
+          <div class="fld">
+            <label>Comisión ($ por unidad)</label>
+            <input type="number" id="c-com-simple" placeholder="0" min="0">
+          </div>
+        </div>
+        <!-- Comisiones kit + prearmada -->
+        <div id="c-com-doble-wrap" style="display:none;margin-top:12px">
+          <div class="fg fg2">
+            <div class="fld">
+              <label>Comisión Kit ($ por unidad) <span class="opt-label">armar desde cero</span></label>
+              <input type="number" id="c-com-kit" placeholder="0" min="0">
+            </div>
+            <div class="fld">
+              <label>Comisión Prearmada ($ por unidad) <span class="opt-label">ajuste/preparación</span></label>
+              <input type="number" id="c-com-pre" placeholder="0" min="0">
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-o btn-full" onclick="cAgregar()">➕ AGREGAR AL CATÁLOGO</button>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">📥 Importar desde Excel</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:10px">El Excel debe tener columnas: <strong>Marca, Modelo, Talles, Rodados, Colores, ComisionKit, ComisionPrearmada</strong> (talles, rodados y colores separados por coma dentro de la celda)</p>
+        <label class="file-label" for="excel-import">📂 Seleccionar archivo Excel (.xlsx / .xls)</label>
+        <input type="file" id="excel-import" accept=".xlsx,.xls" onchange="importarExcel(this)">
+        <div id="import-status" style="margin-top:8px;font-size:13px;color:var(--text2)"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">📋 Catálogo Actual</div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="btn btn-ghost btn-sm" onclick="exportarCatalogo()">⬇️ Exportar Catálogo</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Marca</th><th>Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Kit+Pre</th><th>Comisión</th><th></th></tr></thead>
+            <tbody id="t-catalogo"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMISIONES -->
+    <div id="a-comisiones" class="tab-body">
+      <div class="panel">
+        <div class="ptitle">💰 Comisión por Modelo de Bicicleta</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Ingresá el importe en $ que cobra el armador por cada unidad armada de ese modelo.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Marca</th><th>Modelo</th><th>Armado</th><th>Comisión ($ por unidad)</th></tr></thead>
+            <tbody id="t-comisiones"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-o btn-full" style="margin-top:12px" onclick="guardarComisiones()">💾 GUARDAR COMISIONES</button>
+      </div>
+    </div>
+
+    <!-- ARMADORES -->
+    <div id="a-armadores" class="tab-body">
+      <div class="panel">
+        <div class="ptitle">➕ Nuevo Armador</div>
+        <div class="fg fg2">
+          <div class="fld"><label>Nombre completo</label><input type="text" id="arm-nombre" placeholder="Nombre del armador"></div>
+        </div>
+        <button class="btn btn-o btn-full" onclick="armAgregar()">➕ AGREGAR ARMADOR</button>
+      </div>
+      <div class="panel">
+        <div class="ptitle">👥 Equipo de Armado</div>
+        <div id="arm-lista"></div>
+      </div>
+    </div>
+
+    <!-- USUARIOS -->
+    <div id="a-usuarios" class="tab-body">
+      <div class="panel">
+        <div class="ptitle">🔐 Gestión de Usuarios y Contraseñas</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:18px">Configurá el usuario y contraseña para cada sección del sistema. Solo el administrador puede ver y modificar estas credenciales.</p>
+        <div id="usuarios-lista"></div>
+        <button class="btn btn-o btn-full" style="margin-top:4px" onclick="guardarUsuarios()">💾 GUARDAR CAMBIOS</button>
+      </div>
+      <div class="panel">
+        <div class="ptitle">➕ Agregar Usuario Adicional</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Podés crear múltiples usuarios por sección (ej: varios vendedores con distintas claves).</p>
+        <div class="fg fg3">
+          <div class="fld"><label>Sección</label>
+            <select id="nu-rol">
+              <option value="vendedor">🛒 Vendedor</option>
+              <option value="taller">🔧 Taller</option>
+              <option value="admin">⚙️ Admin</option>
+            </select>
+          </div>
+          <div class="fld"><label>Usuario</label><input type="text" id="nu-user" placeholder="nombre de usuario"></div>
+          <div class="fld"><label>Contraseña</label><input type="password" id="nu-pass" placeholder="contraseña"></div>
+        </div>
+        <button class="btn btn-o btn-full" onclick="agregarUsuario()">➕ AGREGAR USUARIO</button>
+      </div>
+    </div>
+
+    <!-- REPORTES -->
+    <div id="a-reportes" class="tab-body">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+          <div class="ptitle" style="margin:0;border:none;padding:0">📊 Reportes</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="renderReporte()">🔄 Actualizar</button>
+            <button class="btn btn-b btn-sm" onclick="exportarReporteSemanal()">⬇️ Exportar Excel</button>
+            <button class="btn btn-r btn-sm" onclick="confirmarReset()">🗑️ Resetear Período</button>
+          </div>
+        </div>
+
+        <!-- FILTROS DE PERÍODO -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px">Período a analizar</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button class="btn btn-sm" id="pbtn-hoy"    onclick="setPeriodo('hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
+            <button class="btn btn-sm" id="pbtn-semana" onclick="setPeriodo('semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
+            <button class="btn btn-sm" id="pbtn-mes"    onclick="setPeriodo('mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
+            <button class="btn btn-sm" id="pbtn-anio"   onclick="setPeriodo('anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
+            <button class="btn btn-sm" id="pbtn-custom" onclick="setPeriodo('custom')" style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Rango Personalizado</button>
+          </div>
+          <div id="custom-range" style="display:none;gap:12px;flex-wrap:wrap">
+            <div class="fld" style="flex:1;min-width:140px">
+              <label>Desde</label>
+              <input type="date" id="r-desde" onchange="renderReporte()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div class="fld" style="flex:1;min-width:140px">
+              <label>Hasta</label>
+              <input type="date" id="r-hasta" onchange="renderReporte()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+          </div>
+          <div id="periodo-label" style="font-size:12px;color:var(--text2);margin-top:6px"></div>
+        </div>
+
+        <div id="reporte-body"><div class="empty"><div class="empty-icon">📊</div>Hacé click en Actualizar</div></div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL COMPLETO -->
+    <div id="a-historial" class="tab-body">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="ptitle" style="margin:0;border:none;padding:0">📁 Historial Completo</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-b btn-sm" onclick="exportarHistorial()">⬇️ Exportar Todo</button>
+          </div>
+        </div>
+        <div class="fg fg4" style="margin-bottom:14px">
+          <div class="fld"><label>Filtrar Armador</label>
+            <select id="h-armador" onchange="renderHistorial()"><option value="">Todos</option></select>
+          </div>
+          <div class="fld"><label>Filtrar Marca</label>
+            <select id="h-marca" onchange="renderHistorial()"><option value="">Todas</option></select>
+          </div>
+          <div class="fld"><label>Tipo</label>
+            <select id="h-tipo" onchange="renderHistorial()">
+              <option value="">Todos</option>
+              <option value="venta">Pedidos venta</option>
+              <option value="salon">Para salón</option>
+            </select>
+          </div>
+          <div class="fld"><label>Estado</label>
+            <select id="h-estado" onchange="renderHistorial()">
+              <option value="">Todos</option>
+              <option value="completada">Completados</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="en-proceso">En proceso</option>
+              <option value="cancelada">Cancelados</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
+            <tbody id="t-historial"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GARANTÍAS (solo admin) -->
+    <div id="a-garantias" class="tab-body">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="ptitle" style="margin:0;border:none;padding:0">🛡️ Control de Garantías</div>
+          <button class="btn btn-b btn-sm" onclick="exportarGarantias()">⬇️ Exportar</button>
+        </div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Registro de todos los service realizados. La garantía rige por <strong>2 meses</strong> desde la fecha del service.</p>
+        <div class="fg fg2" style="margin-bottom:14px">
+          <div class="fld"><label>Filtrar Estado</label>
+            <select id="g-estado" onchange="renderGarantias()">
+              <option value="">Todos</option>
+              <option value="vigente">Vigentes</option>
+              <option value="vencida">Vencidas</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>N° Cuadro</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Color</th><th>Fecha Service</th><th>Vencimiento</th><th>Días restantes</th><th>Estado</th><th>Obs.</th></tr></thead>
+            <tbody id="t-garantias"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="modal-asignar" class="modal-bg">
+  <div class="modal">
+    <h3>🙋 Tomar esta Orden</h3>
+    <p id="modal-info"></p>
+    <div class="fg">
+      <div class="fld">
+        <label>¿Quién arma?</label>
+        <select id="modal-armador"><option value="">— Elegí —</option></select>
+      </div>
+      <div class="fld" id="modal-tipo-armado-wrap">
+        <label>Tipo de Armado <span style="color:var(--red);font-size:10px">★ requerido</span></label>
+        <select id="modal-tipo-armado">
+          <option value="">— Seleccioná —</option>
+          <option value="kit">📦 De Kit (armar desde cero)</option>
+          <option value="prearmada">🚲 Prearmada (ajuste/preparación)</option>
+        </select>
+      </div>
+      <div class="fld"><label>N° de Cuadro <span class="opt-label">(opcional)</span></label>
+        <input type="text" id="modal-cuadro" placeholder="ej: A123456">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-asignar')">Cancelar</button>
+      <button class="btn btn-g" style="flex:1" onclick="confirmarAsignacion()">✅ ASIGNAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPLETAR -->
+<div id="modal-completar" class="modal-bg">
+  <div class="modal">
+    <h3>✅ Marcar como Completado</h3>
+    <p id="modal-comp-info"></p>
+    <div class="fld">
+      <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+      <input type="text" id="modal-comp-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicado(this.value)">
+    </div>
+    <div class="dup-warning" id="dup-warning">
+      ⚠️ <strong>¡N° de Cuadro ya registrado!</strong><br>
+      Este número de cuadro ya tiene un armado previo en el salón. <strong>No se sumará comisión adicional</strong> para evitar duplicación. Verificá si es la misma bici o ingresá el número correcto.
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeModal('modal-completar')">Cancelar</button>
+      <button class="btn btn-r btn-sm" onclick="devolverSinStock()" style="padding:12px 14px">❌ Sin Stock</button>
+      <button class="btn btn-g" style="flex:1" onclick="confirmarCompletado()">🎉 COMPLETADO</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESET -->
+<div id="modal-reset" class="modal-bg">
+  <div class="modal">
+    <h3 style="color:var(--red)">⚠️ Resetear Período</h3>
+    <p>Esto <strong>archiva</strong> todos los registros completados del período visible actualmente. Los datos históricos se conservan en el historial completo. El catálogo y armadores no se modifican.</p>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reset')">Cancelar</button>
+      <button class="btn btn-r" style="flex:1" onclick="ejecutarReset()">Sí, resetear semana</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR ORDEN -->
+<div id="modal-editar" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <h3>✏️ Modificar Orden</h3>
+    <p id="modal-editar-info" style="color:var(--text2);font-size:13px;margin-bottom:16px"></p>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Marca</label>
+        <select id="e-marca" onchange="eFillModelos()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Modelo</label>
+        <select id="e-modelo" onchange="eFillVariants()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Talle</label>
+        <select id="e-talle"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Rodado</label>
+        <select id="e-rodado"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Color</label>
+        <select id="e-color"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Cantidad</label>
+        <select id="e-cantidad">
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+          <option value="4">4</option><option value="5">5</option>
+        </select>
+      </div>
+      <div class="fld"><label>Armador asignado</label>
+        <select id="e-armador"><option value="">— Sin asignar —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Cliente <span style="color:var(--text3);font-size:10px">(opcional)</span></label>
+        <input type="text" id="e-cliente" placeholder="Nombre del cliente">
+      </div>
+      <div class="fld"><label>N° de Cuadro <span style="color:var(--text3);font-size:10px">(opcional)</span></label>
+        <input type="text" id="e-cuadro" placeholder="ej: A123456">
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>Observaciones <span style="color:var(--text3);font-size:10px">(opcional)</span></label>
+      <input type="text" id="e-obs" placeholder="Accesorios, urgente, etc.">
+    </div>
+    <div style="background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.3);border-radius:3px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--yellow)">
+      ⚠️ Si cambiás el modelo, la comisión del armador se recalcula automáticamente con el nuevo modelo.
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cancelar</button>
+      <button class="btn btn-r btn-sm" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
+      <button class="btn btn-o" style="flex:1" onclick="confirmarEdicion()">✅ GUARDAR CAMBIOS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTA TALLER -->
+<div id="alerta-taller">
+  <div class="alerta-box">
+    <div class="alerta-icon">🔔</div>
+    <h2>¡NUEVA ORDEN!</h2>
+    <div class="alerta-detail" id="alerta-detalle"></div>
+    <button class="btn btn-o" style="width:100%;font-size:18px" onclick="cerrarAlerta()">VER ÓRDENES →</button>
+  </div>
+</div>
+
+<!-- ALERTA VENDEDOR SIN STOCK -->
+<!-- ALERTA VENDEDOR SIN STOCK — edición inline -->
+<div id="alerta-vendedor">
+  <div class="alerta-box-r" style="max-width:560px;text-align:left">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div class="alerta-icon" style="font-size:38px;animation:pulse 1s infinite">❌</div>
+      <div>
+        <h2 style="margin:0;font-size:28px">SIN STOCK</h2>
+        <p style="font-size:13px;color:var(--text2);margin:2px 0 0">El taller no tiene esta bici. Modificá el pedido y reenvíalo sin cerrar esta ventana.</p>
+      </div>
+    </div>
+    <div class="alerta-detail" id="alerta-vendedor-detalle" style="background:rgba(255,61,61,.07);border-radius:4px;padding:12px 16px;margin:12px 0 14px;font-size:13px;line-height:1.8;border:1px solid rgba(255,61,61,.2)"></div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:12px">✏️ MODIFICAR PEDIDO</div>
+      <div class="fg fg2" style="margin-bottom:10px">
+        <div class="fld"><label>Marca</label>
+          <select id="av-marca" onchange="avFillModelos()"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Modelo</label>
+          <select id="av-modelo" onchange="avFillVariants()"><option value="">— Seleccioná —</option></select>
+        </div>
+      </div>
+      <div class="fg fg2" style="margin-bottom:10px">
+        <div class="fld"><label>Talle</label>
+          <select id="av-talle"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Rodado</label>
+          <select id="av-rodado"><option value="">— Seleccioná —</option></select>
+        </div>
+      </div>
+      <div class="fg fg2" style="margin-bottom:10px">
+        <div class="fld"><label>Color</label>
+          <select id="av-color"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Cantidad</label>
+          <select id="av-cantidad">
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg fg2">
+        <div class="fld"><label>Destino</label>
+          <select id="av-destino">
+            <option value="salon">🏪 Para el Salón</option>
+            <option value="envio">🚚 Envío a Domicilio</option>
+          </select>
+        </div>
+        <div class="fld"><label>Observaciones <span class="opt-label">(opcional)</span></label>
+          <input type="text" id="av-obs" placeholder="Accesorios, urgente, etc.">
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="descartarAlertaVendedor()" style="flex:0 0 auto">Descartar</button>
+      <button class="btn btn-o" style="flex:1;font-size:16px" onclick="reenviarDesdeAlerta()">🚀 REENVIAR AL TALLER</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SERVICE — bici no encontrada, carga manual -->
+<div id="modal-service-manual" class="modal-bg">
+  <div class="modal" style="max-width:500px">
+    <h3>⚠️ Cuadro no registrado</h3>
+    <p id="modal-srv-info" style="color:var(--text2);font-size:13px;margin-bottom:16px">Este número de cuadro no está en la base de datos. Completá los datos para registrarlo.</p>
+    <div class="fg fg2" style="margin-bottom:10px">
+      <div class="fld"><label>Cliente</label><input type="text" id="srv-m-cliente" placeholder="Nombre del cliente"></div>
+      <div class="fld"><label>Marca</label>
+        <select id="srv-m-marca" onchange="srvMFillModelos()"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:10px">
+      <div class="fld"><label>Modelo</label>
+        <select id="srv-m-modelo" onchange="srvMFillVariants()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Talle</label>
+        <select id="srv-m-talle"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:10px">
+      <div class="fld"><label>Rodado</label>
+        <select id="srv-m-rodado"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Color</label>
+        <select id="srv-m-color"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:14px">
+      <label>Observaciones <span class="opt-label">(opcional)</span></label>
+      <input type="text" id="srv-m-obs" placeholder="Accesorios, detalles, etc.">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-service-manual')">Cancelar</button>
+      <button class="btn btn-b" style="flex:1" onclick="srvRegistrarManual()">✅ REGISTRAR Y CONFIRMAR SERVICE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MONITOR SALÓN ═══════════════ -->
+<div id="screen-monitor">
+
+  <!-- HEADER -->
+  <div class="mon-header">
+    <div class="mon-brand">
+      RODADOS <em>LOPEZ</em>
+      <small>SEGUÍ EL ESTADO DE TU BICICLETA</small>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <div class="mon-live">EN VIVO</div>
+      <div class="mon-clock" id="mon-clock">00:00</div>
+    </div>
+  </div>
+
+  <!-- COLUMNAS -->
+  <div class="mon-body">
+
+    <!-- EN PROCESO -->
+    <div class="mon-col mon-col-en-proceso">
+      <div class="mon-col-header">
+        <div class="mon-col-header-inner">
+          <div class="mon-col-icon">🔧</div>
+          <div class="mon-col-title">EN ARMADO</div>
+          <div class="mon-col-count" id="mon-count-proceso">0</div>
+        </div>
+      </div>
+      <div class="mon-col-divider"></div>
+      <div class="mon-lista" id="mon-lista-proceso">
+        <div class="mon-empty">
+          <div class="mon-empty-icon">🔧</div>
+          <div class="mon-empty-txt">Sin órdenes en proceso</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETADAS -->
+    <div class="mon-col mon-col-completada">
+      <div class="mon-col-header">
+        <div class="mon-col-header-inner">
+          <div class="mon-col-icon" style="animation:none">✅</div>
+          <div class="mon-col-title">LISTAS PARA RETIRAR</div>
+          <div class="mon-col-count" id="mon-count-comp">0</div>
+        </div>
+      </div>
+      <div class="mon-col-divider"></div>
+      <div class="mon-lista" id="mon-lista-comp">
+        <div class="mon-empty">
+          <div class="mon-empty-icon">🚲</div>
+          <div class="mon-empty-txt">Ninguna lista aún</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TICKER INFERIOR -->
+  <div class="mon-footer">
+    <div class="mon-ticker-track" id="mon-ticker">
+      <span class="mon-ticker-item">🚲 RODADOS LOPEZ <span class="mon-ticker-sep">·</span> Tu bici, nuestra pasión</span>
+      <span class="mon-ticker-item">🔧 Realizamos armados profesionales</span>
+      <span class="mon-ticker-item">🛡️ Hacé tu service dentro de los 15-20 días para activar la garantía</span>
+      <span class="mon-ticker-item">📍 ¡Gracias por elegirnos!</span>
+      <span class="mon-ticker-item">🚲 RODADOS LOPEZ <span class="mon-ticker-sep">·</span> Tu bici, nuestra pasión</span>
+      <span class="mon-ticker-item">🔧 Realizamos armados profesionales</span>
+      <span class="mon-ticker-item">🛡️ Hacé tu service dentro de los 15-20 días para activar la garantía</span>
+      <span class="mon-ticker-item">📍 ¡Gracias por elegirnos!</span>
+    </div>
+  </div>
+
+  <!-- BOTÓN SALIR (muy discreto, esquina) -->
+  <button class="mon-exit" onclick="monitorSalir()">✕ SALIR</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  FIREBASE CONFIG — reemplazá estos valores con los tuyos
+// ════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyAmaLKvwze9kvl04p9f3bZyY71IuEgbYzk",
+  authDomain:        "rodados-lopez-ea21b.firebaseapp.com",
+  databaseURL:       "https://rodados-lopez-ea21b-default-rtdb.firebaseio.com",
+  projectId:         "rodados-lopez-ea21b",
+  storageBucket:     "rodados-lopez-ea21b.firebasestorage.app",
+  messagingSenderId: "950585273289",
+  appId:             "1:950585273289:web:332081bcf4707282781618"
+};
+
+// ════════════════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════════════════
+let fbApp = null;
+let fbDB  = null;
+
+let DB = {
+  catalogo: [],
+  comisiones: {},
+  comisionesKit: {},
+  comisionesPre: {},
+  armadores: [],
+  ordenes: [],
+  counter: 1,
+  usuarios: [],
+  sinStockAlertas: [],
+  services: [],       // registros de service/garantía
+};
+
+let ordenAsignarId  = null;
+let ordenCompletarId = null;
+let ordenEditarId   = null;
+let lastOrdenCount  = 0;
+let sesionActual    = null;
+let fbListeners     = {};  // referencias a listeners activos
+
+// ── INIT FIREBASE ──
+function initFirebase() {
+  try {
+    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+    fbDB  = firebase.database();
+    return true;
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    return false;
+  }
+}
+
+// ── LOAD: lectura única al inicio ──
+async function loadDB() {
+  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  const promises = keys.map(key =>
+    fbDB.ref(key).once('value').then(snap => {
+      const val = snap.val();
+      if (val !== null) DB[key] = val;
+    }).catch(()=>{})
+  );
+  await Promise.all(promises);
+
+  // defaults si la BD está vacía
+  if (!DB.catalogo.length)                DB.catalogo   = getDefaultCatalogo();
+  if (!Object.keys(DB.comisionesKit).length) {
+    if (Object.keys(DB.comisiones).length) {
+      DB.comisionesKit = {...DB.comisiones};
+      DB.comisionesPre = Object.fromEntries(Object.keys(DB.comisiones).map(k=>[k, Math.round((DB.comisiones[k]||0)*0.5)]));
+    } else {
+      DB.comisionesKit = getDefaultComisiones();
+      DB.comisionesPre = getDefaultComisionesPre();
+    }
+  }
+  if (!Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
+  if (!DB.armadores.length)               DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
+  if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
+  if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
+  if (!DB.services)                       DB.services = [];
+}
+
+// ── SAVE: escritura de una clave ──
+async function saveKey(key) {
+  try {
+    await fbDB.ref(key).set(DB[key]);
+  } catch(e) { console.error('Firebase save error:', key, e); toast('⚠️ Error guardando datos','var(--red)'); }
+}
+
+async function saveAll() {
+  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  await Promise.all(keys.map(k => saveKey(k)));
+}
+
+// ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
+function startPolling() {
+  // Escuchar cambios en órdenes en tiempo real
+  if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
+  fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
+    const fresh = snap.val();
+    if (fresh === null) return;
+    const freshArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
+
+    // alerta taller: nuevas órdenes de venta
+    if (isScreen('taller') && freshArr.length > DB.ordenes.length) {
+      const nuevas = freshArr.filter(o => !DB.ordenes.find(x => x.id === o.id));
+      nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
+    }
+    DB.ordenes = freshArr;
+    if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
+    if (isScreen('taller'))   tRenderAll();
+  });
+
+  // Escuchar sinStockAlertas en tiempo real
+  if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
+  fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
+    const fresh = snap.val();
+    const nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+    if (isScreen('vendedor')) {
+      // detectar alertas nuevas no vistas antes de actualizar DB
+      const noVistasAntes = new Set((DB.sinStockAlertas||[]).filter(a=>a.vista||a.resuelta).map(a=>a.id));
+      DB.sinStockAlertas = nuevasAlertas;
+      vRenderInbox();
+      // mostrar alerta sonora solo si hay una nueva no vista para este vendedor y el overlay no está ya abierto
+      const overlay = document.getElementById('alerta-vendedor');
+      if (!overlay.classList.contains('on')) {
+        const noVistas = nuevasAlertas.filter(a =>
+          !a.vista && !a.resuelta && a.vendedor === sesionActual?.usuario && !noVistasAntes.has(a.id)
+        );
+        if (noVistas.length > 0) mostrarAlertaVendedor(noVistas[0]);
+      }
+    } else {
+      DB.sinStockAlertas = nuevasAlertas;
+    }
+  });
+
+  // Escuchar catálogo en tiempo real (actualiza vendedor y taller automáticamente)
+  if (fbListeners.catalogo) fbDB.ref('catalogo').off('value', fbListeners.catalogo);
+  fbListeners.catalogo = fbDB.ref('catalogo').on('value', snap => {
+    const val = snap.val();
+    if (val === null) return;
+    DB.catalogo = Array.isArray(val) ? val : Object.values(val);
+    // refrescar selects de marca en las pantallas activas
+    if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
+    if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
+    if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
+  });
+
+  // Escuchar comisionesKit en tiempo real
+  if (fbListeners.comisionesKit) fbDB.ref('comisionesKit').off('value', fbListeners.comisionesKit);
+  fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) DB.comisionesKit = val;
+    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
+  });
+
+  // Escuchar comisionesPre en tiempo real
+  if (fbListeners.comisionesPre) fbDB.ref('comisionesPre').off('value', fbListeners.comisionesPre);
+  fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) DB.comisionesPre = val;
+    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
+  });
+
+  // Escuchar counter en tiempo real
+  if (fbListeners.counter) fbDB.ref('counter').off('value', fbListeners.counter);
+  fbListeners.counter = fbDB.ref('counter').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) DB.counter = val;
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  LOGIN & AUTENTICACIÓN
+// ════════════════════════════════════════════════════════════
+let loginTarget = null;
+
+function loginPedir(rol) {
+  loginTarget = rol;
+  const labels = {vendedor:'🛒 Sección Vendedor', taller:'🔧 Sección Taller', admin:'⚙️ Administración'};
+  document.getElementById('login-role-label').textContent = labels[rol];
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').classList.remove('on');
+  document.getElementById('screen-login').classList.add('on');
+  setTimeout(()=>document.getElementById('login-user').focus(), 100);
+}
+
+function loginSubmit() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const match = DB.usuarios.find(u => u.usuario === user && u.password === pass && u.rol === loginTarget);
+  if (!match) {
+    document.getElementById('login-error').classList.add('on');
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+    return;
+  }
+  document.getElementById('login-error').classList.remove('on');
+  document.getElementById('screen-login').classList.remove('on');
+  sesionActual = { usuario: user, rol: loginTarget };
+  go(loginTarget);
+}
+
+function loginCancel() {
+  document.getElementById('screen-login').classList.remove('on');
+  loginTarget = null;
+}
+
+function logout() {
+  sesionActual = null;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById('screen-inicio').style.display = 'flex';
+}
+
+// ════════════════════════════════════════════════════════════
+//  NAVEGACIÓN
+// ════════════════════════════════════════════════════════════
+function isScreen(id) {
+  return document.getElementById('screen-'+id).classList.contains('on');
+}
+
+function go(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById('screen-inicio').style.display = 'none';
+  document.getElementById('screen-monitor').classList.remove('on');
+  if (screen === 'inicio') {
+    document.getElementById('screen-inicio').style.display = 'flex';
+  } else if (screen === 'monitor') {
+    document.getElementById('screen-monitor').classList.add('on');
+    initMonitor();
+  } else {
+    document.getElementById('screen-'+screen).classList.add('on');
+    const chip = document.getElementById(screen[0]+'-user-chip');
+    if (chip && sesionActual) chip.innerHTML = `👤 <strong>${sesionActual.usuario}</strong>`;
+    if (screen === 'vendedor') initVendedor();
+    if (screen === 'taller') initTaller();
+    if (screen === 'admin') initAdmin();
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  MONITOR SALÓN
+// ════════════════════════════════════════════════════════════
+let monClockInterval  = null;
+let monFireListener   = null;
+
+function initMonitor() {
+  // reloj
+  if (monClockInterval) clearInterval(monClockInterval);
+  monClockInterval = setInterval(() => {
+    const now = new Date();
+    document.getElementById('mon-clock').textContent =
+      now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  }, 1000);
+  // disparo inmediato
+  const now = new Date();
+  document.getElementById('mon-clock').textContent =
+    now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+
+  // listener Firebase en tiempo real (independiente del resto del sistema)
+  if (monFireListener) fbDB.ref('ordenes').off('value', monFireListener);
+  monFireListener = fbDB.ref('ordenes').on('value', snap => {
+    const val = snap.val();
+    if (val === null) { monRender([]); return; }
+    const arr = Array.isArray(val) ? val : Object.values(val);
+    monRender(arr);
+  });
+}
+
+function monitorSalir() {
+  if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
+  if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+  document.getElementById('screen-monitor').classList.remove('on');
+  document.getElementById('screen-inicio').style.display = 'flex';
+}
+
+function monRender(ordenes) {
+  // En proceso: órdenes de venta con estado en-proceso
+  const enProceso = ordenes
+    .filter(o => !o.esSalon && o.estado === 'en-proceso')
+    .sort((a,b) => new Date(a.fechaAsignado||a.fechaCreacion) - new Date(b.fechaAsignado||b.fechaCreacion));
+
+  // Completadas recientes: últimas 10 horas, mostrar máx 15
+  const ahora = Date.now();
+  const completadas = ordenes
+    .filter(o => !o.esSalon && o.estado === 'completada' && o.fechaCompletado &&
+      (ahora - new Date(o.fechaCompletado).getTime()) < 10 * 3600 * 1000)
+    .sort((a,b) => new Date(b.fechaCompletado) - new Date(a.fechaCompletado))
+    .slice(0, 15);
+
+  // Contadores
+  document.getElementById('mon-count-proceso').textContent = enProceso.length;
+  document.getElementById('mon-count-comp').textContent    = completadas.length;
+
+  // Render listas
+  const listaProceso = document.getElementById('mon-lista-proceso');
+  const listaComp    = document.getElementById('mon-lista-comp');
+
+  if (!enProceso.length) {
+    listaProceso.innerHTML = `<div class="mon-empty"><div class="mon-empty-icon">💤</div><div class="mon-empty-txt">Sin órdenes en proceso</div></div>`;
+  } else {
+    listaProceso.innerHTML = enProceso.map((o, i) => monCard(o, 'proceso', i+1)).join('');
+  }
+
+  if (!completadas.length) {
+    listaComp.innerHTML = `<div class="mon-empty"><div class="mon-empty-icon">🚲</div><div class="mon-empty-txt">Ninguna lista aún</div></div>`;
+  } else {
+    listaComp.innerHTML = completadas.map((o, i) => monCard(o, 'completada', i+1)).join('');
+  }
+
+  // Actualizar ticker con datos reales
+  monActualizarTicker(enProceso.length, completadas.length);
+}
+
+function monCard(o, tipo, num) {
+  const nombre = o.cliente ? o.cliente.toUpperCase() : 'CLIENTE';
+  const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' · ' + o.talle : ''}${o.rodado ? ' · ' + o.rodado : ''} · ${o.color}`;
+  const destinoBadge = o.destino === 'envio'
+    ? `<span class="mon-destino mon-destino-envio">🚚 Envío a domicilio</span>`
+    : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
+  const icon   = tipo === 'proceso' ? '⚙️' : '✅';
+  const tiempoComp = tipo === 'completada' && o.fechaCompletado
+    ? `<div style="font-size:12px;color:rgba(0,200,83,.6);margin-top:4px;letter-spacing:1px">LISTO ${monHaceMinutos(o.fechaCompletado)}</div>`
+    : '';
+
+  return `
+    <div class="mon-card mon-card-${tipo}">
+      <div class="mon-num">${o.id}</div>
+      <div class="mon-card-body">
+        <div class="mon-nombre">${nombre}</div>
+        <div class="mon-bici">${bici}</div>
+        ${destinoBadge}
+        ${tiempoComp}
+      </div>
+      <div class="mon-estado-icon">${icon}</div>
+    </div>`;
+}
+
+function monHaceMinutos(iso) {
+  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diff < 1)  return 'HACE INSTANTES';
+  if (diff === 1) return 'HACE 1 MIN';
+  if (diff < 60) return `HACE ${diff} MIN`;
+  const h = Math.floor(diff/60);
+  return `HACE ${h}h`;
+}
+
+function monActualizarTicker(enProceso, completadas) {
+  const base = [
+    '🚲 RODADOS LOPEZ · Tu bici, nuestra pasión',
+    `🔧 ${enProceso} bici${enProceso !== 1 ? 's' : ''} en armado ahora mismo`,
+    `✅ ${completadas} bici${completadas !== 1 ? 's' : ''} listas para retirar hoy`,
+    '🛡️ Hacé tu service en 15-20 días para activar la garantía',
+    '📍 ¡Gracias por elegirnos!',
+  ];
+  // duplicar para loop continuo
+  const all = [...base, ...base];
+  document.getElementById('mon-ticker').innerHTML = all
+    .map(t => `<span class="mon-ticker-item">${t}</span>`)
+    .join('<span class="mon-ticker-item mon-ticker-sep">·</span>');
+}
+
+function switchTab(prefix, id) {
+  const parent = document.getElementById(id).parentElement;
+  parent.querySelectorAll('.tab-body').forEach(t => t.classList.remove('on'));
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  const bodies = parent.querySelectorAll('.tab-body');
+  const tabs = parent.querySelectorAll('.tab');
+  bodies.forEach((b,i) => { if(b.id === id) tabs[i].classList.add('on'); });
+}
+
+// ════════════════════════════════════════════════════════════
+//  VENDEDOR
+// ════════════════════════════════════════════════════════════
+function initVendedor() {
+  fillMarcasSelect('v-marca');
+  document.getElementById('v-modelo').innerHTML = '<option value="">— Primero elegí marca —</option>';
+  document.getElementById('v-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-color').innerHTML = '<option value="">— Seleccioná —</option>';
+  vRenderOrdenes();
+  vRenderInbox();
+}
+
+function vFillModelos() {
+  const marca = document.getElementById('v-marca').value;
+  fillModelosSelect('v-modelo', marca);
+  document.getElementById('v-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-color').innerHTML = '<option value="">— Seleccioná —</option>';
+}
+
+function vFillVariants() {
+  const marca = document.getElementById('v-marca').value;
+  const modelo = document.getElementById('v-modelo').value;
+  fillVariants('v-talle','v-rodado','v-color', marca, modelo);
+}
+
+async function vEnviarOrden() {
+  const cliente = document.getElementById('v-cliente').value.trim();
+  const marca = document.getElementById('v-marca').value;
+  const modelo = document.getElementById('v-modelo').value;
+  const talle = document.getElementById('v-talle').value;
+  const rodado = document.getElementById('v-rodado').value;
+  const color = document.getElementById('v-color').value;
+  const cantidad = parseInt(document.getElementById('v-cantidad').value);
+  const obs = document.getElementById('v-obs').value.trim();
+  const destino = document.getElementById('v-destino').value; // 'envio' | 'salon'
+
+  if (!marca || !modelo || (!talle && !rodado) || !color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
+
+  const orden = {
+    id: DB.counter++,
+    cliente, marca, modelo, talle, rodado, color, cantidad, obs,
+    estado: 'pendiente', armador: null, cuadro: null,
+    esSalon: false,
+    destino: destino, // 'envio' | 'salon'
+    vendedor: sesionActual ? sesionActual.usuario : 'desconocido',
+    fechaCreacion: new Date().toISOString(),
+    fechaAsignado: null,
+    fechaCompletado: null,
+    tipoArmado: null, // 'kit' | 'prearmada' — se define al asignar
+    comisionDuplicada: false, // true si el cuadro ya existía en salón
+  };
+
+  DB.ordenes.push(orden);
+  await saveKey('ordenes');
+  await saveKey('counter');
+
+  // limpiar
+  ['v-cliente','v-obs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('v-marca').value = '';
+  document.getElementById('v-modelo').innerHTML = '<option value="">— Primero elegí marca —</option>';
+  document.getElementById('v-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('v-color').innerHTML = '<option value="">— Seleccioná —</option>';
+
+  vRenderOrdenes();
+  toast(`✅ Orden enviada al taller${destino==='envio'?' 🚚 (Envío a domicilio)':' 🏪 (Para salón)'}`);
+}
+
+function vRenderOrdenes() {
+  const cont = document.getElementById('v-lista-ordenes');
+  const lista = [...DB.ordenes].filter(o => !o.esSalon)
+    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).slice(0,30);
+  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div>'; return; }
+  cont.innerHTML = lista.map(o => `
+    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}">
+      <div style="flex:1">
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+          ${o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
+        </div>
+        <div class="ocard-sub">
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}${o.cuadro ? ` · N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          <br>${fmtHora(o.fechaCreacion)}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        ${estadoBadge(o)}
+        ${(o.estado==='pendiente'||o.estado==='en-proceso') ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})" style="font-size:12px;padding:5px 10px">✏️ Modificar</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function vRenderInbox() {
+  const cont = document.getElementById('v-inbox-lista');
+  if (!cont) return;
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const badge = document.getElementById('v-inbox-count');
+  const tabCount = document.getElementById('v-inbox-tab-count');
+  if (badge) { badge.textContent = alertas.length; badge.style.display = alertas.length ? 'flex' : 'none'; }
+  if (tabCount) { tabCount.textContent = alertas.length; tabCount.style.display = alertas.length ? 'inline-block' : 'none'; }
+
+  if (!alertas.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">✅</div>Sin alertas pendientes</div>'; return; }
+  cont.innerHTML = alertas.map((a,i) => `
+    <div class="inbox-item">
+      <div class="inbox-title">❌ Sin Stock — ${a.marca} ${a.modelo}</div>
+      <div class="inbox-body">
+        ${a.talle ? `Talle: <strong>${a.talle}</strong> · ` : ''}${a.rodado ? `Rodado: <strong>${a.rodado}</strong> · ` : ''}Color: <strong>${a.color}</strong>${a.cliente ? ` · Cliente: <strong>${a.cliente}</strong>` : ''}<br>
+        Devuelto por taller: <strong>${fmtHora(a.fecha)}</strong> · Orden original #${a.ordenId}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-o btn-sm" onclick="abrirAlertaVendedorDesdeInbox(${i})">✏️ Modificar y Reenviar</button>
+        <button class="btn btn-ghost btn-sm" onclick="vDismissAlerta(${i})">✕ Descartar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function vDismissAlerta(idx) {
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alerta = alertas[idx];
+  if (!alerta) return;
+  const globalIdx = DB.sinStockAlertas.indexOf(alerta);
+  if (globalIdx >= 0) DB.sinStockAlertas[globalIdx].resuelta = true;
+  await saveKey('sinStockAlertas');
+  vRenderInbox();
+}
+
+// Índice global de la alerta que se está editando en el overlay
+let alertaVendedorIdx = -1;
+
+function abrirAlertaVendedorDesdeInbox(idx) {
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alerta = alertas[idx];
+  if (!alerta) return;
+  alertaVendedorIdx = DB.sinStockAlertas.indexOf(alerta);
+  _mostrarAlertaVendedorConDatos(alerta);
+}
+
+function mostrarAlertaVendedor(alerta) {
+  alertaVendedorIdx = DB.sinStockAlertas.indexOf(alerta);
+  _mostrarAlertaVendedorConDatos(alerta);
+}
+
+function _mostrarAlertaVendedorConDatos(alerta) {
+  document.getElementById('alerta-vendedor-detalle').innerHTML = `
+    <strong>${alerta.marca} ${alerta.modelo}</strong><br>
+    ${alerta.talle ? `Talle: ${alerta.talle}<br>` : ''}${alerta.rodado ? `Rodado: ${alerta.rodado}<br>` : ''}Color: <strong>${alerta.color}</strong><br>
+    ${alerta.cliente ? `Cliente: ${alerta.cliente}<br>` : ''}
+    Devuelto: ${fmtHora(alerta.fecha)} · Orden #${alerta.ordenId}
+  `;
+  // pre-cargar formulario de edición
+  fillMarcasSelect('av-marca');
+  document.getElementById('av-marca').value = alerta.marca;
+  avFillModelos();
+  setTimeout(() => {
+    document.getElementById('av-modelo').value = alerta.modelo;
+    avFillVariants();
+    setTimeout(() => {
+      document.getElementById('av-talle').value = alerta.talle || '';
+      document.getElementById('av-rodado').value = alerta.rodado || '';
+      document.getElementById('av-color').value = alerta.color || '';
+    }, 80);
+  }, 40);
+  document.getElementById('av-cantidad').value = alerta.cantidad || 1;
+  document.getElementById('av-destino').value = alerta.destino || 'salon';
+  document.getElementById('av-obs').value = alerta.obs || '';
+  document.getElementById('alerta-vendedor').classList.add('on');
+  iniciarSonidoRepetitivo('vendedor');
+}
+
+function avFillModelos() {
+  const marca = document.getElementById('av-marca').value;
+  fillModelosSelect('av-modelo', marca);
+  document.getElementById('av-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('av-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('av-color').innerHTML = '<option value="">— Seleccioná —</option>';
+}
+function avFillVariants() {
+  fillVariants('av-talle','av-rodado','av-color',
+    document.getElementById('av-marca').value,
+    document.getElementById('av-modelo').value);
+}
+
+async function reenviarDesdeAlerta() {
+  const marca   = document.getElementById('av-marca').value;
+  const modelo  = document.getElementById('av-modelo').value;
+  const talle   = document.getElementById('av-talle').value;
+  const rodado  = document.getElementById('av-rodado').value;
+  const color   = document.getElementById('av-color').value;
+  const cantidad = parseInt(document.getElementById('av-cantidad').value);
+  const destino  = document.getElementById('av-destino').value;
+  const obs      = document.getElementById('av-obs').value.trim();
+  if (!marca || !modelo || (!talle && !rodado) || !color) {
+    toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return;
+  }
+
+  // Obtener datos del cliente desde la alerta original
+  const alertaOrig = alertaVendedorIdx >= 0 ? DB.sinStockAlertas[alertaVendedorIdx] : null;
+  const cliente = alertaOrig ? (alertaOrig.cliente || '') : '';
+
+  // Crear nueva orden
+  const nuevaOrden = {
+    id: DB.counter++,
+    cliente, marca, modelo, talle, rodado, color, cantidad, obs,
+    estado: 'pendiente', armador: null, cuadro: null,
+    esSalon: false,
+    destino,
+    vendedor: sesionActual ? sesionActual.usuario : 'vendedor',
+    fechaCreacion: new Date().toISOString(),
+    fechaAsignado: null,
+    fechaCompletado: null,
+    tipoArmado: null,
+    comisionDuplicada: false,
+  };
+  DB.ordenes.push(nuevaOrden);
+  await saveKey('ordenes');
+  await saveKey('counter');
+
+  // Marcar alerta como resuelta
+  if (alertaVendedorIdx >= 0) {
+    DB.sinStockAlertas[alertaVendedorIdx].resuelta = true;
+    await saveKey('sinStockAlertas');
+  }
+
+  detenerSonidoRepetitivo();
+  document.getElementById('alerta-vendedor').classList.remove('on');
+  alertaVendedorIdx = -1;
+  vRenderOrdenes();
+  vRenderInbox();
+  toast(`✅ Pedido modificado y reenviado al taller${destino==='envio'?' 🚚':' 🏪'}`);
+}
+
+async function descartarAlertaVendedor() {
+  if (alertaVendedorIdx >= 0) {
+    DB.sinStockAlertas[alertaVendedorIdx].resuelta = true;
+    await saveKey('sinStockAlertas');
+  }
+  detenerSonidoRepetitivo();
+  document.getElementById('alerta-vendedor').classList.remove('on');
+  alertaVendedorIdx = -1;
+  vRenderInbox();
+}
+
+// ════════════════════════════════════════════════════════════
+//  TALLER
+// ════════════════════════════════════════════════════════════
+function initTaller() {
+  fillMarcasSelect('s-marca');
+  fillArmadoresSelect('s-armador');
+  tRenderAll();
+  lastOrdenCount = DB.ordenes.filter(o=>!o.esSalon).length;
+}
+
+function tRenderAll() {
+  const pendientes = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon);
+  const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
+  const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
+  const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
+
+  renderOcards('t-pendientes', pendientes, 'pendiente');
+  renderOcards('t-en-proceso', enProceso, 'en-proceso');
+  renderOcards('t-completadas', completadas, 'completada');
+  renderSalon();
+  renderEnvios(envios);
+}
+
+function renderOcards(contId, lista, tipo) {
+  const cont = document.getElementById(contId);
+  if (!lista.length) {
+    const msgs = {pendiente:'Sin órdenes pendientes ✅', 'en-proceso':'Nada en proceso 💤', completada:'Nada aún 🏁'};
+    cont.innerHTML = `<div class="empty"><div class="empty-icon">${tipo==='pendiente'?'📋':tipo==='en-proceso'?'🔧':'🏁'}</div>${msgs[tipo]}</div>`;
+    return;
+  }
+  cont.innerHTML = lista.sort((a,b)=>new Date(a.fechaCreacion)-new Date(b.fechaCreacion)).map(o => `
+    <div class="ocard ${o.estado}">
+      <div style="flex:1">
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}</div>
+        <div class="ocard-sub">
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}${o.cuadro ? ` · N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          <br>${fmtHora(o.fechaCreacion)}${o.armador ? ` · Armador: <strong>${o.armador}</strong>` : ''}
+        </div>
+      </div>
+      <div class="ocard-actions">
+      ${tipo==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
+        ${tipo==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
+        ${tipo==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderEnvios(envios) {
+  const cont = document.getElementById('t-envios-lista');
+  const countEl = document.getElementById('t-envios-count');
+  const pendEnvios = envios.filter(o => o.estado !== 'completada');
+  if (countEl) { countEl.textContent = pendEnvios.length; countEl.style.display = pendEnvios.length ? 'inline-block' : 'none'; }
+  if (!envios.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🚚</div>Sin pedidos de envío</div>'; return; }
+  cont.innerHTML = envios.sort((a,b)=>new Date(a.fechaCreacion)-new Date(b.fechaCreacion)).map(o => `
+    <div class="ocard ${o.estado}" style="border-left-color:var(--yellow)">
+      <div style="flex:1">
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo} <span class="badge badge-env">🚚 Envío</span></div>
+        <div class="ocard-sub">
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · 📦 Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}
+          <br>${fmtHora(o.fechaCreacion)} · ${estadoBadge(o)}
+        </div>
+      </div>
+      <div class="ocard-actions">
+        ${o.estado==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button>` : ''}
+        ${o.estado==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Listo</button>` : ''}
+        ${o.estado==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ASIGNAR
+function abrirModalAsignar(id) {
+  ordenAsignarId = id;
+  const o = DB.ordenes.find(x => x.id===id);
+  document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : ''}`;
+  const sel = document.getElementById('modal-armador');
+  sel.innerHTML = '<option value="">— Elegí —</option>';
+  DB.armadores.forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
+  document.getElementById('modal-cuadro').value = '';
+  document.getElementById('modal-tipo-armado').value = '';
+
+  // Mostrar/ocultar tipoArmado según si la bici tiene kit+prearmada
+  const biciCatalogo = DB.catalogo.find(b => b.marca===o.marca && b.modelo===o.modelo);
+  const mostrarTipo = biciCatalogo ? biciCatalogo.tieneKitPre === true : false;
+  const wrapTipo = document.getElementById('modal-tipo-armado-wrap');
+  if (wrapTipo) wrapTipo.style.display = mostrarTipo ? 'block' : 'none';
+  // si no tiene kitPre, auto-asignar tipo 'kit' (comisión única)
+  if (!mostrarTipo) document.getElementById('modal-tipo-armado').value = 'kit';
+
+  document.getElementById('modal-asignar').classList.add('on');
+}
+
+async function confirmarAsignacion() {
+  const armador = document.getElementById('modal-armador').value;
+  const cuadro  = document.getElementById('modal-cuadro').value.trim();
+  const tipoArmado = document.getElementById('modal-tipo-armado').value;
+  const wrapTipo = document.getElementById('modal-tipo-armado-wrap');
+  const requiereTipo = wrapTipo && wrapTipo.style.display !== 'none';
+  if (!armador) { toast('⚠️ Elegí un armador','var(--red)'); return; }
+  if (requiereTipo && !tipoArmado) { toast('⚠️ Seleccioná el tipo de armado (Kit o Prearmada)','var(--red)'); return; }
+  
+  const o = DB.ordenes.find(x => x.id===ordenAsignarId);
+  if (o) { 
+    o.estado='en-proceso'; 
+    o.armador=armador; 
+    o.tipoArmado = tipoArmado || 'kit';
+    o.fechaAsignado=new Date().toISOString();
+    if(cuadro) o.cuadro=cuadro; 
+  }
+  await saveKey('ordenes');
+  closeModal('modal-asignar');
+  tRenderAll(); vRenderOrdenes();
+  const tipoLabel = (tipoArmado==='prearmada') ? 'Prearmada' : 'Kit';
+  toast(`✅ ${armador} asignado${requiereTipo ? ` — ${tipoLabel}` : ''}`);
+}
+
+// COMPLETAR
+function abrirModalCompletar(id) {
+  ordenCompletarId = id;
+  const o = DB.ordenes.find(x => x.id===id);
+  document.getElementById('modal-comp-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${o.tipoArmado ? ` — ${o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearmada'}` : ''}`;
+  document.getElementById('modal-comp-cuadro').value = o.cuadro || '';
+  document.getElementById('dup-warning').classList.remove('on');
+  document.getElementById('modal-completar').classList.add('on');
+}
+
+function checkCuadroDuplicado(cuadro) {
+  if (!cuadro) { document.getElementById('dup-warning').classList.remove('on'); return; }
+  // Buscar si ese cuadro ya existe en órdenes completadas de salón
+  const existeEnSalon = DB.ordenes.some(o => 
+    o.esSalon && o.cuadro && o.cuadro.toLowerCase() === cuadro.toLowerCase() && o.estado === 'completada'
+  );
+  document.getElementById('dup-warning').classList.toggle('on', existeEnSalon);
+}
+
+async function confirmarCompletado() {
+  const cuadro = document.getElementById('modal-comp-cuadro').value.trim();
+  if (!cuadro) { toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)'); return; }
+  
+  const o = DB.ordenes.find(x => x.id===ordenCompletarId);
+  if (o) { 
+    o.estado='completada'; 
+    o.fechaCompletado=new Date().toISOString(); 
+    o.cuadro=cuadro;
+    // calcular tiempo de armado
+    if (o.fechaAsignado) {
+      const minutos = Math.round((new Date(o.fechaCompletado) - new Date(o.fechaAsignado)) / 60000);
+      o.tiempoArmadoMin = minutos;
+    }
+    // verificar si el cuadro ya estaba armado en salón → no duplicar comisión
+    const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === cuadro.toLowerCase() && x.estado==='completada' && x.id !== o.id);
+    o.comisionDuplicada = yaEnSalon;
+  }
+  await saveKey('ordenes');
+  closeModal('modal-completar');
+  tRenderAll(); vRenderOrdenes();
+  if (o?.comisionDuplicada) {
+    toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
+  } else {
+    toast('🎉 Bici completada');
+  }
+}
+
+// DEVOLVER SIN STOCK AL VENDEDOR
+async function devolverSinStock() {
+  const o = DB.ordenes.find(x => x.id===ordenCompletarId);
+  if (!o) return;
+  if (!confirm(`¿Devolver al vendedor por falta de stock?\n${o.marca} ${o.modelo}`)) return;
+
+  // marcar orden como sin-stock (sale de pendientes y en-proceso)
+  o.estado = 'sin-stock';
+  o.armador = null;
+  o.fechaAsignado = null;
+  o.tipoArmado = null;
+
+  // crear alerta para el vendedor
+  const alerta = {
+    id: Date.now(),
+    ordenId: o.id,
+    vendedor: o.vendedor || 'vendedor',
+    marca: o.marca, modelo: o.modelo, talle: o.talle, rodado: o.rodado,
+    color: o.color, cliente: o.cliente, obs: o.obs,
+    cantidad: o.cantidad, destino: o.destino,
+    fecha: new Date().toISOString(),
+    vista: false,
+    resuelta: false,
+  };
+  if (!DB.sinStockAlertas) DB.sinStockAlertas = [];
+  DB.sinStockAlertas.push(alerta);
+
+  await saveKey('ordenes');
+  await saveKey('sinStockAlertas');
+  closeModal('modal-completar');
+  tRenderAll();
+  toast('📨 Solicitud devuelta al vendedor por falta de stock','var(--red)');
+}
+
+// EDITAR ORDEN
+function abrirModalEditar(id) {
+  ordenEditarId = id;
+  const o = DB.ordenes.find(x => x.id===id);
+  document.getElementById('modal-editar-info').textContent =
+    `Orden #${o.id} · Creada: ${fmtHora(o.fechaCreacion)}${o.cliente ? ' · Cliente: '+o.cliente : ''}`;
+
+  // llenar marcas
+  fillMarcasSelect('e-marca');
+  document.getElementById('e-marca').value = o.marca;
+  // llenar modelos de esa marca
+  fillModelosSelect('e-modelo', o.marca);
+  document.getElementById('e-modelo').value = o.modelo;
+  // llenar talles/colores de ese modelo
+  fillVariants('e-talle','e-rodado','e-color', o.marca, o.modelo);
+  document.getElementById('e-talle').value = o.talle || '';
+  document.getElementById('e-rodado').value = o.rodado || '';
+  document.getElementById('e-color').value = o.color;
+  // cantidad
+  document.getElementById('e-cantidad').value = o.cantidad;
+  // armador
+  const selA = document.getElementById('e-armador');
+  selA.innerHTML = '<option value="">— Sin asignar —</option>';
+  DB.armadores.forEach(a => selA.innerHTML += `<option value="${a}">${a}</option>`);
+  selA.value = o.armador || '';
+  // otros campos
+  document.getElementById('e-cliente').value = o.cliente || '';
+  document.getElementById('e-cuadro').value = o.cuadro || '';
+  document.getElementById('e-obs').value = o.obs || '';
+
+  document.getElementById('modal-editar').classList.add('on');
+}
+
+function eFillModelos() {
+  const marca = document.getElementById('e-marca').value;
+  fillModelosSelect('e-modelo', marca);
+  document.getElementById('e-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('e-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('e-color').innerHTML = '<option value="">— Seleccioná —</option>';
+}
+
+function eFillVariants() {
+  fillVariants('e-talle','e-rodado','e-color', document.getElementById('e-marca').value, document.getElementById('e-modelo').value);
+}
+
+async function confirmarEdicion() {
+  const marca    = document.getElementById('e-marca').value;
+  const modelo   = document.getElementById('e-modelo').value;
+  const talle    = document.getElementById('e-talle').value;
+  const rodado   = document.getElementById('e-rodado').value;
+  const color    = document.getElementById('e-color').value;
+  const cantidad = parseInt(document.getElementById('e-cantidad').value);
+  const armador  = document.getElementById('e-armador').value;
+  const cliente  = document.getElementById('e-cliente').value.trim();
+  const cuadro   = document.getElementById('e-cuadro').value.trim();
+  const obs      = document.getElementById('e-obs').value.trim();
+
+  if (!marca||!modelo||(!talle&&!rodado)||!color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
+
+  
+  const o = DB.ordenes.find(x => x.id===ordenEditarId);
+  if (o) {
+    o.marca = marca; o.modelo = modelo; o.talle = talle; o.rodado = rodado; o.color = color;
+    o.cantidad = cantidad; o.cliente = cliente; o.obs = obs;
+    if (cuadro) o.cuadro = cuadro;
+    // si se asignó armador y antes no tenía, pasar a en-proceso
+    if (armador && !o.armador) { o.armador = armador; o.estado = 'en-proceso'; }
+    else if (armador) { o.armador = armador; }
+    else if (!armador && o.estado === 'en-proceso') { o.armador = null; o.estado = 'pendiente'; }
+    o.ultimaEdicion = new Date().toISOString();
+    o.editadoPor = sesionActual ? sesionActual.usuario : 'desconocido';
+  }
+  await saveKey('ordenes');
+  closeModal('modal-editar');
+  tRenderAll(); vRenderOrdenes();
+  toast('✅ Orden modificada');
+}
+
+async function cancelarOrden() {
+  if (!confirm('¿Cancelar esta orden? Quedará registrada como cancelada en el historial.')) return;
+  
+  const o = DB.ordenes.find(x => x.id===ordenEditarId);
+  if (o) { o.estado = 'cancelada'; o.fechaCompletado = new Date().toISOString(); }
+  await saveKey('ordenes');
+  closeModal('modal-editar');
+  tRenderAll(); vRenderOrdenes();
+  toast('🗑️ Orden cancelada','var(--red)');
+}
+function sFillModelos() {
+  const marca = document.getElementById('s-marca').value;
+  fillModelosSelect('s-modelo', marca);
+  document.getElementById('s-talle').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('s-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('s-color').innerHTML = '<option value="">— Seleccioná —</option>';
+}
+function sFillVariants() { fillVariants('s-talle','s-rodado','s-color', document.getElementById('s-marca').value, document.getElementById('s-modelo').value); }
+
+async function sRegistrar() {
+  const armador  = document.getElementById('s-armador').value;
+  const marca    = document.getElementById('s-marca').value;
+  const modelo   = document.getElementById('s-modelo').value;
+  const talle    = document.getElementById('s-talle').value;
+  const rodado   = document.getElementById('s-rodado').value;
+  const color    = document.getElementById('s-color').value;
+  const cantidad = parseInt(document.getElementById('s-cantidad').value);
+  const cuadro   = document.getElementById('s-cuadro').value.trim();
+  if (!armador||!marca||!modelo) { toast('⚠️ Completá armador, marca y modelo','var(--red)'); return; }
+  if (!cuadro) { toast('⚠️ El N° de Cuadro es obligatorio para bicis del salón','var(--red)'); return; }
+
+  
+  
+
+  DB.ordenes.push({
+    id: DB.counter++, cliente:'', marca, modelo,
+    talle: talle||'', rodado: rodado||'', color: color||'-', cantidad, obs:'', armador, cuadro,
+    estado:'completada', esSalon:true,
+    fechaCreacion: new Date().toISOString(),
+    fechaCompletado: new Date().toISOString(),
+  });
+  await saveKey('ordenes'); await saveKey('counter');
+  ['s-armador','s-marca','s-cuadro'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('s-modelo').innerHTML='<option value="">— Seleccioná —</option>';
+  document.getElementById('s-talle').innerHTML='<option value="">— Seleccioná —</option>';
+  document.getElementById('s-rodado').innerHTML='<option value="">— Seleccioná —</option>';
+  document.getElementById('s-color').innerHTML='<option value="">— Seleccioná —</option>';
+  renderSalon();
+  toast('✅ Registrado para salón');
+}
+
+function renderSalon() {
+  const cont = document.getElementById('s-lista');
+  const lista = DB.ordenes.filter(o=>o.esSalon).sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
+  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🚲</div>Sin registros</div>'; return; }
+  cont.innerHTML = lista.slice(0,20).map(o=>`
+    <div class="ocard completada" style="opacity:1">
+      <div style="flex:1">
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}</div>
+        <div class="ocard-sub">${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong> · ${fmtHora(o.fechaCreacion)}</div>
+      </div>
+      <span class="badge badge-p">🔧 ${o.armador}</span>
+    </div>
+  `).join('');
+}
+
+// ALERTA
+// ── SISTEMA DE SONIDO ──────────────────────────────────────
+let alertSoundInterval = null;
+let alertSoundCtx = null;
+
+function crearSonidoAlerta(tipo = 'taller') {
+  try {
+    if (!alertSoundCtx) alertSoundCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = alertSoundCtx;
+
+    function beep(freq, dur, vol=0.3, t=0) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+      gain.gain.setValueAtTime(vol, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + dur);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + dur + 0.05);
+    }
+
+    if (tipo === 'taller') {
+      // Melodía amigable ascendente (nueva orden)
+      beep(523, 0.12, 0.25, 0);
+      beep(659, 0.12, 0.25, 0.15);
+      beep(784, 0.20, 0.30, 0.30);
+    } else {
+      // Melodía de advertencia descendente (sin stock)
+      beep(784, 0.12, 0.25, 0);
+      beep(659, 0.12, 0.25, 0.15);
+      beep(440, 0.20, 0.30, 0.30);
+    }
+  } catch(e) { console.warn('Audio no disponible:', e); }
+}
+
+function iniciarSonidoRepetitivo(tipo = 'taller') {
+  detenerSonidoRepetitivo();
+  crearSonidoAlerta(tipo);
+  alertSoundInterval = setInterval(() => crearSonidoAlerta(tipo), 3000);
+}
+
+function detenerSonidoRepetitivo() {
+  if (alertSoundInterval) { clearInterval(alertSoundInterval); alertSoundInterval = null; }
+}
+// ─────────────────────────────────────────────────────────
+
+function mostrarAlerta(orden) {
+  document.getElementById('alerta-detalle').innerHTML = `
+    <strong>${orden.cantidad}x ${orden.marca} ${orden.modelo}</strong><br>
+    ${orden.talle ? `Talle: ${orden.talle}<br>` : ''}${orden.rodado ? `Rodado: ${orden.rodado}<br>` : ''}Color: ${orden.color}<br>
+    ${orden.cliente ? `Cliente: ${orden.cliente}<br>` : ''}
+    ${orden.destino==='envio' ? '<span style="color:var(--yellow);font-weight:700">🚚 ENVÍO A DOMICILIO</span><br>' : ''}
+    ${orden.obs ? `Obs: ${orden.obs}<br>` : ''}
+    Hora: ${fmtHora(orden.fechaCreacion)}
+  `;
+  document.getElementById('alerta-taller').classList.add('on');
+  iniciarSonidoRepetitivo('taller');
+}
+function cerrarAlerta() {
+  document.getElementById('alerta-taller').classList.remove('on');
+  detenerSonidoRepetitivo();
+  tRenderAll();
+}
+
+// ════════════════════════════════════════════════════════════
+//  ADMIN
+// ════════════════════════════════════════════════════════════
+// CATÁLOGO
+function toggleComisionesForm() {
+  const esSi = document.getElementById('c-kit-pre-si').checked;
+  document.getElementById('c-com-simple-wrap').style.display = esSi ? 'none' : 'block';
+  document.getElementById('c-com-doble-wrap').style.display  = esSi ? 'block' : 'none';
+}
+
+async function cAgregar() {
+  const marca   = document.getElementById('c-marca').value.trim();
+  const modelo  = document.getElementById('c-modelo').value.trim();
+  const talles  = document.getElementById('c-talles').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const rodados = document.getElementById('c-rodados').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const colores = document.getElementById('c-colores').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const tieneKitPre = document.getElementById('c-kit-pre-si').checked;
+  const comKit  = tieneKitPre ? (parseInt(document.getElementById('c-com-kit').value)||0) : 0;
+  const comPre  = tieneKitPre ? (parseInt(document.getElementById('c-com-pre').value)||0) : 0;
+  const comSimple = !tieneKitPre ? (parseInt(document.getElementById('c-com-simple').value)||0) : 0;
+
+  if (!marca||!modelo||!colores.length) { toast('⚠️ Completá Marca, Modelo y al menos un Color','var(--red)'); return; }
+  if (!talles.length && !rodados.length) { toast('⚠️ Ingresá al menos un Talle o un Rodado','var(--red)'); return; }
+
+  DB.catalogo.push({marca, modelo, talles, rodados, colores, tieneKitPre});
+  const key = `${marca}|${modelo}`;
+  if (tieneKitPre) {
+    DB.comisionesKit[key] = comKit;
+    DB.comisionesPre[key] = comPre;
+    DB.comisiones[key]    = comKit;
+  } else {
+    DB.comisionesKit[key] = comSimple;
+    DB.comisionesPre[key] = comSimple;
+    DB.comisiones[key]    = comSimple;
+  }
+  await saveKey('catalogo'); await saveKey('comisionesKit'); await saveKey('comisionesPre'); await saveKey('comisiones');
+  ['c-marca','c-modelo','c-talles','c-rodados','c-colores','c-com-kit','c-com-pre','c-com-simple'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('c-kit-pre-no').checked = true;
+  toggleComisionesForm();
+  renderCatalogo(); renderComisiones();
+  toast('✅ Bicicleta agregada al catálogo');
+}
+
+function renderCatalogo() {
+  const tbody = document.getElementById('t-catalogo');
+  if (!DB.catalogo.length) { tbody.innerHTML='<tr><td colspan="8" class="tbl-empty">Sin bicicletas en catálogo</td></tr>'; return; }
+  tbody.innerHTML = DB.catalogo.map((b,i)=>{
+    let talles  = b.talles  || [];
+    let rodados = b.rodados || [];
+    if (!b.rodados) {
+      talles  = (b.talles||[]).filter(t => /^[a-zA-Z]+$/.test(t.trim()));
+      rodados = (b.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test(t.trim())));
+    }
+    const key = `${b.marca}|${b.modelo}`;
+    const comKit = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+    const comPre = (DB.comisionesPre||{})[key] ?? 0;
+    const tieneKitPre = b.tieneKitPre === true;
+    return `<tr>
+      <td><strong>${b.marca}</strong></td>
+      <td>${b.modelo}</td>
+      <td>${talles.length  ? talles.map(t=>`<span class="chip">${t}</span>`).join('')  : '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${rodados.length ? rodados.map(r=>`<span class="chip">${r}</span>`).join('') : '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${b.colores.map(c=>`<span class="chip">${c}</span>`).join('')}</td>
+      <td style="text-align:center">${tieneKitPre ? '<span class="badge badge-b">Sí</span>' : '<span style="color:var(--text3);font-size:12px">No</span>'}</td>
+      <td style="font-size:12px">${tieneKitPre
+        ? `<span style="color:var(--blue)">$${comKit.toLocaleString('es-AR')} kit</span> / <span style="color:var(--purple)">$${comPre.toLocaleString('es-AR')} pre</span>`
+        : `<span style="color:var(--green)">$${comKit.toLocaleString('es-AR')}</span>`
+      }</td>
+      <td><button class="btn btn-r btn-sm" onclick="cEliminar(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function cEliminar(i) {
+  const b = DB.catalogo[i];
+  const key = `${b.marca}|${b.modelo}`;
+  delete DB.comisiones[key];
+  delete DB.comisionesKit[key];
+  delete DB.comisionesPre[key];
+  DB.catalogo.splice(i,1);
+  await saveKey('catalogo'); await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
+  renderCatalogo(); renderComisiones();
+  toast('🗑️ Eliminado','var(--red)');
+}
+
+// IMPORTAR EXCEL
+function importarExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('import-status');
+  status.textContent = '⏳ Procesando...';
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      let added = 0, skipped = 0, comUpdated = 0;
+      for (const row of rows) {
+        const marca  = String(row['Marca']||row['marca']||'').trim();
+        const modelo = String(row['Modelo']||row['modelo']||'').trim();
+        const tallesRaw  = String(row['Talles']||row['talles']||row['Talle']||row['talle']||'').trim();
+        const rodadosRaw = String(row['Rodados']||row['rodados']||row['Rodado']||row['rodado']||'').trim();
+        const coloresRaw = String(row['Colores']||row['colores']||row['Color']||row['color']||'').trim();
+        const comisionRaw = row['Comision']||row['comision']||row['Comisión']||row['comisión']||row['Comision ($)']||row['Comisión ($)']||'';
+        const comisionKitRaw = row['ComisionKit']||row['comisionKit']||row['Comision Kit']||row['Comisión Kit']||comisionRaw||'';
+        const comisionPreRaw = row['ComisionPrearmada']||row['comisionPrearmada']||row['Comision Prearmada']||row['Comisión Prearmada']||'';
+        if (!marca||!modelo) { skipped++; continue; }
+        const talles  = tallesRaw  ? tallesRaw.split(',').map(s=>s.trim()).filter(Boolean)  : [];
+        const rodados = rodadosRaw ? rodadosRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        const colores = coloresRaw ? coloresRaw.split(',').map(s=>s.trim()).filter(Boolean) : ['Único'];
+        const comision = comisionRaw !== '' ? parseInt(String(comisionRaw).replace(/[^0-9]/g,''))||0 : null;
+        const comisionKit = comisionKitRaw !== '' ? parseInt(String(comisionKitRaw).replace(/[^0-9]/g,''))||0 : null;
+        const comisionPre = comisionPreRaw !== '' ? parseInt(String(comisionPreRaw).replace(/[^0-9]/g,''))||0 : null;
+        const existe = DB.catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
+        if (!existe) {
+          DB.catalogo.push({marca,modelo,talles,rodados,colores});
+          DB.comisionesKit[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
+          DB.comisionesPre[`${marca}|${modelo}`] = comisionPre ?? 0;
+          DB.comisiones[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
+          added++;
+          if (comisionKit !== null || comision !== null) comUpdated++;
+        } else {
+          if (comisionKit !== null || comision !== null) {
+            DB.comisionesKit[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
+            DB.comisiones[`${marca}|${modelo}`] = DB.comisionesKit[`${marca}|${modelo}`];
+            comUpdated++;
+          }
+          if (comisionPre !== null) DB.comisionesPre[`${marca}|${modelo}`] = comisionPre;
+          skipped++;
+        }
+      }
+      await saveKey('catalogo'); await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
+      renderCatalogo(); renderComisiones();
+      status.innerHTML = `<span style="color:var(--green)">✅ ${added} bicicletas importadas</span>${comUpdated?` · <span style="color:var(--green)">${comUpdated} comisiones cargadas</span>`:''}${skipped?` · ${skipped} omitidas`:''}`;
+      toast(`✅ ${added} importadas${comUpdated?' · '+comUpdated+' comisiones':''}`);
+    } catch(err) {
+      status.innerHTML = `<span style="color:var(--red)">❌ Error al leer el archivo: ${err.message}</span>`;
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportarCatalogo() {
+  const rows = DB.catalogo.map(b=>{
+    const key = `${b.marca}|${b.modelo}`;
+    return {
+      Marca: b.marca, Modelo: b.modelo,
+      Talles: (b.talles||[]).join(', '),
+      Rodados: (b.rodados||[]).join(', '),
+      Colores: b.colores.join(', '),
+      'ComisionKit ($)': (DB.comisionesKit||{})[key] ?? DB.comisiones[key] ?? 0,
+      'ComisionPrearmada ($)': (DB.comisionesPre||{})[key] ?? 0,
+    };
+  });
+  exportXlsx([{name:'Catálogo', data:rows}], 'catalogo_bicicletas.xlsx');
+  toast('⬇️ Catálogo exportado');
+}
+
+// COMISIONES
+function renderComisiones() {
+  const tbody = document.getElementById('t-comisiones');
+  const claves = [...new Set([...Object.keys(DB.comisionesKit||{}), ...Object.keys(DB.comisiones||{})])];
+  if (!claves.length) { tbody.innerHTML='<tr><td colspan="4" class="tbl-empty">Sin datos</td></tr>'; return; }
+  tbody.innerHTML = claves.map(k=>{
+    const [m,mo]=k.split('|');
+    const valKit = (DB.comisionesKit||{})[k] ?? (DB.comisiones||{})[k] ?? 0;
+    const valPre = (DB.comisionesPre||{})[k] ?? 0;
+    return `
+      <tr>
+        <td rowspan="2"><strong>${m}</strong></td><td rowspan="2">${mo}</td>
+        <td style="color:var(--blue);font-size:12px">📦 Kit</td>
+        <td><input type="number" id="comkit_${k.replace(/\|/g,'__')}" value="${valKit}"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:120px;border-radius:3px;font-size:14px" min="0"></td>
+      </tr>
+      <tr>
+        <td style="color:var(--purple);font-size:12px">🚲 Prearmada</td>
+        <td><input type="number" id="compre_${k.replace(/\|/g,'__')}" value="${valPre}"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:120px;border-radius:3px;font-size:14px" min="0"></td>
+      </tr>`;
+  }).join('');
+}
+
+async function guardarComisiones() {
+  const claves = [...new Set([...Object.keys(DB.comisionesKit||{}), ...Object.keys(DB.comisiones||{})])];
+  claves.forEach(k=>{
+    const elKit = document.getElementById('comkit_'+k.replace(/\|/g,'__'));
+    const elPre = document.getElementById('compre_'+k.replace(/\|/g,'__'));
+    if (!DB.comisionesKit) DB.comisionesKit = {};
+    if (!DB.comisionesPre) DB.comisionesPre = {};
+    if(elKit) { DB.comisionesKit[k] = parseInt(elKit.value)||0; DB.comisiones[k] = DB.comisionesKit[k]; }
+    if(elPre) DB.comisionesPre[k] = parseInt(elPre.value)||0;
+  });
+  await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
+  renderCatalogo();
+  toast('💾 Comisiones guardadas');
+}
+
+// ARMADORES
+async function armAgregar() {
+  const nombre = document.getElementById('arm-nombre').value.trim();
+  if (!nombre) { toast('⚠️ Escribí un nombre','var(--red)'); return; }
+  if (DB.armadores.includes(nombre)) { toast('⚠️ Ya existe','var(--red)'); return; }
+  DB.armadores.push(nombre);
+  await saveKey('armadores');
+  document.getElementById('arm-nombre').value='';
+  renderArmadores();
+  toast('✅ Armador agregado');
+}
+
+async function armEliminar(nombre) {
+  DB.armadores = DB.armadores.filter(a=>a!==nombre);
+  await saveKey('armadores');
+  renderArmadores();
+  toast('🗑️ Armador eliminado','var(--red)');
+}
+
+function renderArmadores() {
+  const cont = document.getElementById('arm-lista');
+  if (!DB.armadores.length) { cont.innerHTML='<div class="empty">Sin armadores</div>'; return; }
+  cont.innerHTML = DB.armadores.map(a=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;margin-bottom:8px">
+      <span style="font-size:16px;font-weight:600">🔧 ${a}</span>
+      <button class="btn btn-r btn-sm" onclick="armEliminar('${a}')">✕ Eliminar</button>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  USUARIOS
+// ════════════════════════════════════════════════════════════
+function renderUsuarios() {
+  const cont = document.getElementById('usuarios-lista');
+  const roles = ['admin','vendedor','taller'];
+  const roleLabels = {admin:'⚙️ Administración', vendedor:'🛒 Vendedor', taller:'🔧 Taller'};
+  cont.innerHTML = roles.map(rol => {
+    const users = DB.usuarios.filter(u => u.rol === rol);
+    return `
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${roleLabels[rol]}</div>
+        ${users.map((u,i) => `
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+            <input type="text" value="${u.usuario}" data-rol="${rol}" data-idx="${DB.usuarios.indexOf(u)}" data-field="usuario"
+              onchange="editarUsuarioInline(this)"
+              style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;flex:1;min-width:120px;outline:none;"
+              placeholder="usuario">
+            <input type="password" value="${u.password}" data-rol="${rol}" data-idx="${DB.usuarios.indexOf(u)}" data-field="password"
+              onchange="editarUsuarioInline(this)"
+              style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;flex:1;min-width:120px;outline:none;"
+              placeholder="contraseña">
+            ${DB.usuarios.filter(x=>x.rol===rol).length > 1 ? `<button class="btn btn-r btn-sm" onclick="eliminarUsuario(${DB.usuarios.indexOf(u)})">✕</button>` : '<span style="width:42px"></span>'}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function editarUsuarioInline(el) {
+  const idx = parseInt(el.dataset.idx);
+  const field = el.dataset.field;
+  if (DB.usuarios[idx]) DB.usuarios[idx][field] = el.value;
+}
+
+async function guardarUsuarios() {
+  // recolectar todos los inputs del formulario por si acaso
+  document.querySelectorAll('#usuarios-lista input').forEach(el => {
+    if (el.dataset.idx !== undefined) {
+      const idx = parseInt(el.dataset.idx);
+      if (DB.usuarios[idx]) DB.usuarios[idx][el.dataset.field] = el.value;
+    }
+  });
+  await saveKey('usuarios');
+  toast('💾 Usuarios guardados');
+}
+
+async function agregarUsuario() {
+  const rol  = document.getElementById('nu-rol').value;
+  const user = document.getElementById('nu-user').value.trim();
+  const pass = document.getElementById('nu-pass').value;
+  if (!user||!pass) { toast('⚠️ Completá usuario y contraseña','var(--red)'); return; }
+  if (DB.usuarios.find(u=>u.usuario===user)) { toast('⚠️ Ese usuario ya existe','var(--red)'); return; }
+  DB.usuarios.push({rol, usuario:user, password:pass});
+  await saveKey('usuarios');
+  document.getElementById('nu-user').value='';
+  document.getElementById('nu-pass').value='';
+  renderUsuarios();
+  toast('✅ Usuario agregado');
+}
+
+async function eliminarUsuario(idx) {
+  DB.usuarios.splice(idx, 1);
+  await saveKey('usuarios');
+  renderUsuarios();
+  toast('🗑️ Usuario eliminado','var(--red)');
+}
+// ════════════════════════════════════════════════════════════
+//  REPORTE CON PERÍODOS
+// ════════════════════════════════════════════════════════════
+let periodoActivo = 'semana'; // hoy | semana | mes | anio | custom
+
+function setPeriodo(p) {
+  periodoActivo = p;
+  // highlight botones
+  ['hoy','semana','mes','anio','custom'].forEach(k => {
+    const btn = document.getElementById('pbtn-'+k);
+    if (!btn) return;
+    if (k === p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
+    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
+  });
+  const cr = document.getElementById('custom-range');
+  if (cr) cr.style.display = p === 'custom' ? 'flex' : 'none';
+  renderReporte();
+}
+
+function getOrdenesDelPeriodo() {
+  const ahora = new Date();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+  let desde, hasta;
+  if (periodoActivo === 'hoy') {
+    desde = hoy;
+    hasta = new Date(hoy.getTime() + 86400000 - 1);
+  } else if (periodoActivo === 'semana') {
+    const dow = ahora.getDay(); // 0=dom
+    const lunes = new Date(hoy.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
+    desde = lunes;
+    hasta = new Date(lunes.getTime() + 7 * 86400000 - 1);
+  } else if (periodoActivo === 'mes') {
+    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    hasta = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+  } else if (periodoActivo === 'anio') {
+    desde = new Date(ahora.getFullYear(), 0, 1);
+    hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
+  } else if (periodoActivo === 'custom') {
+    const d = document.getElementById('r-desde')?.value;
+    const h = document.getElementById('r-hasta')?.value;
+    if (!d || !h) return { ordenes: [], label: 'Seleccioná las fechas' };
+    desde = new Date(d + 'T00:00:00');
+    hasta = new Date(h + 'T23:59:59');
+  }
+
+  const fmtD = d => d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const labels = {
+    hoy: `Hoy — ${fmtD(ahora)}`,
+    semana: `Esta semana — ${fmtD(desde)} al ${fmtD(hasta)}`,
+    mes: `${ahora.toLocaleString('es-AR',{month:'long',year:'numeric'})}`,
+    anio: `Año ${ahora.getFullYear()}`,
+    custom: desde && hasta ? `${fmtD(desde)} al ${fmtD(hasta)}` : '',
+  };
+
+  const ordenes = DB.ordenes.filter(o => {
+    if (o.estado !== 'completada' || !o.armador) return false;
+    const f = new Date(o.fechaCompletado || o.fechaCreacion);
+    return f >= desde && f <= hasta;
+  });
+
+  return { ordenes, label: labels[periodoActivo] || '' };
+}
+
+function renderReporte() {
+  const cont = document.getElementById('reporte-body');
+  const lbl  = document.getElementById('periodo-label');
+  const { ordenes: periodo, label } = getOrdenesDelPeriodo();
+  if (lbl) lbl.textContent = label ? `Mostrando: ${label}` : '';
+
+  if (!periodo.length) {
+    cont.innerHTML='<div class="empty"><div class="empty-icon">📊</div>Sin datos para el período seleccionado</div>';
+    return;
+  }
+
+  // stats globales
+  const totalBicis  = periodo.reduce((s,o)=>s+o.cantidad,0);
+  const totalPago   = periodo.reduce((s,o)=>s+comisionOrden(o),0);
+  const ventasCount = periodo.filter(o=>!o.esSalon).reduce((s,o)=>s+o.cantidad,0);
+  const salonCount  = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
+
+  // por armador
+  const porArmador = {};
+  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,detalle:{}});
+  periodo.forEach(o => {
+    if (!porArmador[o.armador]) porArmador[o.armador]={bicis:0,total:0,ventas:0,salon:0,detalle:{}};
+    const com = comisionOrden(o);
+    porArmador[o.armador].bicis += o.cantidad;
+    porArmador[o.armador].total += com;
+    if (o.esSalon) porArmador[o.armador].salon += o.cantidad;
+    else porArmador[o.armador].ventas += o.cantidad;
+    const dk = `${o.marca}|${o.modelo}`;
+    if (!porArmador[o.armador].detalle[dk]) porArmador[o.armador].detalle[dk]={cantidad:0,ganado:0,comUn:DB.comisiones[dk]||0};
+    porArmador[o.armador].detalle[dk].cantidad += o.cantidad;
+    porArmador[o.armador].detalle[dk].ganado += com;
+  });
+
+  // ranking modelos
+  const porModelo = {};
+  periodo.forEach(o=>{
+    const k=`${o.marca} ${o.modelo}`;
+    if(!porModelo[k]) porModelo[k]=0;
+    porModelo[k]+=o.cantidad;
+  });
+  const topModelos = Object.entries(porModelo).sort((a,b)=>b[1]-a[1]);
+  const maxMod = topModelos[0]?.[1]||1;
+
+  cont.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-box stat-o"><div class="stat-num">${totalBicis}</div><div class="stat-lbl">Bicis Armadas</div></div>
+      <div class="stat-box stat-g"><div class="stat-num">$${totalPago.toLocaleString('es-AR')}</div><div class="stat-lbl">Total a Pagar</div></div>
+      <div class="stat-box stat-b"><div class="stat-num">${ventasCount}</div><div class="stat-lbl">Por Ventas</div></div>
+      <div class="stat-box stat-p"><div class="stat-num">${salonCount}</div><div class="stat-lbl">Para Salón</div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:14px">
+      <div class="section-label" style="margin-bottom:10px">📊 Modelos más armados</div>
+      <div class="bar-chart">
+        ${topModelos.slice(0,8).map(([k,v],i)=>`
+          <div class="bar-row">
+            <span class="bar-label">${k}</span>
+            <div class="bar-track">
+              <div class="bar-fill ${i===0?'':'bar-fill-b'}" style="width:${Math.round(v/maxMod*100)}%">
+                <span class="bar-val">${v}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    ${DB.armadores.map(nombre=>{
+      const r = porArmador[nombre];
+      if(!r||r.bicis===0) return `
+        <div class="rcard" style="opacity:.35">
+          <div class="rcard-head">
+            <div class="rcard-name">🔧 ${nombre}</div>
+            <div style="color:var(--text2);font-size:13px">Sin armados en este período</div>
+          </div>
+        </div>`;
+      return `
+        <div class="rcard">
+          <div class="rcard-head">
+            <div>
+              <div class="rcard-name">🔧 ${nombre}</div>
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <span class="badge badge-b">${r.bicis} bicis</span>
+                <span class="badge badge-g">${r.ventas} ventas</span>
+                <span class="badge badge-p">${r.salon} salón</span>
+              </div>
+            </div>
+            <div class="rcard-total">$${r.total.toLocaleString('es-AR')}</div>
+          </div>
+          <table class="rcard-rows">
+            <thead><tr><th style="padding:4px 8px;font-size:10px;color:var(--text3)">Modelo</th><th>Cant.</th><th>Com. Unit.</th><th>Subtotal</th></tr></thead>
+            <tbody>
+              ${Object.entries(r.detalle).map(([k,d])=>`
+                <tr>
+                  <td>${k.replace('|',' ')}</td>
+                  <td><strong>${d.cantidad}</strong></td>
+                  <td style="color:var(--text2)">$${d.comUn.toLocaleString('es-AR')}</td>
+                  <td><strong style="color:var(--green)">$${d.ganado.toLocaleString('es-AR')}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }).join('')}
+  `;
+}
+
+function exportarReporteSemanal() {
+  const { ordenes: periodo, label } = getOrdenesDelPeriodo();
+  const resumen = DB.armadores.map(nombre=>{
+    const ords = periodo.filter(o=>o.armador===nombre);
+    const bicis = ords.reduce((s,o)=>s+o.cantidad,0);
+    const total = ords.reduce((s,o)=>s+comisionOrden(o),0);
+    return {Armador:nombre, 'Bicis Armadas':bicis, 'Total a Pagar ($)':total};
+  });
+  const detalle = periodo.map(o=>({
+    'N° Orden': o.id,
+    Fecha: fmtFecha(o.fechaCreacion),
+    Hora: fmtHora(o.fechaCreacion),
+    Cliente: o.cliente||'-',
+    Marca: o.marca, Modelo: o.modelo,
+    Talle: o.talle, Color: o.color,
+    Cantidad: o.cantidad,
+    Armador: o.armador||'-',
+    'N° Cuadro': o.cuadro||'-',
+    'Tipo Armado': o.tipoArmado||'-',
+    'Tiempo (min)': o.tiempoArmadoMin ?? '-',
+    Tipo: o.esSalon?'Salón':'Venta',
+    Destino: o.destino||'-',
+    'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
+    'Total Comisión ($)': comisionOrden(o),
+  }));
+  const fname = `reporte_${periodoActivo}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  exportXlsx([
+    {name:'Resumen', data:resumen},
+    {name:'Detalle Armados', data:detalle},
+  ], fname);
+  toast('⬇️ Reporte exportado');
+}
+
+function confirmarReset() { document.getElementById('modal-reset').classList.add('on'); }
+
+async function ejecutarReset() {
+  // resetear solo los de la semana actual (completados)
+  DB.ordenes = DB.ordenes.filter(o => o.estado !== 'completada');
+  await saveKey('ordenes');
+  closeModal('modal-reset');
+  renderReporte();
+  toast('✅ Semana reseteada','var(--red)');
+}
+
+// ════════════════════════════════════════════════════════════
+//  HISTORIAL
+// ════════════════════════════════════════════════════════════
+function fillHistorialFiltros() {
+  const sA = document.getElementById('h-armador');
+  const sM = document.getElementById('h-marca');
+  sA.innerHTML = '<option value="">Todos</option>';
+  sM.innerHTML = '<option value="">Todas</option>';
+  DB.armadores.forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
+  [...new Set(DB.catalogo.map(b=>b.marca))].forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
+}
+
+function renderHistorial() {
+  const fA = document.getElementById('h-armador').value;
+  const fM = document.getElementById('h-marca').value;
+  const fT = document.getElementById('h-tipo').value;
+  const fE = document.getElementById('h-estado').value;
+
+  let lista = [...DB.ordenes]
+    .filter(o => !fA || o.armador===fA)
+    .filter(o => !fM || o.marca===fM)
+    .filter(o => !fT || (fT==='salon'?o.esSalon:!o.esSalon))
+    .filter(o => !fE || o.estado===fE)
+    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
+
+  const tbody = document.getElementById('t-historial');
+  if (!lista.length) { tbody.innerHTML='<tr><td colspan="15" class="tbl-empty">Sin resultados</td></tr>'; return; }
+  tbody.innerHTML = lista.map(o=>{
+    // tiempo armado (solo admin puede verlo — siempre se renderiza aquí)
+    const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
+    const tipoStr = o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
+    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':'<span class="badge badge-sal">🏪 Salón vta</span>');
+    const comStr = o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>' : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
+    return `
+    <tr>
+      <td style="color:var(--text2)">#${o.id}</td>
+      <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
+      <td>${o.cliente||'<span style="color:var(--text3)">—</span>'}</td>
+      <td><strong>${o.marca}</strong> ${o.modelo}</td>
+      <td>${o.talle||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${o.rodado||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${o.color}</td>
+      <td style="text-align:center"><strong>${o.cantidad}</strong></td>
+      <td>${o.armador||'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="font-family:monospace;font-size:12px">${o.cuadro||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${tipoStr}</td>
+      <td style="color:var(--blue);font-size:12px">${tiempoStr}</td>
+      <td>${destinoStr}</td>
+      <td>${estadoBadge(o)}</td>
+      <td>${comStr}</td>
+    </tr>
+  `}).join('');
+}
+
+function exportarHistorial() {
+  const datos = [...DB.ordenes].sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).map(o=>({
+    'N° Orden': o.id,
+    Fecha: fmtFecha(o.fechaCreacion),
+    Hora: fmtHora(o.fechaCreacion),
+    Cliente: o.cliente||'-',
+    Marca: o.marca, Modelo: o.modelo,
+    Talle: o.talle||'-', Rodado: o.rodado||'-', Color: o.color,
+    Cantidad: o.cantidad,
+    Armador: o.armador||'-',
+    'N° Cuadro': o.cuadro||'-',
+    'Tipo Armado': o.tipoArmado||'-',
+    'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
+    Destino: o.destino||'salon',
+    Observaciones: o.obs||'-',
+    Tipo: o.esSalon?'Salón':'Venta',
+    Estado: o.estado,
+    'Fecha Completado': o.fechaCompletado ? fmtFecha(o.fechaCompletado) : '-',
+    'Com. Kit ($)': (DB.comisionesKit||{})[`${o.marca}|${o.modelo}`]||0,
+    'Com. Prearmada ($)': (DB.comisionesPre||{})[`${o.marca}|${o.modelo}`]||0,
+    'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
+    'Total Comisión ($)': comisionOrden(o),
+  }));
+  exportXlsx([{name:'Historial Completo', data:datos}], 'historial_completo.xlsx');
+  toast('⬇️ Historial exportado');
+}
+
+// ════════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════════
+function comisionOrden(o) {
+  if (o.estado !== 'completada') return 0;
+  if (o.comisionDuplicada) return 0; // N° cuadro ya armado para salón, no duplicar
+  const key = `${o.marca}|${o.modelo}`;
+  let comUnitaria = 0;
+  if (o.tipoArmado === 'prearmada') {
+    comUnitaria = (DB.comisionesPre||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+  } else {
+    // kit o sin tipo (legacy)
+    comUnitaria = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+  }
+  return comUnitaria * o.cantidad;
+}
+
+function estadoBadge(o) {
+  if (o.estado==='pendiente')  return `<span class="badge badge-y">⏳ Pendiente</span>`;
+  if (o.estado==='en-proceso') return `<span class="badge badge-b">🔧 ${o.armador||'Asignado'}</span>`;
+  if (o.estado==='completada') return `<span class="badge badge-g">✅ ${o.armador||''}</span>`;
+  if (o.estado==='cancelada')  return `<span class="badge badge-r">❌ Cancelada</span>`;
+  if (o.estado==='sin-stock')  return `<span class="badge badge-r">📦 Sin Stock</span>`;
+  return '';
+}
+
+function fmtHora(iso) {
+  try { return new Date(iso).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return iso||''; }
+}
+function fmtFecha(iso) {
+  try { return new Date(iso).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){ return iso||''; }
+}
+
+function fillMarcasSelect(id) {
+  const marcas = [...new Set(DB.catalogo.map(b=>b.marca))];
+  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + marcas.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+function fillModelosSelect(id, marca) {
+  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' +
+    DB.catalogo.filter(b=>b.marca===marca).map(b=>`<option value="${b.modelo}">${b.modelo}</option>`).join('');
+}
+function fillVariants(talleId, rodadoId, colorId, marca, modelo) {
+  const bici = DB.catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
+  // retrocompatibilidad
+  let talles  = bici ? (bici.talles  || []) : [];
+  let rodados = bici ? (bici.rodados || []) : [];
+  if (bici && !bici.rodados) {
+    talles  = (bici.talles||[]).filter(t => /^[a-zA-Z]+$/.test(t.trim()));
+    rodados = (bici.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test(t.trim())));
+  }
+  document.getElementById(talleId).innerHTML  = '<option value="">— Seleccioná —</option>' + talles.map(t=>`<option value="${t}">${t}</option>`).join('');
+  document.getElementById(rodadoId).innerHTML = '<option value="">— Seleccioná —</option>' + rodados.map(r=>`<option value="${r}">${r}</option>`).join('');
+  document.getElementById(colorId).innerHTML  = '<option value="">— Seleccioná —</option>' + (bici?bici.colores.map(c=>`<option value="${c}">${c}</option>`).join(''):'');
+}
+function fillArmadoresSelect(id) {
+  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + DB.armadores.map(a=>`<option value="${a}">${a}</option>`).join('');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+
+function toast(msg, bg='var(--green)') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = bg;
+  t.style.color = (bg==='var(--green)'||bg==='var(--orange)') ? '#000' : '#fff';
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.style.display='none', 2800);
+}
+
+function exportXlsx(sheets, filename) {
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(s => {
+    const ws = XLSX.utils.json_to_sheet(s.data);
+    XLSX.utils.book_append_sheet(wb, ws, s.name);
+  });
+  XLSX.writeFile(wb, filename);
+}
+
+// DEFAULTS
+// ════════════════════════════════════════════════════════════
+//  SERVICE & GARANTÍA
+// ════════════════════════════════════════════════════════════
+let srvCuadroActual = '';
+
+function srvBuscarCuadro(val, forzar = false) {
+  srvCuadroActual = val.trim();
+  if (!forzar && srvCuadroActual.length < 4) {
+    document.getElementById('srv-result').classList.remove('on');
+    return;
+  }
+  if (!srvCuadroActual) return;
+
+  const cuadroLower = srvCuadroActual.toLowerCase();
+
+  // 1) Buscar en órdenes completadas (entregadas)
+  const ordenMatch = DB.ordenes.find(o =>
+    o.estado === 'completada' && o.cuadro && o.cuadro.toLowerCase() === cuadroLower
+  );
+
+  // 2) Buscar en services previos (ya hizo service antes?)
+  const serviceMatch = (DB.services || []).find(s => s.cuadro && s.cuadro.toLowerCase() === cuadroLower);
+
+  const result = document.getElementById('srv-result');
+  result.classList.add('on');
+
+  if (ordenMatch) {
+    // Encontrado en historial de órdenes
+    result.innerHTML = `
+      <div style="background:rgba(0,200,83,.08);border:1px solid var(--green);border-radius:4px;padding:12px 16px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:8px">✅ Bicicleta encontrada en historial</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;line-height:1.9">
+          <div>Cliente: <strong>${ordenMatch.cliente || '—'}</strong></div>
+          <div>N° Cuadro: <strong>${ordenMatch.cuadro}</strong></div>
+          <div>Marca/Modelo: <strong>${ordenMatch.marca} ${ordenMatch.modelo}</strong></div>
+          <div>Color: <strong>${ordenMatch.color}</strong></div>
+          ${ordenMatch.talle ? `<div>Talle: <strong>${ordenMatch.talle}</strong></div>` : ''}
+          ${ordenMatch.rodado ? `<div>Rodado: <strong>${ordenMatch.rodado}</strong></div>` : ''}
+          <div>Entregada: <strong>${fmtFecha(ordenMatch.fechaCompletado || ordenMatch.fechaCreacion)}</strong></div>
+          ${ordenMatch.armador ? `<div>Armada por: <strong>${ordenMatch.armador}</strong></div>` : ''}
+        </div>
+      </div>
+      ${serviceMatch ? `<div style="background:rgba(255,193,7,.08);border:1px solid var(--yellow);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--yellow)">⚠️ Esta bici ya registró un service el ${fmtFecha(serviceMatch.fechaService)}. Podés registrar uno nuevo igualmente.</div>` : ''}
+      <div class="fld" style="margin-bottom:12px">
+        <label>Observaciones <span class="opt-label">(opcional)</span></label>
+        <input type="text" id="srv-obs-confirm" placeholder="Ajustes realizados, detalles, etc.">
+      </div>
+      <button class="btn btn-g btn-full" onclick="srvConfirmar(${JSON.stringify({
+        cuadro: ordenMatch.cuadro,
+        cliente: ordenMatch.cliente||'',
+        marca: ordenMatch.marca,
+        modelo: ordenMatch.modelo,
+        talle: ordenMatch.talle||'',
+        rodado: ordenMatch.rodado||'',
+        color: ordenMatch.color,
+      }).replace(/"/g,'&quot;')})">🔧 CONFIRMAR SERVICE REALIZADO</button>
+    `;
+  } else {
+    // No encontrado
+    result.innerHTML = `
+      <div style="background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--red)">
+        ❌ El N° de cuadro <strong>${srvCuadroActual}</strong> no está en la base de datos de bicicletas armadas.
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Si la bici existe y fue vendida, podés ingresarla manualmente para registrar el service.</p>
+      <button class="btn btn-o" onclick="srvAbrirManual()">➕ Ingresar manualmente</button>
+    `;
+  }
+}
+
+function srvAbrirManual() {
+  document.getElementById('modal-srv-info').textContent = `N° de cuadro: ${srvCuadroActual} — No está en la base de datos. Seleccioná los datos del cliente para registrarlo.`;
+  // limpiar campos
+  document.getElementById('srv-m-cliente').value = '';
+  document.getElementById('srv-m-obs').value = '';
+  // poblar marcas desde catálogo
+  fillMarcasSelect('srv-m-marca');
+  document.getElementById('srv-m-modelo').innerHTML = '<option value="">— Primero elegí marca —</option>';
+  document.getElementById('srv-m-talle').innerHTML  = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-color').innerHTML  = '<option value="">— Seleccioná —</option>';
+  document.getElementById('modal-service-manual').classList.add('on');
+}
+
+function srvMFillModelos() {
+  const marca = document.getElementById('srv-m-marca').value;
+  fillModelosSelect('srv-m-modelo', marca);
+  document.getElementById('srv-m-talle').innerHTML  = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-color').innerHTML  = '<option value="">— Seleccioná —</option>';
+}
+
+function srvMFillVariants() {
+  fillVariants(
+    'srv-m-talle', 'srv-m-rodado', 'srv-m-color',
+    document.getElementById('srv-m-marca').value,
+    document.getElementById('srv-m-modelo').value
+  );
+}
+
+async function srvRegistrarManual() {
+  const cliente = document.getElementById('srv-m-cliente').value.trim();
+  const marca   = document.getElementById('srv-m-marca').value;
+  const modelo  = document.getElementById('srv-m-modelo').value;
+  const talle   = document.getElementById('srv-m-talle').value;
+  const rodado  = document.getElementById('srv-m-rodado').value;
+  const color   = document.getElementById('srv-m-color').value;
+  const obs     = document.getElementById('srv-m-obs').value.trim();
+  if (!marca || !modelo) { toast('⚠️ Marca y Modelo son obligatorios','var(--red)'); return; }
+  if (!color) { toast('⚠️ Seleccioná un color','var(--red)'); return; }
+
+  await srvGuardar({ cuadro: srvCuadroActual, cliente, marca, modelo, talle, rodado, color }, obs);
+  closeModal('modal-service-manual');
+}
+
+async function srvConfirmar(datosStr) {
+  let datos;
+  try { datos = (typeof datosStr === 'object') ? datosStr : JSON.parse(datosStr); } catch(e) { return; }
+  const obs = document.getElementById('srv-obs-confirm')?.value.trim() || '';
+  await srvGuardar(datos, obs);
+}
+
+async function srvGuardar(datos, obs) {
+  if (!DB.services) DB.services = [];
+  const fechaService = new Date().toISOString();
+  const vencimiento = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(); // +60 días
+
+  DB.services.push({
+    id: Date.now(),
+    cuadro:     datos.cuadro,
+    cliente:    datos.cliente || '',
+    marca:      datos.marca,
+    modelo:     datos.modelo,
+    talle:      datos.talle || '',
+    rodado:     datos.rodado || '',
+    color:      datos.color || '',
+    obs:        obs,
+    fechaService,
+    vencimiento,
+    armador:    sesionActual?.usuario || '',
+  });
+  await saveKey('services');
+
+  // limpiar pantalla service
+  document.getElementById('srv-cuadro').value = '';
+  document.getElementById('srv-result').classList.remove('on');
+  srvCuadroActual = '';
+  toast('✅ Service registrado. Garantía activa por 60 días.');
+}
+
+// ── GARANTÍAS (admin) ──────────────────────────────────────
+function initAdmin() {
+  renderCatalogo(); renderComisiones(); renderArmadores(); renderUsuarios();
+  fillHistorialFiltros(); renderHistorial();
+  renderGarantias();
+  setTimeout(()=>{ setPeriodo(periodoActivo); }, 50);
+}
+
+function renderGarantias() {
+  const tbody = document.getElementById('t-garantias');
+  if (!tbody) return;
+  const filtro = document.getElementById('g-estado')?.value || '';
+  const ahora = new Date();
+  const lista = [...(DB.services || [])].sort((a,b)=>new Date(b.fechaService)-new Date(a.fechaService));
+
+  const filtrados = lista.filter(s => {
+    const diasRest = Math.ceil((new Date(s.vencimiento) - ahora) / 86400000);
+    if (filtro === 'vigente') return diasRest > 0;
+    if (filtro === 'vencida') return diasRest <= 0;
+    return true;
+  });
+
+  if (!filtrados.length) { tbody.innerHTML='<tr><td colspan="10" class="tbl-empty">Sin registros de service</td></tr>'; return; }
+
+  tbody.innerHTML = filtrados.map(s => {
+    const diasRest = Math.ceil((new Date(s.vencimiento) - ahora) / 86400000);
+    const pct = Math.max(0, Math.min(100, Math.round((diasRest / 60) * 100)));
+    const color = diasRest > 20 ? 'var(--green)' : diasRest > 7 ? 'var(--yellow)' : 'var(--red)';
+    const estadoTxt = diasRest > 0
+      ? `<span class="badge badge-g">✅ Vigente</span>`
+      : `<span class="badge badge-r">❌ Vencida</span>`;
+    return `<tr>
+      <td style="font-family:monospace"><strong>${s.cuadro}</strong></td>
+      <td>${s.cliente||'—'}</td>
+      <td><strong>${s.marca}</strong> ${s.modelo}</td>
+      <td>${s.talle||'—'}</td>
+      <td>${s.color||'—'}</td>
+      <td>${fmtFecha(s.fechaService)}</td>
+      <td>${fmtFecha(s.vencimiento)}</td>
+      <td>
+        <div style="font-weight:700;color:${color};font-size:13px">${diasRest > 0 ? diasRest+' días' : 'Vencida'}</div>
+        <div class="garantia-bar" style="width:80px">
+          <div class="garantia-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+      </td>
+      <td>${estadoTxt}</td>
+      <td style="font-size:12px;color:var(--text2)">${s.obs||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportarGarantias() {
+  const ahora = new Date();
+  const datos = (DB.services || []).sort((a,b)=>new Date(b.fechaService)-new Date(a.fechaService)).map(s => ({
+    'N° Cuadro': s.cuadro,
+    Cliente: s.cliente||'-',
+    Marca: s.marca, Modelo: s.modelo,
+    Talle: s.talle||'-', Rodado: s.rodado||'-', Color: s.color||'-',
+    'Fecha Service': fmtFecha(s.fechaService),
+    'Vencimiento Garantía': fmtFecha(s.vencimiento),
+    'Días Restantes': Math.ceil((new Date(s.vencimiento)-ahora)/86400000),
+    Estado: new Date(s.vencimiento) > ahora ? 'Vigente' : 'Vencida',
+    Observaciones: s.obs||'-',
+    Armador: s.armador||'-',
+  }));
+  exportXlsx([{name:'Garantías', data:datos}], 'garantias.xlsx');
+  toast('⬇️ Garantías exportadas');
+}
+
+function getDefaultCatalogo() {
+  return [
+    {marca:'Trek',modelo:'FX 3',talles:['S','M','L','XL'],rodados:[],colores:['Negro','Blanco','Azul']},
+    {marca:'Trek',modelo:'Marlin 5',talles:[],rodados:['R27.5','R29'],colores:['Negro','Rojo','Verde']},
+    {marca:'Bianchi',modelo:'Aria',talles:['S','M','L'],rodados:[],colores:['Verde Celeste','Negro','Blanco']},
+    {marca:'Giant',modelo:'Escape 3',talles:['S','M','L','XL'],rodados:[],colores:['Azul','Negro','Gris']},
+    {marca:'Giant',modelo:'ATX 27.5',talles:[],rodados:['R27.5','R29'],colores:['Negro','Rojo']},
+  ];
+}
+function getDefaultComisiones() {
+  return {'Trek|FX 3':1500,'Trek|Marlin 5':1800,'Bianchi|Aria':2000,'Giant|Escape 3':1400,'Giant|ATX 27.5':1600};
+}
+function getDefaultComisionesPre() {
+  return {'Trek|FX 3':800,'Trek|Marlin 5':900,'Bianchi|Aria':1000,'Giant|Escape 3':700,'Giant|ATX 27.5':800};
+}
+
+function getDefaultUsuarios() {
+  return [
+    {rol:'admin',   usuario:'admin',   password:'admin123'},
+    {rol:'vendedor',usuario:'vendedor',password:'venta123'},
+    {rol:'taller',  usuario:'taller',  password:'taller123'},
+  ];
+}
+
+// ════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════
+(async()=>{
+  // Verificar que el usuario haya configurado Firebase
+  if (FIREBASE_CONFIG.apiKey === 'TU_API_KEY') {
+    document.getElementById('loader').innerHTML = `
+      <div style="text-align:center;max-width:480px;padding:24px">
+        <h1 style="font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;margin-bottom:8px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1>
+        <div style="background:rgba(255,98,0,.1);border:2px solid var(--orange);border-radius:8px;padding:24px;margin-top:20px;text-align:left">
+          <div style="font-size:22px;font-weight:700;color:var(--orange);margin-bottom:12px">⚙️ Configuración pendiente</div>
+          <p style="color:var(--text2);font-size:14px;line-height:1.7;margin-bottom:16px">
+            Para que el sistema funcione en la nube necesitás configurar Firebase. Seguí los pasos del instructivo que te entregamos junto con este archivo.
+          </p>
+          <div style="background:var(--bg3);border-radius:4px;padding:14px;font-size:12px;color:var(--text2);line-height:2">
+            1. Creá tu proyecto en <strong style="color:var(--text)">console.firebase.google.com</strong><br>
+            2. Activá <strong style="color:var(--text)">Realtime Database</strong><br>
+            3. Copiá tu configuración en este archivo (sección FIREBASE_CONFIG)<br>
+            4. Subí el archivo a GitHub Pages o Netlify
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const ok = initFirebase();
+  if (!ok) {
+    document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
+    return;
+  }
+
+  await loadDB();
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('screen-inicio').style.display = 'flex';
+  startPolling();
+})();</script>
+</body>
+</html>
