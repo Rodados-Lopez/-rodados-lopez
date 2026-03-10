@@ -768,8 +768,9 @@ input[type=file]{display:none;}
 
       <div class="panel">
         <div class="ptitle">📋 Catálogo Actual</div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px">
           <button class="btn btn-ghost btn-sm" onclick="exportarCatalogo()">⬇️ Exportar Catálogo</button>
+          <button class="btn btn-r btn-sm" onclick="cEliminarTodo()" style="font-size:12px">🗑️ Eliminar Todo</button>
         </div>
         <div class="tbl-wrap">
           <table>
@@ -787,7 +788,7 @@ input[type=file]{display:none;}
         <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Ingresá el importe en $ que cobra el armador por cada unidad armada de ese modelo.</p>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Marca</th><th>Modelo</th><th>Armado</th><th>Comisión ($ por unidad)</th></tr></thead>
+            <thead><tr><th>Marca</th><th>Modelo</th><th>¿Tiene Kit?</th><th>Tipo</th><th>Comisión ($ por unidad)</th></tr></thead>
             <tbody id="t-comisiones"></tbody>
           </table>
         </div>
@@ -2391,7 +2392,8 @@ async function cAgregar() {
 function renderCatalogo() {
   const tbody = document.getElementById('t-catalogo');
   if (!DB.catalogo.length) { tbody.innerHTML='<tr><td colspan="8" class="tbl-empty">Sin bicicletas en catálogo</td></tr>'; return; }
-  tbody.innerHTML = DB.catalogo.map((b,i)=>{
+  const sorted = [...DB.catalogo].sort((a,b)=>a.marca.localeCompare(b.marca,'es')||a.modelo.localeCompare(b.modelo,'es'));
+  tbody.innerHTML = sorted.map((b,i)=>{
     let talles  = b.talles  || [];
     let rodados = b.rodados || [];
     if (!b.rodados) {
@@ -2413,21 +2415,32 @@ function renderCatalogo() {
         ? `<span style="color:var(--blue)">$${comKit.toLocaleString('es-AR')} kit</span> / <span style="color:var(--purple)">$${comPre.toLocaleString('es-AR')} pre</span>`
         : `<span style="color:var(--green)">$${comKit.toLocaleString('es-AR')}</span>`
       }</td>
-      <td><button class="btn btn-r btn-sm" onclick="cEliminar(${i})">✕</button></td>
+      <td><button class="btn btn-r btn-sm" onclick="cEliminar('${b.marca}','${b.modelo}')">✕</button></td>
     </tr>`;
   }).join('');
 }
 
-async function cEliminar(i) {
-  const b = DB.catalogo[i];
-  const key = `${b.marca}|${b.modelo}`;
+async function cEliminar(marca, modelo) {
+  const key = `${marca}|${modelo}`;
   delete DB.comisiones[key];
   delete DB.comisionesKit[key];
   delete DB.comisionesPre[key];
-  DB.catalogo.splice(i,1);
+  DB.catalogo = DB.catalogo.filter(b => !(b.marca===marca && b.modelo===modelo));
   await saveKey('catalogo'); await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
   renderCatalogo(); renderComisiones();
   toast('🗑️ Eliminado','var(--red)');
+}
+
+async function cEliminarTodo() {
+  if (!DB.catalogo.length) { toast('⚠️ El catálogo ya está vacío','var(--red)'); return; }
+  if (!confirm(`¿Eliminar las ${DB.catalogo.length} bicicletas del catálogo? También se borrarán todas sus comisiones.\n\nEsta acción no se puede deshacer.`)) return;
+  DB.catalogo = [];
+  DB.comisiones = {};
+  DB.comisionesKit = {};
+  DB.comisionesPre = {};
+  await saveKey('catalogo'); await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
+  renderCatalogo(); renderComisiones();
+  toast('🗑️ Catálogo eliminado completamente','var(--red)');
 }
 
 // IMPORTAR EXCEL
@@ -2508,36 +2521,91 @@ function exportarCatalogo() {
 // COMISIONES
 function renderComisiones() {
   const tbody = document.getElementById('t-comisiones');
-  const claves = [...new Set([...Object.keys(DB.comisionesKit||{}), ...Object.keys(DB.comisiones||{})])];
-  if (!claves.length) { tbody.innerHTML='<tr><td colspan="4" class="tbl-empty">Sin datos</td></tr>'; return; }
-  tbody.innerHTML = claves.map(k=>{
-    const [m,mo]=k.split('|');
+  // Obtener todas las claves de catálogo, ordenadas alfabéticamente
+  const claves = [...new Set(DB.catalogo.map(b=>`${b.marca}|${b.modelo}`))].sort((a,b)=>a.localeCompare(b,'es'));
+  if (!claves.length) { tbody.innerHTML='<tr><td colspan="5" class="tbl-empty">Sin datos</td></tr>'; return; }
+  tbody.innerHTML = claves.map(k => {
+    const [m, mo] = k.split('|');
+    const bici = DB.catalogo.find(b => b.marca===m && b.modelo===mo);
+    const tieneKit = bici ? bici.tieneKitPre === true : false;
     const valKit = (DB.comisionesKit||{})[k] ?? (DB.comisiones||{})[k] ?? 0;
     const valPre = (DB.comisionesPre||{})[k] ?? 0;
+    const safeK = k.replace(/\|/g,'__');
     return `
-      <tr>
-        <td rowspan="2"><strong>${m}</strong></td><td rowspan="2">${mo}</td>
-        <td style="color:var(--blue);font-size:12px">📦 Kit</td>
-        <td><input type="number" id="comkit_${k.replace(/\|/g,'__')}" value="${valKit}"
-          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:120px;border-radius:3px;font-size:14px" min="0"></td>
-      </tr>
-      <tr>
-        <td style="color:var(--purple);font-size:12px">🚲 Prearmada</td>
-        <td><input type="number" id="compre_${k.replace(/\|/g,'__')}" value="${valPre}"
-          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:120px;border-radius:3px;font-size:14px" min="0"></td>
+      <tr id="comrow_${safeK}">
+        <td><strong>${m}</strong></td>
+        <td>${mo}</td>
+        <td style="text-align:center">
+          <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="comkit_check_${safeK}" ${tieneKit?'checked':''} 
+              onchange="toggleKitRow('${safeK}','${m}','${mo}')"
+              style="accent-color:var(--orange);width:16px;height:16px">
+            <span style="color:var(--text2);font-size:11px;letter-spacing:1px">¿Tiene Kit?</span>
+          </label>
+        </td>
+        <td id="comrow_tipo_${safeK}" style="font-size:12px">
+          ${tieneKit
+            ? `<div style="display:flex;flex-direction:column;gap:4px">
+                <span style="color:var(--blue)">📦 Kit</span>
+                <span style="color:var(--purple)">🚲 Prearmado</span>
+               </div>`
+            : `<span style="color:var(--purple)">🚲 Prearmado</span>`}
+        </td>
+        <td id="comrow_inputs_${safeK}">
+          ${tieneKit
+            ? `<div style="display:flex;flex-direction:column;gap:6px">
+                <input type="number" id="comkit_${safeK}" value="${valKit}"
+                  style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Kit">
+                <input type="number" id="compre_${safeK}" value="${valPre}"
+                  style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">
+               </div>`
+            : `<input type="number" id="compre_${safeK}" value="${valPre}"
+                style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">`}
+        </td>
       </tr>`;
   }).join('');
 }
 
+async function toggleKitRow(safeK, marca, modelo) {
+  const checked = document.getElementById(`comkit_check_${safeK}`).checked;
+  // Actualizar el flag tieneKitPre en el catálogo
+  const bici = DB.catalogo.find(b => b.marca===marca && b.modelo===modelo);
+  if (bici) bici.tieneKitPre = checked;
+  await saveKey('catalogo');
+  // Re-renderizar solo esa fila
+  const key = `${marca}|${modelo}`;
+  const valKit = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+  const valPre = (DB.comisionesPre||{})[key] ?? 0;
+  document.getElementById(`comrow_tipo_${safeK}`).innerHTML = checked
+    ? `<div style="display:flex;flex-direction:column;gap:4px"><span style="color:var(--blue)">📦 Kit</span><span style="color:var(--purple)">🚲 Prearmado</span></div>`
+    : `<span style="color:var(--purple)">🚲 Prearmado</span>`;
+  document.getElementById(`comrow_inputs_${safeK}`).innerHTML = checked
+    ? `<div style="display:flex;flex-direction:column;gap:6px">
+        <input type="number" id="comkit_${safeK}" value="${valKit}"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Kit">
+        <input type="number" id="compre_${safeK}" value="${valPre}"
+          style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">
+       </div>`
+    : `<input type="number" id="compre_${safeK}" value="${valPre}"
+        style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">`;
+}
+
 async function guardarComisiones() {
-  const claves = [...new Set([...Object.keys(DB.comisionesKit||{}), ...Object.keys(DB.comisiones||{})])];
-  claves.forEach(k=>{
-    const elKit = document.getElementById('comkit_'+k.replace(/\|/g,'__'));
-    const elPre = document.getElementById('compre_'+k.replace(/\|/g,'__'));
+  const claves = [...new Set(DB.catalogo.map(b=>`${b.marca}|${b.modelo}`))];
+  claves.forEach(k => {
+    const safeK = k.replace(/\|/g,'__');
+    const elKit = document.getElementById('comkit_'+safeK);
+    const elPre = document.getElementById('compre_'+safeK);
+    const chkKit = document.getElementById('comkit_check_'+safeK);
     if (!DB.comisionesKit) DB.comisionesKit = {};
     if (!DB.comisionesPre) DB.comisionesPre = {};
-    if(elKit) { DB.comisionesKit[k] = parseInt(elKit.value)||0; DB.comisiones[k] = DB.comisionesKit[k]; }
-    if(elPre) DB.comisionesPre[k] = parseInt(elPre.value)||0;
+    if (elKit) { DB.comisionesKit[k] = parseInt(elKit.value)||0; DB.comisiones[k] = DB.comisionesKit[k]; }
+    if (elPre) DB.comisionesPre[k] = parseInt(elPre.value)||0;
+    // si no tiene kit, la comisión "kit" = comisión pre (comisión única = prearmado)
+    if (chkKit && !chkKit.checked) {
+      DB.comisionesKit[k] = DB.comisionesPre[k] || 0;
+      DB.comisiones[k] = DB.comisionesKit[k];
+    }
   });
   await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
   renderCatalogo();
@@ -2871,8 +2939,8 @@ function fillHistorialFiltros() {
   const sM = document.getElementById('h-marca');
   sA.innerHTML = '<option value="">Todos</option>';
   sM.innerHTML = '<option value="">Todas</option>';
-  DB.armadores.forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
-  [...new Set(DB.catalogo.map(b=>b.marca))].forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
+  [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
+  [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
 }
 
 function renderHistorial() {
@@ -2980,12 +3048,12 @@ function fmtFecha(iso) {
 }
 
 function fillMarcasSelect(id) {
-  const marcas = [...new Set(DB.catalogo.map(b=>b.marca))];
+  const marcas = [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es'));
   document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + marcas.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 function fillModelosSelect(id, marca) {
-  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' +
-    DB.catalogo.filter(b=>b.marca===marca).map(b=>`<option value="${b.modelo}">${b.modelo}</option>`).join('');
+  const modelos = DB.catalogo.filter(b=>b.marca===marca).map(b=>b.modelo).sort((a,b)=>a.localeCompare(b,'es'));
+  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + modelos.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 function fillVariants(talleId, rodadoId, colorId, marca, modelo) {
   const bici = DB.catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
@@ -2996,12 +3064,16 @@ function fillVariants(talleId, rodadoId, colorId, marca, modelo) {
     talles  = (bici.talles||[]).filter(t => /^[a-zA-Z]+$/.test(t.trim()));
     rodados = (bici.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test(t.trim())));
   }
+  talles  = [...talles].sort((a,b)=>a.localeCompare(b,'es'));
+  rodados = [...rodados].sort((a,b)=>a.localeCompare(b,'es'));
+  const colores = bici ? [...bici.colores].sort((a,b)=>a.localeCompare(b,'es')) : [];
   document.getElementById(talleId).innerHTML  = '<option value="">— Seleccioná —</option>' + talles.map(t=>`<option value="${t}">${t}</option>`).join('');
   document.getElementById(rodadoId).innerHTML = '<option value="">— Seleccioná —</option>' + rodados.map(r=>`<option value="${r}">${r}</option>`).join('');
-  document.getElementById(colorId).innerHTML  = '<option value="">— Seleccioná —</option>' + (bici?bici.colores.map(c=>`<option value="${c}">${c}</option>`).join(''):'');
+  document.getElementById(colorId).innerHTML  = '<option value="">— Seleccioná —</option>' + colores.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 function fillArmadoresSelect(id) {
-  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + DB.armadores.map(a=>`<option value="${a}">${a}</option>`).join('');
+  const armadores = [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es'));
+  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + armadores.map(a=>`<option value="${a}">${a}</option>`).join('');
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('on'); }
