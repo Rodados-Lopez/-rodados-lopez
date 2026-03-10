@@ -249,7 +249,170 @@ input[type=file]{display:none;}
 .alerta-box-r{background:var(--bg2);border:2px solid var(--red);border-radius:8px;padding:36px;text-align:center;max-width:480px;width:100%;animation:pop .3s ease;}
 .alerta-box-r h2{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red);margin:12px 0;}
 
-/* ── COMISION DUPLICADA WARNING ── */
+/* ══════════════════════════════════════
+   MONITOR DE SALON — pantalla pública
+══════════════════════════════════════ */
+#screen-monitor{
+  display:none;position:fixed;inset:0;background:#0a0a0a;
+  font-family:'Barlow Condensed',sans-serif;overflow:hidden;z-index:10000;
+}
+#screen-monitor.on{display:flex;flex-direction:column;}
+
+/* header monitor */
+.mon-header{
+  background:linear-gradient(135deg,#1a0500 0%,#2d0d00 50%,#1a0500 100%);
+  border-bottom:3px solid var(--orange);
+  padding:0 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:90px;flex-shrink:0;
+  position:relative;overflow:hidden;
+}
+.mon-header::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(255,98,0,.04) 60px,rgba(255,98,0,.04) 61px);
+}
+.mon-brand{
+  font-size:38px;font-weight:900;letter-spacing:-1px;line-height:1;
+  text-shadow:0 0 30px rgba(255,98,0,.5);
+}
+.mon-brand em{color:var(--orange);font-style:normal;}
+.mon-brand small{display:block;font-size:13px;letter-spacing:5px;color:rgba(255,255,255,.4);font-weight:400;margin-top:2px;}
+.mon-clock{
+  font-size:52px;font-weight:800;color:var(--orange);
+  text-shadow:0 0 20px rgba(255,98,0,.6);letter-spacing:-1px;
+  font-variant-numeric:tabular-nums;
+}
+.mon-live{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;letter-spacing:3px;color:var(--green);
+  border:1px solid var(--green);padding:5px 12px;border-radius:20px;
+}
+.mon-live::before{content:'';width:8px;height:8px;background:var(--green);border-radius:50%;animation:blink 1.2s infinite;}
+
+/* columnas */
+.mon-body{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;}
+.mon-col{display:flex;flex-direction:column;overflow:hidden;}
+.mon-col-en-proceso{border-right:1px solid rgba(255,98,0,.15);}
+.mon-col-header{
+  padding:18px 32px;display:flex;align-items:center;gap:12px;
+  flex-shrink:0;
+}
+.mon-col-header-inner{display:flex;align-items:center;gap:14px;flex:1;}
+.mon-col-icon{font-size:32px;animation:pulse 2s infinite;}
+.mon-col-title{font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;}
+.mon-col-count{
+  font-size:18px;font-weight:800;
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.mon-col-en-proceso .mon-col-header{background:linear-gradient(90deg,rgba(61,139,255,.08),transparent);}
+.mon-col-en-proceso .mon-col-title{color:var(--blue);}
+.mon-col-en-proceso .mon-col-count{background:rgba(61,139,255,.2);color:var(--blue);}
+.mon-col-completada .mon-col-header{background:linear-gradient(90deg,rgba(0,200,83,.08),transparent);}
+.mon-col-completada .mon-col-title{color:var(--green);}
+.mon-col-completada .mon-col-count{background:rgba(0,200,83,.2);color:var(--green);}
+
+/* divisor animado */
+.mon-col-divider{height:2px;flex-shrink:0;margin:0 24px;}
+.mon-col-en-proceso .mon-col-divider{background:linear-gradient(90deg,transparent,var(--blue),transparent);animation:shimmer 2s linear infinite;}
+.mon-col-completada .mon-col-divider{background:linear-gradient(90deg,transparent,var(--green),transparent);animation:shimmer 2.5s linear infinite;}
+@keyframes shimmer{0%{background-position:-200px 0;}100%{background-position:200px 0;}}
+
+/* lista de items */
+.mon-lista{flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;}
+.mon-lista::-webkit-scrollbar{width:4px;}
+.mon-lista::-webkit-scrollbar-track{background:transparent;}
+.mon-lista::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+
+/* tarjeta de orden */
+.mon-card{
+  border-radius:8px;padding:18px 22px;
+  display:flex;align-items:center;gap:16px;
+  animation:monCardIn .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+@keyframes monCardIn{
+  from{opacity:0;transform:translateY(-20px) scale(.95);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.mon-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+.mon-card-proceso{
+  background:linear-gradient(135deg,rgba(61,139,255,.1),rgba(61,139,255,.04));
+  border:1px solid rgba(61,139,255,.25);
+}
+.mon-card-proceso::before{background:var(--blue);box-shadow:0 0 8px var(--blue);}
+.mon-card-completada{
+  background:linear-gradient(135deg,rgba(0,200,83,.1),rgba(0,200,83,.04));
+  border:1px solid rgba(0,200,83,.25);
+}
+.mon-card-completada::before{background:var(--green);box-shadow:0 0 8px var(--green);}
+
+/* número de orden */
+.mon-num{
+  font-size:26px;font-weight:900;
+  width:46px;height:46px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;letter-spacing:-1px;
+}
+.mon-card-proceso .mon-num{background:rgba(61,139,255,.2);color:var(--blue);}
+.mon-card-completada .mon-num{background:rgba(0,200,83,.2);color:var(--green);}
+
+/* texto principal */
+.mon-card-body{flex:1;min-width:0;}
+.mon-nombre{
+  font-size:26px;font-weight:800;letter-spacing:.5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.1;
+}
+.mon-bici{
+  font-size:17px;color:rgba(255,255,255,.6);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mon-bici strong{color:rgba(255,255,255,.85);}
+.mon-destino{
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:2px 8px;border-radius:10px;display:inline-block;margin-top:5px;
+}
+.mon-destino-envio{background:rgba(255,193,7,.15);color:var(--yellow);}
+.mon-destino-salon{background:rgba(168,85,247,.15);color:var(--purple);}
+
+/* ícono estado derecho */
+.mon-estado-icon{font-size:28px;flex-shrink:0;}
+.mon-card-proceso .mon-estado-icon{animation:spin 3s linear infinite;}
+
+/* empty state */
+.mon-empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.12);gap:10px;
+}
+.mon-empty-icon{font-size:52px;opacity:.3;}
+.mon-empty-txt{font-size:16px;letter-spacing:3px;text-transform:uppercase;}
+
+/* ticker inferior */
+.mon-footer{
+  height:44px;flex-shrink:0;background:var(--orange);
+  display:flex;align-items:center;overflow:hidden;
+  border-top:1px solid rgba(0,0,0,.2);
+}
+.mon-ticker-track{display:flex;white-space:nowrap;animation:ticker 30s linear infinite;}
+.mon-ticker-track:hover{animation-play-state:paused;}
+.mon-ticker-item{
+  padding:0 48px;font-size:14px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:#000;display:flex;align-items:center;gap:10px;
+}
+.mon-ticker-sep{color:rgba(0,0,0,.3);}
+@keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* botón salir monitor */
+.mon-exit{
+  position:fixed;bottom:14px;right:14px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.3);padding:7px 14px;border-radius:3px;
+  font-size:11px;letter-spacing:2px;cursor:pointer;
+  transition:all .2s;z-index:10001;font-family:'Barlow',sans-serif;
+}
+.mon-exit:hover{background:rgba(255,61,61,.15);color:var(--red);border-color:var(--red);}
+</style>
 .dup-warning{background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;margin-top:12px;font-size:13px;color:var(--red);display:none;}
 .dup-warning.on{display:block;}
 
@@ -294,6 +457,7 @@ input[type=file]{display:none;}
     <button class="ibtn ibtn-v" onclick="loginPedir('vendedor')">🛒 Vendedor<small>Panel de Ventas</small></button>
     <button class="ibtn ibtn-t" onclick="loginPedir('taller')">🔧 Taller<small>Armadores</small></button>
     <button class="ibtn ibtn-a" onclick="loginPedir('admin')">⚙️ Admin<small>Gestión & Reportes</small></button>
+    <button class="ibtn" onclick="go('monitor')" style="background:linear-gradient(135deg,#1a0a2e,#2d1854);color:#c084fc;border:1px solid rgba(168,85,247,.4);">📺 Monitor<small>Pantalla Salón</small></button>
   </div>
   <div class="sync-status"><span class="sync-dot"></span> Datos sincronizados en la nube</div>
 </div>
@@ -1007,6 +1171,80 @@ input[type=file]{display:none;}
   </div>
 </div>
 
+<!-- ═══════════════ MONITOR SALÓN ═══════════════ -->
+<div id="screen-monitor">
+
+  <!-- HEADER -->
+  <div class="mon-header">
+    <div class="mon-brand">
+      RODADOS <em>LOPEZ</em>
+      <small>SEGUÍ EL ESTADO DE TU BICICLETA</small>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <div class="mon-live">EN VIVO</div>
+      <div class="mon-clock" id="mon-clock">00:00</div>
+    </div>
+  </div>
+
+  <!-- COLUMNAS -->
+  <div class="mon-body">
+
+    <!-- EN PROCESO -->
+    <div class="mon-col mon-col-en-proceso">
+      <div class="mon-col-header">
+        <div class="mon-col-header-inner">
+          <div class="mon-col-icon">🔧</div>
+          <div class="mon-col-title">EN ARMADO</div>
+          <div class="mon-col-count" id="mon-count-proceso">0</div>
+        </div>
+      </div>
+      <div class="mon-col-divider"></div>
+      <div class="mon-lista" id="mon-lista-proceso">
+        <div class="mon-empty">
+          <div class="mon-empty-icon">🔧</div>
+          <div class="mon-empty-txt">Sin órdenes en proceso</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETADAS -->
+    <div class="mon-col mon-col-completada">
+      <div class="mon-col-header">
+        <div class="mon-col-header-inner">
+          <div class="mon-col-icon" style="animation:none">✅</div>
+          <div class="mon-col-title">LISTAS PARA RETIRAR</div>
+          <div class="mon-col-count" id="mon-count-comp">0</div>
+        </div>
+      </div>
+      <div class="mon-col-divider"></div>
+      <div class="mon-lista" id="mon-lista-comp">
+        <div class="mon-empty">
+          <div class="mon-empty-icon">🚲</div>
+          <div class="mon-empty-txt">Ninguna lista aún</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TICKER INFERIOR -->
+  <div class="mon-footer">
+    <div class="mon-ticker-track" id="mon-ticker">
+      <span class="mon-ticker-item">🚲 RODADOS LOPEZ <span class="mon-ticker-sep">·</span> Tu bici, nuestra pasión</span>
+      <span class="mon-ticker-item">🔧 Realizamos armados profesionales</span>
+      <span class="mon-ticker-item">🛡️ Hacé tu service dentro de los 15-20 días para activar la garantía</span>
+      <span class="mon-ticker-item">📍 ¡Gracias por elegirnos!</span>
+      <span class="mon-ticker-item">🚲 RODADOS LOPEZ <span class="mon-ticker-sep">·</span> Tu bici, nuestra pasión</span>
+      <span class="mon-ticker-item">🔧 Realizamos armados profesionales</span>
+      <span class="mon-ticker-item">🛡️ Hacé tu service dentro de los 15-20 días para activar la garantía</span>
+      <span class="mon-ticker-item">📍 ¡Gracias por elegirnos!</span>
+    </div>
+  </div>
+
+  <!-- BOTÓN SALIR (muy discreto, esquina) -->
+  <button class="mon-exit" onclick="monitorSalir()">✕ SALIR</button>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1234,17 +1472,142 @@ function isScreen(id) {
 function go(screen) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   document.getElementById('screen-inicio').style.display = 'none';
+  document.getElementById('screen-monitor').classList.remove('on');
   if (screen === 'inicio') {
     document.getElementById('screen-inicio').style.display = 'flex';
+  } else if (screen === 'monitor') {
+    document.getElementById('screen-monitor').classList.add('on');
+    initMonitor();
   } else {
     document.getElementById('screen-'+screen).classList.add('on');
-    // mostrar chip de usuario
     const chip = document.getElementById(screen[0]+'-user-chip');
     if (chip && sesionActual) chip.innerHTML = `👤 <strong>${sesionActual.usuario}</strong>`;
     if (screen === 'vendedor') initVendedor();
     if (screen === 'taller') initTaller();
     if (screen === 'admin') initAdmin();
   }
+}
+
+// ════════════════════════════════════════════════════════════
+//  MONITOR SALÓN
+// ════════════════════════════════════════════════════════════
+let monClockInterval  = null;
+let monFireListener   = null;
+
+function initMonitor() {
+  // reloj
+  if (monClockInterval) clearInterval(monClockInterval);
+  monClockInterval = setInterval(() => {
+    const now = new Date();
+    document.getElementById('mon-clock').textContent =
+      now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  }, 1000);
+  // disparo inmediato
+  const now = new Date();
+  document.getElementById('mon-clock').textContent =
+    now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+
+  // listener Firebase en tiempo real (independiente del resto del sistema)
+  if (monFireListener) fbDB.ref('ordenes').off('value', monFireListener);
+  monFireListener = fbDB.ref('ordenes').on('value', snap => {
+    const val = snap.val();
+    if (val === null) { monRender([]); return; }
+    const arr = Array.isArray(val) ? val : Object.values(val);
+    monRender(arr);
+  });
+}
+
+function monitorSalir() {
+  if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
+  if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+  document.getElementById('screen-monitor').classList.remove('on');
+  document.getElementById('screen-inicio').style.display = 'flex';
+}
+
+function monRender(ordenes) {
+  // En proceso: órdenes de venta con estado en-proceso
+  const enProceso = ordenes
+    .filter(o => !o.esSalon && o.estado === 'en-proceso')
+    .sort((a,b) => new Date(a.fechaAsignado||a.fechaCreacion) - new Date(b.fechaAsignado||b.fechaCreacion));
+
+  // Completadas recientes: últimas 10 horas, mostrar máx 15
+  const ahora = Date.now();
+  const completadas = ordenes
+    .filter(o => !o.esSalon && o.estado === 'completada' && o.fechaCompletado &&
+      (ahora - new Date(o.fechaCompletado).getTime()) < 10 * 3600 * 1000)
+    .sort((a,b) => new Date(b.fechaCompletado) - new Date(a.fechaCompletado))
+    .slice(0, 15);
+
+  // Contadores
+  document.getElementById('mon-count-proceso').textContent = enProceso.length;
+  document.getElementById('mon-count-comp').textContent    = completadas.length;
+
+  // Render listas
+  const listaProceso = document.getElementById('mon-lista-proceso');
+  const listaComp    = document.getElementById('mon-lista-comp');
+
+  if (!enProceso.length) {
+    listaProceso.innerHTML = `<div class="mon-empty"><div class="mon-empty-icon">💤</div><div class="mon-empty-txt">Sin órdenes en proceso</div></div>`;
+  } else {
+    listaProceso.innerHTML = enProceso.map((o, i) => monCard(o, 'proceso', i+1)).join('');
+  }
+
+  if (!completadas.length) {
+    listaComp.innerHTML = `<div class="mon-empty"><div class="mon-empty-icon">🚲</div><div class="mon-empty-txt">Ninguna lista aún</div></div>`;
+  } else {
+    listaComp.innerHTML = completadas.map((o, i) => monCard(o, 'completada', i+1)).join('');
+  }
+
+  // Actualizar ticker con datos reales
+  monActualizarTicker(enProceso.length, completadas.length);
+}
+
+function monCard(o, tipo, num) {
+  const nombre = o.cliente ? o.cliente.toUpperCase() : 'CLIENTE';
+  const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' · ' + o.talle : ''}${o.rodado ? ' · ' + o.rodado : ''} · ${o.color}`;
+  const destinoBadge = o.destino === 'envio'
+    ? `<span class="mon-destino mon-destino-envio">🚚 Envío a domicilio</span>`
+    : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
+  const icon   = tipo === 'proceso' ? '⚙️' : '✅';
+  const tiempoComp = tipo === 'completada' && o.fechaCompletado
+    ? `<div style="font-size:12px;color:rgba(0,200,83,.6);margin-top:4px;letter-spacing:1px">LISTO ${monHaceMinutos(o.fechaCompletado)}</div>`
+    : '';
+
+  return `
+    <div class="mon-card mon-card-${tipo}">
+      <div class="mon-num">${o.id}</div>
+      <div class="mon-card-body">
+        <div class="mon-nombre">${nombre}</div>
+        <div class="mon-bici">${bici}</div>
+        ${destinoBadge}
+        ${tiempoComp}
+      </div>
+      <div class="mon-estado-icon">${icon}</div>
+    </div>`;
+}
+
+function monHaceMinutos(iso) {
+  const diff = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diff < 1)  return 'HACE INSTANTES';
+  if (diff === 1) return 'HACE 1 MIN';
+  if (diff < 60) return `HACE ${diff} MIN`;
+  const h = Math.floor(diff/60);
+  return `HACE ${h}h`;
+}
+
+function monActualizarTicker(enProceso, completadas) {
+  const base = [
+    '🚲 RODADOS LOPEZ · Tu bici, nuestra pasión',
+    `🔧 ${enProceso} bici${enProceso !== 1 ? 's' : ''} en armado ahora mismo`,
+    `✅ ${completadas} bici${completadas !== 1 ? 's' : ''} listas para retirar hoy`,
+    '🛡️ Hacé tu service en 15-20 días para activar la garantía',
+    '📍 ¡Gracias por elegirnos!',
+  ];
+  // duplicar para loop continuo
+  const all = [...base, ...base];
+  document.getElementById('mon-ticker').innerHTML = all
+    .map(t => `<span class="mon-ticker-item">${t}</span>`)
+    .join('<span class="mon-ticker-item mon-ticker-sep">·</span>');
 }
 
 function switchTab(prefix, id) {
