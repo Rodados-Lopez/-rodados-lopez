@@ -976,15 +976,25 @@ input[type=file]{display:none;}
     <p id="modal-srv-info" style="color:var(--text2);font-size:13px;margin-bottom:16px">Este número de cuadro no está en la base de datos. Completá los datos para registrarlo.</p>
     <div class="fg fg2" style="margin-bottom:10px">
       <div class="fld"><label>Cliente</label><input type="text" id="srv-m-cliente" placeholder="Nombre del cliente"></div>
-      <div class="fld"><label>Marca</label><input type="text" id="srv-m-marca" placeholder="Trek, Giant..."></div>
+      <div class="fld"><label>Marca</label>
+        <select id="srv-m-marca" onchange="srvMFillModelos()"><option value="">— Seleccioná —</option></select>
+      </div>
     </div>
     <div class="fg fg2" style="margin-bottom:10px">
-      <div class="fld"><label>Modelo</label><input type="text" id="srv-m-modelo" placeholder="FX3, Marlin..."></div>
-      <div class="fld"><label>Talle</label><input type="text" id="srv-m-talle" placeholder="S, M, L, XL, R29..."></div>
+      <div class="fld"><label>Modelo</label>
+        <select id="srv-m-modelo" onchange="srvMFillVariants()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Talle</label>
+        <select id="srv-m-talle"><option value="">— Seleccioná —</option></select>
+      </div>
     </div>
     <div class="fg fg2" style="margin-bottom:10px">
-      <div class="fld"><label>Rodado</label><input type="text" id="srv-m-rodado" placeholder="R26, R27.5, R29"></div>
-      <div class="fld"><label>Color</label><input type="text" id="srv-m-color" placeholder="Negro, Rojo..."></div>
+      <div class="fld"><label>Rodado</label>
+        <select id="srv-m-rodado"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Color</label>
+        <select id="srv-m-color"><option value="">— Seleccioná —</option></select>
+      </div>
     </div>
     <div class="fld" style="margin-bottom:14px">
       <label>Observaciones <span class="opt-label">(opcional)</span></label>
@@ -1116,13 +1126,51 @@ function startPolling() {
   if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
   fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
     const fresh = snap.val();
-    DB.sinStockAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+    const nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
     if (isScreen('vendedor')) {
+      // detectar alertas nuevas no vistas antes de actualizar DB
+      const noVistasAntes = new Set((DB.sinStockAlertas||[]).filter(a=>a.vista||a.resuelta).map(a=>a.id));
+      DB.sinStockAlertas = nuevasAlertas;
       vRenderInbox();
-      // mostrar alerta sonora si hay alertas nuevas no vistas
-      const noVistas = DB.sinStockAlertas.filter(a => !a.vista && a.vendedor === sesionActual?.usuario);
-      if (noVistas.length > 0) mostrarAlertaVendedor(noVistas[0]);
+      // mostrar alerta sonora solo si hay una nueva no vista para este vendedor y el overlay no está ya abierto
+      const overlay = document.getElementById('alerta-vendedor');
+      if (!overlay.classList.contains('on')) {
+        const noVistas = nuevasAlertas.filter(a =>
+          !a.vista && !a.resuelta && a.vendedor === sesionActual?.usuario && !noVistasAntes.has(a.id)
+        );
+        if (noVistas.length > 0) mostrarAlertaVendedor(noVistas[0]);
+      }
+    } else {
+      DB.sinStockAlertas = nuevasAlertas;
     }
+  });
+
+  // Escuchar catálogo en tiempo real (actualiza vendedor y taller automáticamente)
+  if (fbListeners.catalogo) fbDB.ref('catalogo').off('value', fbListeners.catalogo);
+  fbListeners.catalogo = fbDB.ref('catalogo').on('value', snap => {
+    const val = snap.val();
+    if (val === null) return;
+    DB.catalogo = Array.isArray(val) ? val : Object.values(val);
+    // refrescar selects de marca en las pantallas activas
+    if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
+    if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
+    if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
+  });
+
+  // Escuchar comisionesKit en tiempo real
+  if (fbListeners.comisionesKit) fbDB.ref('comisionesKit').off('value', fbListeners.comisionesKit);
+  fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) DB.comisionesKit = val;
+    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
+  });
+
+  // Escuchar comisionesPre en tiempo real
+  if (fbListeners.comisionesPre) fbDB.ref('comisionesPre').off('value', fbListeners.comisionesPre);
+  fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) DB.comisionesPre = val;
+    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar counter en tiempo real
@@ -2605,22 +2653,45 @@ function srvBuscarCuadro(val, forzar = false) {
 }
 
 function srvAbrirManual() {
-  document.getElementById('modal-srv-info').textContent = `N° de cuadro: ${srvCuadroActual} — No está en la base de datos. Completá los datos del cliente para registrarlo.`;
-  ['srv-m-cliente','srv-m-marca','srv-m-modelo','srv-m-talle','srv-m-rodado','srv-m-color','srv-m-obs'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  document.getElementById('modal-srv-info').textContent = `N° de cuadro: ${srvCuadroActual} — No está en la base de datos. Seleccioná los datos del cliente para registrarlo.`;
+  // limpiar campos
+  document.getElementById('srv-m-cliente').value = '';
+  document.getElementById('srv-m-obs').value = '';
+  // poblar marcas desde catálogo
+  fillMarcasSelect('srv-m-marca');
+  document.getElementById('srv-m-modelo').innerHTML = '<option value="">— Primero elegí marca —</option>';
+  document.getElementById('srv-m-talle').innerHTML  = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-color').innerHTML  = '<option value="">— Seleccioná —</option>';
   document.getElementById('modal-service-manual').classList.add('on');
+}
+
+function srvMFillModelos() {
+  const marca = document.getElementById('srv-m-marca').value;
+  fillModelosSelect('srv-m-modelo', marca);
+  document.getElementById('srv-m-talle').innerHTML  = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
+  document.getElementById('srv-m-color').innerHTML  = '<option value="">— Seleccioná —</option>';
+}
+
+function srvMFillVariants() {
+  fillVariants(
+    'srv-m-talle', 'srv-m-rodado', 'srv-m-color',
+    document.getElementById('srv-m-marca').value,
+    document.getElementById('srv-m-modelo').value
+  );
 }
 
 async function srvRegistrarManual() {
   const cliente = document.getElementById('srv-m-cliente').value.trim();
-  const marca   = document.getElementById('srv-m-marca').value.trim();
-  const modelo  = document.getElementById('srv-m-modelo').value.trim();
-  const talle   = document.getElementById('srv-m-talle').value.trim();
-  const rodado  = document.getElementById('srv-m-rodado').value.trim();
-  const color   = document.getElementById('srv-m-color').value.trim();
+  const marca   = document.getElementById('srv-m-marca').value;
+  const modelo  = document.getElementById('srv-m-modelo').value;
+  const talle   = document.getElementById('srv-m-talle').value;
+  const rodado  = document.getElementById('srv-m-rodado').value;
+  const color   = document.getElementById('srv-m-color').value;
   const obs     = document.getElementById('srv-m-obs').value.trim();
   if (!marca || !modelo) { toast('⚠️ Marca y Modelo son obligatorios','var(--red)'); return; }
+  if (!color) { toast('⚠️ Seleccioná un color','var(--red)'); return; }
 
   await srvGuardar({ cuadro: srvCuadroActual, cliente, marca, modelo, talle, rodado, color }, obs);
   closeModal('modal-service-manual');
