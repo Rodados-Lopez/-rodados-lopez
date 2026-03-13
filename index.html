@@ -589,6 +589,7 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
       <button class="tab" onclick="switchTab('t','service-tab')">🔩 Service</button>
+      <button class="tab" onclick="switchTab('t','bd-tab-t');renderBD('t')">🗄️ Base de Datos</button>
     </div>
 
     <!-- ÓRDENES TAB -->
@@ -711,6 +712,54 @@ input[type=file]{display:none;}
         </div>
       </div>
     </div>
+
+    <!-- BASE DE DATOS TAB (TALLER) -->
+    <div id="bd-tab-t" class="tab-body">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos de Bicicletas</div>
+        </div>
+        <!-- FILTROS -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px">Filtros</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <button class="btn btn-sm" id="bd-t-pbtn-hoy"    onclick="setBDPeriodo('t','hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
+            <button class="btn btn-sm" id="bd-t-pbtn-semana" onclick="setBDPeriodo('t','semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
+            <button class="btn btn-sm" id="bd-t-pbtn-mes"    onclick="setBDPeriodo('t','mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
+            <button class="btn btn-sm" id="bd-t-pbtn-anio"   onclick="setBDPeriodo('t','anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
+            <button class="btn btn-sm" id="bd-t-pbtn-todos"  onclick="setBDPeriodo('t','todos')"  style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Todos</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="fld">
+              <label>Buscar Cliente</label>
+              <input type="text" id="bd-t-f-cliente" placeholder="Nombre..." oninput="renderBD('t')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div class="fld">
+              <label>Buscar Armador</label>
+              <input type="text" id="bd-t-f-armador" placeholder="Nombre..." oninput="renderBD('t')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div class="fld">
+              <label>N° Cuadro</label>
+              <input type="text" id="bd-t-f-cuadro" placeholder="Ej: A123456" oninput="renderBD('t')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+          </div>
+          <div style="margin-top:10px">
+            <div class="fld">
+              <label>Tipo</label>
+              <select id="bd-t-f-tipo" onchange="renderBD('t')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;outline:none;">
+                <option value="">Todos</option>
+                <option value="salon">🏪 Salón (armadas para exposición)</option>
+                <option value="entregada">📦 Entregadas al cliente</option>
+                <option value="envio">🚚 Envíos a domicilio</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:var(--text2)" id="bd-t-count-label"></div>
+        </div>
+        <div id="bd-t-lista"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="screen-admin" class="screen">
@@ -731,6 +780,7 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('a','a-reportes')">📊 Reportes</button>
       <button class="tab" onclick="switchTab('a','a-historial')">📁 Historial</button>
       <button class="tab" onclick="switchTab('a','a-garantias')">🛡️ Garantías</button>
+      <button class="tab" onclick="switchTab('a','a-bd');renderBD('a')">🗄️ Base de Datos</button>
     </div>
 
     <!-- CATÁLOGO -->
@@ -963,6 +1013,56 @@ input[type=file]{display:none;}
             <tbody id="t-garantias"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+  </div>
+
+    <!-- BASE DE DATOS TAB (ADMIN) -->
+    <div id="a-bd" class="tab-body">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos de Bicicletas</div>
+          <button class="btn btn-b btn-sm" onclick="exportarBD()">⬇️ Exportar Excel</button>
+        </div>
+        <!-- FILTROS -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px">Filtros</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <button class="btn btn-sm" id="bd-a-pbtn-hoy"    onclick="setBDPeriodo('a','hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
+            <button class="btn btn-sm" id="bd-a-pbtn-semana" onclick="setBDPeriodo('a','semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
+            <button class="btn btn-sm" id="bd-a-pbtn-mes"    onclick="setBDPeriodo('a','mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
+            <button class="btn btn-sm" id="bd-a-pbtn-anio"   onclick="setBDPeriodo('a','anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
+            <button class="btn btn-sm" id="bd-a-pbtn-todos"  onclick="setBDPeriodo('a','todos')"  style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Todos</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="fld">
+              <label>Buscar Cliente</label>
+              <input type="text" id="bd-a-f-cliente" placeholder="Nombre..." oninput="renderBD('a')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div class="fld">
+              <label>Buscar Armador</label>
+              <input type="text" id="bd-a-f-armador" placeholder="Nombre..." oninput="renderBD('a')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+            <div class="fld">
+              <label>N° Cuadro</label>
+              <input type="text" id="bd-a-f-cuadro" placeholder="Ej: A123456" oninput="renderBD('a')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
+            </div>
+          </div>
+          <div style="margin-top:10px">
+            <div class="fld">
+              <label>Tipo</label>
+              <select id="bd-a-f-tipo" onchange="renderBD('a')" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;outline:none;">
+                <option value="">Todos</option>
+                <option value="salon">🏪 Salón (armadas para exposición)</option>
+                <option value="entregada">📦 Entregadas al cliente</option>
+                <option value="envio">🚚 Envíos a domicilio</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:12px;color:var(--text2)" id="bd-a-count-label"></div>
+        </div>
+        <div id="bd-a-lista"></div>
       </div>
     </div>
 
@@ -3215,6 +3315,158 @@ function exportarHistorial() {
   }));
   exportXlsx([{name:'Historial Completo', data:datos}], 'historial_completo.xlsx');
   toast('⬇️ Historial exportado');
+}
+
+// ════════════════════════════════════════════════════════════
+//  BASE DE DATOS DE BICICLETAS
+// ════════════════════════════════════════════════════════════
+let bdPeriodo = { a: 'semana', t: 'semana' };
+
+function setBDPeriodo(ctx, p) {
+  bdPeriodo[ctx] = p;
+  const keys = ['hoy','semana','mes','anio','todos'];
+  keys.forEach(k => {
+    const btn = document.getElementById(`bd-${ctx}-pbtn-${k}`);
+    if (!btn) return;
+    if (k === p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
+    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
+  });
+  renderBD(ctx);
+}
+
+function getBDOrdenes(ctx) {
+  const periodo = bdPeriodo[ctx] || 'semana';
+  const ahora = new Date();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  let desde, hasta;
+  if (periodo === 'hoy') {
+    desde = hoy; hasta = new Date(hoy.getTime() + 86400000 - 1);
+  } else if (periodo === 'semana') {
+    const dow = ahora.getDay();
+    const lunes = new Date(hoy.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
+    desde = lunes; hasta = new Date(lunes.getTime() + 7 * 86400000 - 1);
+  } else if (periodo === 'mes') {
+    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    hasta = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+  } else if (periodo === 'anio') {
+    desde = new Date(ahora.getFullYear(), 0, 1);
+    hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
+  } else {
+    // todos — sin filtro de fecha
+    return [...DB.ordenes].filter(o => o.estado === 'completada');
+  }
+  return [...DB.ordenes].filter(o => {
+    if (o.estado !== 'completada') return false;
+    const f = new Date(o.fechaCompletado || o.fechaCreacion);
+    return f >= desde && f <= hasta;
+  });
+}
+
+function renderBD(ctx) {
+  const lista = document.getElementById(`bd-${ctx}-lista`);
+  const countLbl = document.getElementById(`bd-${ctx}-count-label`);
+  if (!lista) return;
+
+  const fCliente = (document.getElementById(`bd-${ctx}-f-cliente`)?.value || '').toLowerCase().trim();
+  const fArmador = (document.getElementById(`bd-${ctx}-f-armador`)?.value || '').toLowerCase().trim();
+  const fCuadro  = (document.getElementById(`bd-${ctx}-f-cuadro`)?.value  || '').toLowerCase().trim();
+  const fTipo    = document.getElementById(`bd-${ctx}-f-tipo`)?.value || '';
+
+  let ordenes = getBDOrdenes(ctx);
+
+  // Filtro tipo
+  if (fTipo === 'salon') {
+    ordenes = ordenes.filter(o => o.esSalon);
+  } else if (fTipo === 'entregada') {
+    ordenes = ordenes.filter(o => !o.esSalon && o.entregada);
+  } else if (fTipo === 'envio') {
+    ordenes = ordenes.filter(o => !o.esSalon && o.destino === 'envio');
+  }
+
+  // Filtros de texto
+  if (fCliente) ordenes = ordenes.filter(o => (o.cliente||'').toLowerCase().includes(fCliente));
+  if (fArmador) ordenes = ordenes.filter(o =>
+    (o.armador||'').toLowerCase().includes(fArmador) ||
+    (o.armador2||'').toLowerCase().includes(fArmador)
+  );
+  if (fCuadro) ordenes = ordenes.filter(o => (o.cuadro||'').toLowerCase().includes(fCuadro));
+
+  // Ordenar: más recientes primero
+  ordenes.sort((a,b) => new Date(b.fechaCompletado||b.fechaCreacion) - new Date(a.fechaCompletado||a.fechaCreacion));
+
+  const total = ordenes.reduce((s,o) => s + o.cantidad, 0);
+  if (countLbl) countLbl.textContent = `${ordenes.length} registro${ordenes.length!==1?'s':''} · ${total} bici${total!==1?'s':''}`;
+
+  if (!ordenes.length) {
+    lista.innerHTML = '<div class="empty"><div class="empty-icon">🗄️</div>Sin resultados para los filtros aplicados</div>';
+    return;
+  }
+
+  lista.innerHTML = ordenes.map(o => {
+    // Tipo badge
+    let tipoBadge = '';
+    if (o.esSalon) {
+      const t = o.esRetoque ? '✨ Retoque' : o.tipoArmado === 'kit' ? '📦 Kit' : '🚲 Prearm.';
+      const col = o.esRetoque ? 'var(--green)' : o.tipoArmado === 'kit' ? 'var(--blue)' : 'var(--purple)';
+      tipoBadge = `<span class="badge" style="background:transparent;border:1px solid ${col};color:${col};font-size:10px">${t} · Salón</span>`;
+    } else if (o.entregada) {
+      tipoBadge = `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>`;
+    } else if (o.destino === 'envio') {
+      tipoBadge = `<span class="badge badge-env" style="font-size:10px">🚚 Envío</span>`;
+    } else {
+      tipoBadge = `<span class="badge badge-sal" style="font-size:10px">🏪 Venta Salón</span>`;
+    }
+
+    const arm2 = o.armador2 ? ` <span style="font-size:12px;color:var(--text2)">+ ${o.armador2}</span>` : '';
+    const fechaComp = o.fechaCompletado || o.fechaCreacion;
+
+    return `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;animation:fadeUp .2s ease">
+      <div style="flex:1;min-width:220px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800">${o.marca} ${o.modelo}</span>
+          <span class="qty" style="width:26px;height:26px;font-size:13px">${o.cantidad}</span>
+          ${tipoBadge}
+        </div>
+        ${o.cliente ? `<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">👤 ${o.cliente}</div>` : ''}
+        <div style="font-size:13px;color:var(--text2);line-height:1.9">
+          ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
+          ${o.cuadro ? `<br>🔢 <strong style="color:var(--text);font-size:14px;font-family:monospace">${o.cuadro}</strong>` : '<br><span style="color:var(--text3);font-size:12px">Sin N° de cuadro</span>'}
+          ${o.obs ? `<br>📝 <em style="color:var(--text3)">${o.obs}</em>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:160px;text-align:right">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">🔧 ${o.armador||'—'}${arm2}</div>
+        <div style="font-size:12px;color:var(--text2)">${fmtFecha(fechaComp)}<br>${fmtHora(fechaComp)}</div>
+        ${o.comisionDuplicada ? '<div style="font-size:11px;color:var(--red)">⚠️ Sin comisión (dup.)</div>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportarBD() {
+  const ordenes = getBDOrdenes('a').sort((a,b)=>new Date(b.fechaCompletado||b.fechaCreacion)-new Date(a.fechaCompletado||a.fechaCreacion));
+  const datos = ordenes.map(o => ({
+    'N° Orden': o.id,
+    'Fecha': fmtFecha(o.fechaCompletado||o.fechaCreacion),
+    'Hora': fmtHora(o.fechaCompletado||o.fechaCreacion),
+    'Cliente': o.cliente||'-',
+    'Marca': o.marca,
+    'Modelo': o.modelo,
+    'Talle': o.talle||'-',
+    'Rodado': o.rodado||'-',
+    'Color': o.color,
+    'Cantidad': o.cantidad,
+    'N° Cuadro': o.cuadro||'-',
+    'Armador': o.armador||'-',
+    'Armador 2': o.armador2||'-',
+    'Tipo Armado': o.esRetoque ? 'Retoque Final' : (o.tipoArmado||'-'),
+    'Destino': o.esSalon ? 'Salón' : o.destino === 'envio' ? 'Envío' : 'Venta',
+    'Entregada': o.entregada ? 'Sí' : 'No',
+    'Observaciones': o.obs||'-',
+  }));
+  exportXlsx([{name:'Base de Datos Bicis', data:datos}], `bd_bicicletas_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('⬇️ Base de datos exportada');
 }
 
 // ════════════════════════════════════════════════════════════
