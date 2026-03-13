@@ -124,8 +124,8 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 .ocard.en-proceso{border-left:3px solid var(--blue);}
 .ocard.completada{border-left:3px solid var(--green);opacity:.65;}
 .ocard-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.ocard-sub{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;}
-.ocard-sub strong{color:var(--text);}
+.ocard-sub{font-size:14px;color:var(--text2);margin-top:6px;line-height:1.8;}
+.ocard-sub strong{color:var(--text);font-size:15px;}
 .ocard-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .qty{background:var(--orange);color:#000;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .badge{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;}
@@ -235,8 +235,9 @@ input[type=file]{display:none;}
 
 /* ── INBOX VENDEDOR ── */
 .inbox-item{background:var(--bg3);border:1px solid var(--red);border-radius:4px;padding:14px 18px;margin-bottom:10px;animation:fadeUp .2s ease;}
-.inbox-item .inbox-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.inbox-item .inbox-body{font-size:13px;color:var(--text2);line-height:1.8;}
+.inbox-item .inbox-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.inbox-item .inbox-body{font-size:15px;color:var(--text2);line-height:1.9;}
+.inbox-item .inbox-body strong{color:var(--text);font-size:16px;}
 .inbox-badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .inbox-btn-wrap{position:relative;display:inline-flex;}
 
@@ -365,10 +366,10 @@ input[type=file]{display:none;}
   line-height:1.1;
 }
 .mon-bici{
-  font-size:17px;color:rgba(255,255,255,.6);margin-top:3px;
+  font-size:20px;color:rgba(255,255,255,.7);margin-top:5px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.mon-bici strong{color:rgba(255,255,255,.85);}
+.mon-bici strong{color:rgba(255,255,255,.95);font-size:21px;}
 .mon-destino{
   font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
   padding:2px 8px;border-radius:10px;display:inline-block;margin-top:5px;
@@ -1024,9 +1025,9 @@ input[type=file]{display:none;}
       <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
       <input type="text" id="modal-comp-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicado(this.value)">
     </div>
-    <div class="dup-warning" id="dup-warning">
-      ⚠️ <strong>¡N° de Cuadro ya registrado!</strong><br>
-      Este número de cuadro ya tiene un armado previo en el salón. <strong>No se sumará comisión adicional</strong> para evitar duplicación. Verificá si es la misma bici o ingresá el número correcto.
+    <div class="dup-warning" id="dup-warning" style="background:rgba(255,193,7,.1);border:2px solid var(--yellow);border-radius:5px;padding:14px 16px;margin-top:10px;font-size:13px;color:var(--yellow);display:none">
+      ⚠️ <strong>¡N° de Cuadro ya registrado en la base de datos!</strong><br>
+      Este cuadro ya tiene un armado previo para el salón. Se cambió automáticamente a <strong>✨ Retoque Final</strong> — no se sumará comisión a este armador.
     </div>
     <!-- Observaciones para devolución (oculto por defecto, se muestra al hacer clic en Sin Stock) -->
     <div id="sinstock-obs-wrap" style="display:none;margin-top:14px;background:rgba(255,61,61,.07);border:1px solid rgba(255,61,61,.3);border-radius:4px;padding:14px">
@@ -1635,7 +1636,7 @@ function monRender(ordenes) {
 
 function monCard(o, tipo, num) {
   const nombre = o.cliente ? o.cliente.toUpperCase() : 'CLIENTE';
-  const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' · ' + o.talle : ''}${o.rodado ? ' · ' + o.rodado : ''} · ${o.color}`;
+  const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.talle + '</span>' : ''}${o.rodado ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.rodado + '</span>' : ''} &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">${o.color}</span>`;
   const destinoBadge = o.destino === 'envio'
     ? `<span class="mon-destino mon-destino-envio">🚚 Envío a domicilio</span>`
     : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
@@ -1773,8 +1774,10 @@ function vRenderOrdenes() {
           ${o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
         </div>
         <div class="ocard-sub">
-          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}${o.cuadro ? ` · N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
-          <br>${fmtHora(o.fechaCreacion)}
+          ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+          ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
+          ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span>
           ${o.estado==='sin-stock' && o.motivoSinStock ? `<br><span style="color:var(--red);font-weight:600">⚠️ Motivo sin stock: ${o.motivoSinStock}</span>` : ''}
         </div>
       </div>
@@ -1802,8 +1805,9 @@ function vRenderInbox() {
     <div class="inbox-item">
       <div class="inbox-title">❌ Sin Stock — ${a.marca} ${a.modelo}</div>
       <div class="inbox-body">
-        ${a.talle ? `Talle: <strong>${a.talle}</strong> · ` : ''}${a.rodado ? `Rodado: <strong>${a.rodado}</strong> · ` : ''}Color: <strong>${a.color}</strong>${a.cliente ? ` · Cliente: <strong>${a.cliente}</strong>` : ''}<br>
-        Devuelto por taller: <strong>${fmtHora(a.fecha)}</strong> · Orden original #${a.ordenId}
+        ${a.cliente ? `<span style="font-size:17px;font-weight:700;color:var(--text);display:block;margin-bottom:4px">👤 ${a.cliente}</span>` : ''}
+        ${a.talle ? `<strong>Talle:</strong> ${a.talle}&nbsp;&nbsp;` : ''}${a.rodado ? `<strong>Rodado:</strong> ${a.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${a.color}<br>
+        <span style="font-size:13px;color:var(--text3)">Devuelto: <strong>${fmtHora(a.fecha)}</strong> · Orden #${a.ordenId}</span>
       </div>
       ${a.motivoSinStock ? `<div style="margin-top:8px;background:rgba(255,61,61,.12);border:1px solid var(--red);border-radius:4px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px">⚠️ Motivo de la devolución</div><div style="font-size:14px;font-weight:600;color:#fff">${a.motivoSinStock}</div></div>` : ''}
       <div style="display:flex;gap:8px;margin-top:10px">
@@ -1993,8 +1997,10 @@ function renderOcards(contId, lista, tipo) {
       <div style="flex:1">
         <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}</div>
         <div class="ocard-sub">
-          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.cliente ? ` · Cliente: <strong>${o.cliente}</strong>` : ''}${o.obs ? ` · <em>${o.obs}</em>` : ''}${o.cuadro ? ` · N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
-          <br>${fmtHora(o.fechaCreacion)}${o.armador ? ` · Armador: <strong>${o.armador}</strong>` : ''}
+          ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+          ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
+          ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}${o.armador ? ` · 🔧 ${o.armador}` : ''}</span>
         </div>
       </div>
       <div class="ocard-actions">
@@ -2112,25 +2118,53 @@ async function confirmarAsignacion() {
 function abrirModalCompletar(id) {
   ordenCompletarId = id;
   const o = DB.ordenes.find(x => x.id===id);
+  // Guardar tipo original por si se auto-cambia a retoque y luego el usuario borra el cuadro
+  o._tipoArmadoOriginal = o.tipoArmado || 'prearmada';
   const tipoLabel = o.tipoArmado === 'retoque' ? '✨ Retoque Final'
     : o.tipoArmado === 'kit' ? '📦 Kit' : '🚲 Prearmada';
   const arm2txt = (o.tipoArmado === 'kit' && o.armador2) ? ` + ${o.armador2}` : '';
   document.getElementById('modal-comp-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt} — ${tipoLabel}`;
   document.getElementById('modal-comp-cuadro').value = o.cuadro || '';
-  document.getElementById('dup-warning').classList.remove('on');
+  document.getElementById('dup-warning').style.display = 'none';
   document.getElementById('sinstock-obs-wrap').style.display = 'none';
   document.getElementById('completar-actions').style.display = 'flex';
   document.getElementById('modal-completar').classList.add('on');
+  // Si ya había un cuadro cargado, verificar duplicado en tiempo real
+  if (o.cuadro) checkCuadroDuplicado(o.cuadro);
 }
 
 function checkCuadroDuplicado(cuadro) {
   const val = (cuadro || '').trim();
-  if (!val) { document.getElementById('dup-warning').classList.remove('on'); return; }
+  const warn = document.getElementById('dup-warning');
+  if (!val) { warn.style.display = 'none'; return; }
   // Buscar si ese cuadro ya existe en órdenes completadas de salón
-  const existeEnSalon = DB.ordenes.some(o => 
+  const existeEnSalon = DB.ordenes.some(o =>
     o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada'
   );
-  document.getElementById('dup-warning').classList.toggle('on', existeEnSalon);
+  warn.style.display = existeEnSalon ? 'block' : 'none';
+  // Auto-cambiar a retoque final si coincide cuadro
+  if (existeEnSalon && ordenCompletarId !== null) {
+    const o = DB.ordenes.find(x => x.id === ordenCompletarId);
+    if (o && o.tipoArmado !== 'retoque') {
+      // Cambiar tipo en memoria y actualizar info mostrada
+      o.tipoArmado = 'retoque';
+      o.esRetoque = true;
+      const arm2txt = (o.armador2) ? ` + ${o.armador2}` : '';
+      document.getElementById('modal-comp-info').innerHTML =
+        `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt} — <span style="color:var(--green);font-weight:700">✨ Retoque Final (sin comisión)</span>`;
+    }
+  } else if (!existeEnSalon && ordenCompletarId !== null) {
+    // Si borraron el cuadro duplicado, restaurar tipo original
+    const o = DB.ordenes.find(x => x.id === ordenCompletarId);
+    if (o && o._tipoArmadoOriginal && o.tipoArmado === 'retoque') {
+      o.tipoArmado = o._tipoArmadoOriginal;
+      o.esRetoque = false;
+      const tipoLabel = o.tipoArmado === 'kit' ? '📦 Kit' : '🚲 Prearmada';
+      const arm2txt = (o.tipoArmado === 'kit' && o.armador2) ? ` + ${o.armador2}` : '';
+      document.getElementById('modal-comp-info').textContent =
+        `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt} — ${tipoLabel}`;
+    }
+  }
 }
 
 async function confirmarCompletado() {
@@ -2952,33 +2986,32 @@ function renderReporte() {
   const porArmador = {};
   DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,detalle:{}});
   periodo.forEach(o => {
-    const armadores = [o.armador];
-    if (o.tipoArmado === 'kit' && o.armador2) armadores.push(o.armador2);
-    armadores.forEach(armNombre => {
+    const esKitDosArmadores = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+    const esKitMismoArmador = o.tipoArmado === 'kit' && o.armador2 && o.armador2 === o.armador;
+    // Determinar lista de armadores únicos para esta orden
+    const armadoresUnicos = esKitDosArmadores ? [o.armador, o.armador2] : [o.armador];
+    armadoresUnicos.forEach(armNombre => {
       if (!armNombre) return;
       if (!porArmador[armNombre]) porArmador[armNombre]={bicis:0,total:0,ventas:0,salon:0,detalle:{}};
       const com = comisionOrden(o, armNombre);
-      // Para el segundo armador en kit, no sumar la bici al contador principal (ya la contó el primero)
-      if (armNombre === o.armador) {
-        porArmador[armNombre].bicis += o.cantidad;
-        if (o.esSalon) porArmador[armNombre].salon += o.cantidad;
-        else porArmador[armNombre].ventas += o.cantidad;
-      } else {
-        // segundo armador: contar bicis también
-        porArmador[armNombre].bicis += o.cantidad;
-        if (o.esSalon) porArmador[armNombre].salon += o.cantidad;
-        else porArmador[armNombre].ventas += o.cantidad;
-      }
+      // Fracción de bici que le corresponde a este armador:
+      // - Kit mismo armador (arm1 == arm2): cuenta 1 bici completa y comisión completa
+      // - Kit dos armadores distintos: cada uno cuenta 0.5 bici
+      // - Cualquier otro caso: 1 bici completa
+      const fracBici = esKitDosArmadores ? o.cantidad * 0.5 : o.cantidad;
+      porArmador[armNombre].bicis += fracBici;
+      if (o.esSalon) porArmador[armNombre].salon += fracBici;
+      else porArmador[armNombre].ventas += fracBici;
       porArmador[armNombre].total += com;
       const dk = `${o.marca}|${o.modelo}`;
       const tipo = o.tipoArmado || 'prearmada';
       const comKey = `${dk}||${tipo}||${armNombre}`;
       if (!porArmador[armNombre].detalle[comKey]) {
-        const comUn = com > 0 ? Math.round(com / o.cantidad) : 0;
+        const comUn = com > 0 ? Math.round(com / fracBici) : 0;
         const tipoLabel = o.esRetoque ? 'retoque' : tipo;
         porArmador[armNombre].detalle[comKey]={marca:o.marca,modelo:o.modelo,tipo:tipoLabel,cantidad:0,ganado:0,comUn};
       }
-      porArmador[armNombre].detalle[comKey].cantidad += o.cantidad;
+      porArmador[armNombre].detalle[comKey].cantidad += fracBici;
       porArmador[armNombre].detalle[comKey].ganado += com;
     });
   });
@@ -3032,9 +3065,9 @@ function renderReporte() {
             <div>
               <div class="rcard-name">🔧 ${nombre}</div>
               <div style="display:flex;gap:10px;margin-top:6px">
-                <span class="badge badge-b">${r.bicis} bicis</span>
-                <span class="badge badge-g">${r.ventas} ventas</span>
-                <span class="badge badge-p">${r.salon} salón</span>
+                <span class="badge badge-b">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis</span>
+                <span class="badge badge-g">${Number.isInteger(r.ventas)?r.ventas:r.ventas.toFixed(1)} ventas</span>
+                <span class="badge badge-p">${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} salón</span>
               </div>
             </div>
             <div class="rcard-total">$${r.total.toLocaleString('es-AR')}</div>
@@ -3046,7 +3079,7 @@ function renderReporte() {
                 <tr>
                   <td>${d.marca} ${d.modelo}</td>
                   <td>${d.tipo==='kit' ? '<span style="color:var(--blue);font-size:11px;font-weight:700">📦 Kit</span>' : d.tipo==='retoque' ? '<span style="color:var(--green);font-size:11px;font-weight:700">✨ Retoque</span>' : '<span style="color:var(--purple);font-size:11px;font-weight:700">🚲 Prearmado</span>'}</td>
-                  <td><strong>${d.cantidad}</strong></td>
+                  <td><strong>${Number.isInteger(d.cantidad)?d.cantidad:d.cantidad.toFixed(1)}</strong></td>
                   <td style="color:var(--text2)">$${d.comUn.toLocaleString('es-AR')}</td>
                   <td><strong style="color:var(--green)">$${d.ganado.toLocaleString('es-AR')}</strong></td>
                 </tr>
@@ -3201,15 +3234,16 @@ function comisionOrden(o, paraArmador) {
     comUnitaria = (DB.comisionesPre||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
   }
   const totalCom = comUnitaria * o.cantidad;
-  // Si hay segundo armador y es kit, dividir comisión al 50%
-  if (o.tipoArmado === 'kit' && o.armador2) {
-    // Si se pide para un armador específico, devolver su mitad
+  // Kit con dos armadores distintos: dividir comisión al 50% cada uno
+  const dosArmadoresDistintos = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+  if (dosArmadoresDistintos) {
     if (paraArmador) {
       if (paraArmador === o.armador || paraArmador === o.armador2) return Math.round(totalCom / 2);
       return 0;
     }
-    return totalCom; // total combinado
+    return totalCom; // total combinado (para stats globales)
   }
+  // Kit con mismo armador asignado dos veces: comisión completa, una sola bici
   return totalCom;
 }
 
