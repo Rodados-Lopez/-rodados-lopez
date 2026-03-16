@@ -231,7 +231,9 @@ input[type=file]{display:none;}
 /* ── DELIVERY BADGE ── */
 .badge-env{background:rgba(255,193,7,.12);color:var(--yellow);border:1px solid var(--yellow);}
 .badge-sal{background:rgba(0,200,83,.12);color:var(--green);border:1px solid var(--green);}
+.badge-local{background:rgba(255,61,61,.12);color:var(--red);border:1px solid var(--red);}
 .ocard.envio{border-left:3px solid var(--yellow);}
+.ocard.local-cliente{border-left:3px solid var(--red);}
 
 /* ── INBOX VENDEDOR ── */
 .inbox-item{background:var(--bg3);border:1px solid var(--red);border-radius:4px;padding:14px 18px;margin-bottom:10px;animation:fadeUp .2s ease;}
@@ -539,6 +541,7 @@ input[type=file]{display:none;}
         <div class="fld">
           <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
           <select id="v-destino">
+            <option value="local">🏃 Cliente en el Local</option>
             <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
@@ -864,7 +867,10 @@ input[type=file]{display:none;}
             <tbody id="t-comisiones"></tbody>
           </table>
         </div>
-        <button class="btn btn-o btn-full" style="margin-top:12px" onclick="guardarComisiones()">💾 GUARDAR COMISIONES</button>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-o btn-full" style="flex:1;min-width:180px" onclick="guardarComisiones()">💾 GUARDAR COMISIONES</button>
+          <button class="btn btn-r" style="white-space:nowrap" onclick="borrarTodasComisiones()">🗑️ BORRAR TODO</button>
+        </div>
       </div>
     </div>
 
@@ -1271,6 +1277,7 @@ input[type=file]{display:none;}
       <div class="fg fg2">
         <div class="fld"><label>Destino</label>
           <select id="av-destino">
+            <option value="local">🏃 Cliente en el Local</option>
             <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
@@ -1442,6 +1449,7 @@ let ordenEditarId   = null;
 let lastOrdenCount  = 0;
 let sesionActual    = null;
 let fbListeners     = {};  // referencias a listeners activos
+let comisionesEditando = false; // true mientras el admin está editando comisiones
 
 // ── INIT FIREBASE ──
 function initFirebase() {
@@ -1559,7 +1567,7 @@ function startPolling() {
     // refrescar selects de marca en las pantallas activas
     if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
     if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
-    if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
+    if (isScreen('admin'))    { renderCatalogo(); if (!comisionesEditando) renderComisiones(); }
   });
 
   // Escuchar comisionesKit en tiempo real
@@ -1567,7 +1575,8 @@ function startPolling() {
   fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
     const val = snap.val();
     if (val !== null) DB.comisionesKit = val;
-    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
+    // Solo re-renderizar si el admin NO está editando la tabla de comisiones
+    if (isScreen('admin') && !comisionesEditando) { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar comisionesPre en tiempo real
@@ -1575,7 +1584,8 @@ function startPolling() {
   fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
     const val = snap.val();
     if (val !== null) DB.comisionesPre = val;
-    if (isScreen('admin')) { renderCatalogo(); renderComisiones(); }
+    // Solo re-renderizar si el admin NO está editando la tabla de comisiones
+    if (isScreen('admin') && !comisionesEditando) { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar counter en tiempo real
@@ -1739,7 +1749,9 @@ function monCard(o, tipo, num) {
   const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.talle + '</span>' : ''}${o.rodado ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.rodado + '</span>' : ''} &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">${o.color}</span>`;
   const destinoBadge = o.destino === 'envio'
     ? `<span class="mon-destino mon-destino-envio">🚚 Envío a domicilio</span>`
-    : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
+    : o.destino === 'local'
+      ? `<span class="mon-destino" style="background:rgba(255,61,61,.15);color:var(--red)">🏃 Cliente en el Local</span>`
+      : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
   const icon   = tipo === 'proceso' ? '⚙️' : '✅';
   const tiempoComp = tipo === 'completada' && o.fechaCompletado
     ? `<div style="font-size:12px;color:rgba(0,200,83,.6);margin-top:4px;letter-spacing:1px">LISTO ${monHaceMinutos(o.fechaCompletado)}</div>`
@@ -1837,7 +1849,7 @@ async function vEnviarOrden() {
     cliente, marca, modelo, talle, rodado, color, cantidad, obs,
     estado: 'pendiente', armador: null, cuadro: null,
     esSalon: false,
-    destino: destino, // 'envio' | 'salon'
+    destino: destino, // 'local' | 'envio' | 'salon'
     vendedor: sesionActual ? sesionActual.usuario : 'desconocido',
     fechaCreacion: new Date().toISOString(),
     fechaAsignado: null,
@@ -1859,7 +1871,7 @@ async function vEnviarOrden() {
   document.getElementById('v-color').innerHTML = '<option value="">— Seleccioná —</option>';
 
   vRenderOrdenes();
-  toast(`✅ Orden enviada al taller${destino==='envio'?' 🚚 (Envío a domicilio)':' 🏪 (Para salón)'}`);
+  toast(`✅ Orden enviada al taller${destino==='envio'?' 🚚 (Envío a domicilio)':destino==='local'?' 🏃 (Cliente en el local)':' 🏪 (Para salón)'}`);
 }
 
 function vRenderOrdenes() {
@@ -1868,10 +1880,14 @@ function vRenderOrdenes() {
     .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).slice(0,30);
   if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div>'; return; }
   cont.innerHTML = lista.map(o => `
-    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}">
+    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':o.destino==='local'?' local-cliente':''}">
       <div style="flex:1">
         <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-          ${o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
+          ${o.destino==='envio'
+            ? '<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>'
+            : o.destino==='local'
+              ? '<span class="badge badge-local" style="font-size:11px">🏃 En el Local</span>'
+              : '<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
         </div>
         <div class="ocard-sub">
           ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
@@ -2092,10 +2108,22 @@ function renderOcards(contId, lista, tipo) {
     cont.innerHTML = `<div class="empty"><div class="empty-icon">${tipo==='pendiente'?'📋':tipo==='en-proceso'?'🔧':'🏁'}</div>${msgs[tipo]}</div>`;
     return;
   }
-  cont.innerHTML = lista.sort((a,b)=>new Date(a.fechaCreacion)-new Date(b.fechaCreacion)).map(o => `
-    <div class="ocard ${o.estado}">
+  // Ordenar: local primero, luego por fecha
+  const destPrioridad = d => d==='local' ? 0 : d==='envio' ? 1 : 2;
+  cont.innerHTML = lista.sort((a,b) => {
+    const dp = destPrioridad(a.destino) - destPrioridad(b.destino);
+    if (dp !== 0) return dp;
+    return new Date(a.fechaCreacion) - new Date(b.fechaCreacion);
+  }).map(o => `
+    <div class="ocard ${o.estado}${o.destino==='local'?' local-cliente':o.destino==='envio'?' envio':''}">
       <div style="flex:1">
-        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}</div>
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+          ${o.destino==='local'
+            ? '<span class="badge badge-local" style="font-size:11px">🏃 Cliente en el Local</span>'
+            : o.destino==='envio'
+              ? '<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>'
+              : ''}
+        </div>
         <div class="ocard-sub">
           ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
           ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
@@ -2140,7 +2168,7 @@ function renderEnvios(envios) {
 function abrirModalAsignar(id) {
   ordenAsignarId = id;
   const o = DB.ordenes.find(x => x.id===id);
-  document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : ''}`;
+  document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : o.destino==='local' ? ' 🏃 CLIENTE EN EL LOCAL' : ''}`;
   const sel = document.getElementById('modal-armador');
   sel.innerHTML = '<option value="">— Elegí —</option>';
   DB.armadores.forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
@@ -2845,11 +2873,14 @@ function renderComisiones() {
           ${tieneKit
             ? `<div style="display:flex;flex-direction:column;gap:6px">
                 <input type="number" id="comkit_${safeK}" value="${valKit}"
+                  onfocus="comisionesEditando=true"
                   style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Kit">
                 <input type="number" id="compre_${safeK}" value="${valPre}"
+                  onfocus="comisionesEditando=true"
                   style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">
                </div>`
             : `<input type="number" id="compre_${safeK}" value="${valPre}"
+                onfocus="comisionesEditando=true"
                 style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">`}
         </td>
       </tr>`;
@@ -2897,14 +2928,25 @@ async function guardarComisiones() {
       DB.comisiones[k] = DB.comisionesKit[k];
     }
   });
+  comisionesEditando = false; // liberar bloqueo de re-render
   await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
   // NO re-renderizar la tabla de comisiones (perdería los valores editados)
   // Solo actualizar catálogo en memoria si corresponde
   toast('💾 Comisiones guardadas ✅');
 }
 
-// ARMADORES
-async function armAgregar() {
+async function borrarTodasComisiones() {
+  if (!confirm('⚠️ ¿Estás seguro que querés borrar TODAS las comisiones? Esta acción no se puede deshacer.')) return;
+  DB.comisiones = {};
+  DB.comisionesKit = {};
+  DB.comisionesPre = {};
+  // También resetear tieneKitPre en el catálogo
+  DB.catalogo.forEach(b => { b.tieneKitPre = false; });
+  comisionesEditando = false;
+  await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre'); await saveKey('catalogo');
+  renderComisiones();
+  toast('🗑️ Todas las comisiones fueron borradas','var(--red)');
+}
   const nombre = document.getElementById('arm-nombre').value.trim();
   if (!nombre) { toast('⚠️ Escribí un nombre','var(--red)'); return; }
   if (DB.armadores.includes(nombre)) { toast('⚠️ Ya existe','var(--red)'); return; }
@@ -3081,6 +3123,8 @@ function renderReporte() {
   const totalPago   = periodo.reduce((s,o)=>s+comisionOrden(o),0);
   const ventasCount = periodo.filter(o=>!o.esSalon).reduce((s,o)=>s+o.cantidad,0);
   const salonCount  = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
+  const localCount  = periodo.filter(o=>!o.esSalon && o.destino==='local').reduce((s,o)=>s+o.cantidad,0);
+  const envioCount  = periodo.filter(o=>!o.esSalon && o.destino==='envio').reduce((s,o)=>s+o.cantidad,0);
 
   // por armador
   const porArmador = {};
@@ -3132,6 +3176,8 @@ function renderReporte() {
       <div class="stat-box stat-g"><div class="stat-num">$${totalPago.toLocaleString('es-AR')}</div><div class="stat-lbl">Total a Pagar</div></div>
       <div class="stat-box stat-b"><div class="stat-num">${ventasCount}</div><div class="stat-lbl">Por Ventas</div></div>
       <div class="stat-box stat-p"><div class="stat-num">${salonCount}</div><div class="stat-lbl">Para Salón</div></div>
+      ${localCount > 0 ? `<div class="stat-box" style="border-color:var(--red)"><div class="stat-num" style="color:var(--red)">${localCount}</div><div class="stat-lbl">🏃 En el Local</div></div>` : ''}
+      ${envioCount > 0 ? `<div class="stat-box" style="border-color:var(--yellow)"><div class="stat-num" style="color:var(--yellow)">${envioCount}</div><div class="stat-lbl">🚚 Envíos</div></div>` : ''}
     </div>
 
     <div class="panel" style="margin-bottom:14px">
@@ -3212,7 +3258,7 @@ function exportarReporteSemanal() {
     'Tipo Armado': o.tipoArmado||'-',
     'Tiempo (min)': o.tiempoArmadoMin ?? '-',
     Tipo: o.esSalon?'Salón':'Venta',
-    Destino: o.destino||'-',
+    Destino: o.destino==='local' ? 'Cliente en el Local' : o.destino==='envio' ? 'Envío a Domicilio' : o.destino==='salon' ? 'Para el Salón' : (o.destino||'-'),
     'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
     'Total Comisión ($)': comisionOrden(o),
   }));
@@ -3267,7 +3313,7 @@ function renderHistorial() {
     const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
     const tipoStr = o.esRetoque ? '✨ Retoque' : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
     const arm2Str = (o.tipoArmado==='kit' && o.armador2) ? `<br><span style="font-size:11px;color:var(--text2)">+${o.armador2}</span>` : '';
-    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':'<span class="badge badge-sal">🏪 Salón vta</span>');
+    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':o.destino==='local'?'<span class="badge badge-local">🏃 Local</span>':'<span class="badge badge-sal">🏪 Salón vta</span>');
     const comStr = o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>' : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
     return `
     <tr>
@@ -3303,7 +3349,7 @@ function exportarHistorial() {
     'N° Cuadro': o.cuadro||'-',
     'Tipo Armado': o.tipoArmado||'-',
     'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
-    Destino: o.destino||'salon',
+    Destino: o.destino==='local' ? 'Cliente en el Local' : o.destino==='envio' ? 'Envío a Domicilio' : o.destino==='salon' ? 'Para el Salón' : (o.destino||'salon'),
     Observaciones: o.obs||'-',
     Tipo: o.esSalon?'Salón':'Venta',
     Estado: o.estado,
