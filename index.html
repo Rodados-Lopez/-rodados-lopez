@@ -231,9 +231,9 @@ input[type=file]{display:none;}
 /* ── DELIVERY BADGE ── */
 .badge-env{background:rgba(255,193,7,.12);color:var(--yellow);border:1px solid var(--yellow);}
 .badge-sal{background:rgba(0,200,83,.12);color:var(--green);border:1px solid var(--green);}
-.badge-local{background:rgba(255,61,61,.12);color:var(--red);border:1px solid var(--red);}
 .ocard.envio{border-left:3px solid var(--yellow);}
-.ocard.local-cliente{border-left:3px solid var(--red);}
+.ocard.local-dest{border-left:3px solid var(--orange);border:1px solid rgba(255,98,0,.35);}
+.badge-local{background:rgba(255,98,0,.15);color:var(--orange);border:1px solid var(--orange);}
 
 /* ── INBOX VENDEDOR ── */
 .inbox-item{background:var(--bg3);border:1px solid var(--red);border-radius:4px;padding:14px 18px;margin-bottom:10px;animation:fadeUp .2s ease;}
@@ -541,7 +541,7 @@ input[type=file]{display:none;}
         <div class="fld">
           <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
           <select id="v-destino">
-            <option value="local">🏃 Cliente en el Local</option>
+            <option value="local">⭐ Cliente en el Local</option>
             <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
@@ -549,6 +549,24 @@ input[type=file]{display:none;}
         <div class="fld">
           <label>Observaciones <span class="opt-label">(opcional)</span></label>
           <input type="text" id="v-obs" placeholder="Accesorios, urgente, etc.">
+        </div>
+      </div>
+      <!-- PRIORIDAD DE ARMADO -->
+      <div class="fg fg2" style="margin-bottom:12px">
+        <div class="fld">
+          <label>Prioridad de Armado <span class="opt-label">(opcional)</span></label>
+          <select id="v-prioridad" onchange="vTogglePrioridadHora()">
+            <option value="">— Sin prioridad especial —</option>
+            <option value="inmediato">🔴 Retiro Inmediato (para ahora)</option>
+            <option value="30min">🕐 En 30 minutos</option>
+            <option value="1h">🕑 En 1 hora</option>
+            <option value="2h">🕒 En 2 horas</option>
+            <option value="horario">🕓 Horario específico...</option>
+          </select>
+        </div>
+        <div class="fld" id="v-hora-especifica-wrap" style="display:none">
+          <label>Hora de entrega</label>
+          <input type="time" id="v-hora-especifica" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:11px 13px;border-radius:3px;font-size:14px;width:100%">
         </div>
       </div>
       <button class="btn btn-o btn-full" onclick="vEnviarOrden()">🚀 ENVIAR ORDEN AL TALLER</button>
@@ -589,6 +607,7 @@ input[type=file]{display:none;}
 
     <div class="tabs">
       <button class="tab on" onclick="switchTab('t','ordenes-tab')">📋 Órdenes</button>
+      <button class="tab" onclick="switchTab('t','local-tab')">⭐ Local <span id="t-local-count" style="display:none;background:var(--orange);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
       <button class="tab" onclick="switchTab('t','service-tab')">🔩 Service</button>
@@ -608,6 +627,15 @@ input[type=file]{display:none;}
       <div class="panel">
         <div class="ptitle ptitle-g">✅ Completadas Hoy</div>
         <div id="t-completadas"><div class="empty"><div class="empty-icon">🏁</div>Nada aún</div></div>
+      </div>
+    </div>
+
+    <!-- LOCAL TAB -->
+    <div id="local-tab" class="tab-body">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--orange)">⭐ Clientes en el Local — PRIORIDAD MÁXIMA</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Estas órdenes corresponden a clientes que están esperando en el local. Tienen máxima prioridad sobre envíos y armados para el salón.</p>
+        <div id="t-local-lista"><div class="empty"><div class="empty-icon">⭐</div>Sin clientes en el local</div></div>
       </div>
     </div>
 
@@ -867,9 +895,9 @@ input[type=file]{display:none;}
             <tbody id="t-comisiones"></tbody>
           </table>
         </div>
-        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-          <button class="btn btn-o btn-full" style="flex:1;min-width:180px" onclick="guardarComisiones()">💾 GUARDAR COMISIONES</button>
-          <button class="btn btn-r" style="white-space:nowrap" onclick="borrarTodasComisiones()">🗑️ BORRAR TODO</button>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn btn-o" style="flex:1;justify-content:center" onclick="guardarComisiones()">💾 GUARDAR COMISIONES</button>
+          <button class="btn btn-r btn-sm" onclick="borrarTodasComisiones()">🗑️ Borrar Todo</button>
         </div>
       </div>
     </div>
@@ -961,6 +989,7 @@ input[type=file]{display:none;}
           <div class="ptitle" style="margin:0;border:none;padding:0">📁 Historial Completo</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-b btn-sm" onclick="exportarHistorial()">⬇️ Exportar Todo</button>
+            <button class="btn btn-r btn-sm" id="btn-borrar-seleccionados" onclick="borrarOrdenesSeleccionadas()" style="display:none">🗑️ Borrar Seleccionados</button>
           </div>
         </div>
         <div class="fg fg4" style="margin-bottom:14px">
@@ -989,7 +1018,7 @@ input[type=file]{display:none;}
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
+            <thead><tr><th><input type="checkbox" id="h-check-all" onchange="historialToggleAll(this)" style="accent-color:var(--orange);width:15px;height:15px"></th><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
             <tbody id="t-historial"></tbody>
           </table>
         </div>
@@ -1277,7 +1306,6 @@ input[type=file]{display:none;}
       <div class="fg fg2">
         <div class="fld"><label>Destino</label>
           <select id="av-destino">
-            <option value="local">🏃 Cliente en el Local</option>
             <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
@@ -1449,7 +1477,6 @@ let ordenEditarId   = null;
 let lastOrdenCount  = 0;
 let sesionActual    = null;
 let fbListeners     = {};  // referencias a listeners activos
-let comisionesEditando = false; // true mientras el admin está editando comisiones
 
 // ── INIT FIREBASE ──
 function initFirebase() {
@@ -1567,7 +1594,7 @@ function startPolling() {
     // refrescar selects de marca en las pantallas activas
     if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
     if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
-    if (isScreen('admin'))    { renderCatalogo(); if (!comisionesEditando) renderComisiones(); }
+    if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar comisionesKit en tiempo real
@@ -1575,8 +1602,7 @@ function startPolling() {
   fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
     const val = snap.val();
     if (val !== null) DB.comisionesKit = val;
-    // Solo re-renderizar si el admin NO está editando la tabla de comisiones
-    if (isScreen('admin') && !comisionesEditando) { renderCatalogo(); renderComisiones(); }
+    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar comisionesPre en tiempo real
@@ -1584,8 +1610,7 @@ function startPolling() {
   fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
     const val = snap.val();
     if (val !== null) DB.comisionesPre = val;
-    // Solo re-renderizar si el admin NO está editando la tabla de comisiones
-    if (isScreen('admin') && !comisionesEditando) { renderCatalogo(); renderComisiones(); }
+    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
   });
 
   // Escuchar counter en tiempo real
@@ -1749,9 +1774,7 @@ function monCard(o, tipo, num) {
   const bici   = `<strong>${o.marca} ${o.modelo}</strong>${o.talle ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.talle + '</span>' : ''}${o.rodado ? ' &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">' + o.rodado + '</span>' : ''} &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.9);font-weight:700">${o.color}</span>`;
   const destinoBadge = o.destino === 'envio'
     ? `<span class="mon-destino mon-destino-envio">🚚 Envío a domicilio</span>`
-    : o.destino === 'local'
-      ? `<span class="mon-destino" style="background:rgba(255,61,61,.15);color:var(--red)">🏃 Cliente en el Local</span>`
-      : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
+    : `<span class="mon-destino mon-destino-salon">🏪 Retiro en local</span>`;
   const icon   = tipo === 'proceso' ? '⚙️' : '✅';
   const tiempoComp = tipo === 'completada' && o.fechaCompletado
     ? `<div style="font-size:12px;color:rgba(0,200,83,.6);margin-top:4px;letter-spacing:1px">LISTO ${monHaceMinutos(o.fechaCompletado)}</div>`
@@ -1831,6 +1854,22 @@ function vFillVariants() {
   fillVariants('v-talle','v-rodado','v-color', marca, modelo);
 }
 
+function vTogglePrioridadHora() {
+  const val = document.getElementById('v-prioridad').value;
+  const wrap = document.getElementById('v-hora-especifica-wrap');
+  if (wrap) wrap.style.display = val === 'horario' ? 'block' : 'none';
+}
+
+function vGetPrioridadLabel(prioridad, horaEspecifica) {
+  if (!prioridad) return null;
+  if (prioridad === 'inmediato') return '🔴 RETIRO INMEDIATO';
+  if (prioridad === '30min') return '🕐 En 30 minutos';
+  if (prioridad === '1h') return '🕑 En 1 hora';
+  if (prioridad === '2h') return '🕒 En 2 horas';
+  if (prioridad === 'horario' && horaEspecifica) return `🕓 Entregar a las ${horaEspecifica}`;
+  return null;
+}
+
 async function vEnviarOrden() {
   const cliente = document.getElementById('v-cliente').value.trim();
   const marca = document.getElementById('v-marca').value;
@@ -1840,9 +1879,13 @@ async function vEnviarOrden() {
   const color = document.getElementById('v-color').value;
   const cantidad = parseInt(document.getElementById('v-cantidad').value);
   const obs = document.getElementById('v-obs').value.trim();
-  const destino = document.getElementById('v-destino').value; // 'envio' | 'salon'
+  const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'salon'
+  const prioridad = document.getElementById('v-prioridad')?.value || '';
+  const horaEspecifica = document.getElementById('v-hora-especifica')?.value || '';
 
   if (!marca || !modelo || (!talle && !rodado) || !color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
+
+  const prioridadLabel = vGetPrioridadLabel(prioridad, horaEspecifica);
 
   const orden = {
     id: DB.counter++,
@@ -1850,6 +1893,8 @@ async function vEnviarOrden() {
     estado: 'pendiente', armador: null, cuadro: null,
     esSalon: false,
     destino: destino, // 'local' | 'envio' | 'salon'
+    prioridad: prioridad || null,
+    prioridadLabel: prioridadLabel,
     vendedor: sesionActual ? sesionActual.usuario : 'desconocido',
     fechaCreacion: new Date().toISOString(),
     fechaAsignado: null,
@@ -1869,9 +1914,14 @@ async function vEnviarOrden() {
   document.getElementById('v-talle').innerHTML = '<option value="">— Seleccioná —</option>';
   document.getElementById('v-rodado').innerHTML = '<option value="">— Seleccioná —</option>';
   document.getElementById('v-color').innerHTML = '<option value="">— Seleccioná —</option>';
+  if (document.getElementById('v-prioridad')) document.getElementById('v-prioridad').value = '';
+  if (document.getElementById('v-hora-especifica')) document.getElementById('v-hora-especifica').value = '';
+  if (document.getElementById('v-hora-especifica-wrap')) document.getElementById('v-hora-especifica-wrap').style.display = 'none';
 
   vRenderOrdenes();
-  toast(`✅ Orden enviada al taller${destino==='envio'?' 🚚 (Envío a domicilio)':destino==='local'?' 🏃 (Cliente en el local)':' 🏪 (Para salón)'}`);
+  const destinoMsg = destino==='local' ? ' ⭐ (Cliente en el Local)' : destino==='envio' ? ' 🚚 (Envío a domicilio)' : ' 🏪 (Para salón)';
+  const priorMsg = prioridadLabel ? ` · ${prioridadLabel}` : '';
+  toast(`✅ Orden enviada al taller${destinoMsg}${priorMsg}`);
 }
 
 function vRenderOrdenes() {
@@ -1880,19 +1930,16 @@ function vRenderOrdenes() {
     .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).slice(0,30);
   if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div>'; return; }
   cont.innerHTML = lista.map(o => `
-    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':o.destino==='local'?' local-cliente':''}">
+    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}${o.destino==='local'?' local-dest':''}">
       <div style="flex:1">
         <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-          ${o.destino==='envio'
-            ? '<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>'
-            : o.destino==='local'
-              ? '<span class="badge badge-local" style="font-size:11px">🏃 En el Local</span>'
-              : '<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
+          ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
         </div>
         <div class="ocard-sub">
           ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
           ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
           ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          ${o.prioridadLabel ? `<br><span style="font-size:12px;font-weight:700;color:var(--red);background:rgba(255,61,61,.1);padding:2px 8px;border-radius:10px;border:1px solid var(--red)">${o.prioridadLabel}</span>` : ''}
           <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span>
           ${o.estado==='sin-stock' && o.motivoSinStock ? `<br><span style="color:var(--red);font-weight:600">⚠️ Motivo sin stock: ${o.motivoSinStock}</span>` : ''}
         </div>
@@ -2093,12 +2140,18 @@ function tRenderAll() {
   const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
   const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
   const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
+  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada');
+  // Count badge for local
+  const localPend = locales.filter(o=>o.estado!=='completada').length;
+  const localCount = document.getElementById('t-local-count');
+  if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
 
   renderOcards('t-pendientes', pendientes, 'pendiente');
   renderOcards('t-en-proceso', enProceso, 'en-proceso');
   renderOcards('t-completadas', completadas, 'completada');
   renderSalon();
   renderEnvios(envios);
+  renderLocales(locales);
 }
 
 function renderOcards(contId, lista, tipo) {
@@ -2108,26 +2161,23 @@ function renderOcards(contId, lista, tipo) {
     cont.innerHTML = `<div class="empty"><div class="empty-icon">${tipo==='pendiente'?'📋':tipo==='en-proceso'?'🔧':'🏁'}</div>${msgs[tipo]}</div>`;
     return;
   }
-  // Ordenar: local primero, luego por fecha
-  const destPrioridad = d => d==='local' ? 0 : d==='envio' ? 1 : 2;
-  cont.innerHTML = lista.sort((a,b) => {
-    const dp = destPrioridad(a.destino) - destPrioridad(b.destino);
-    if (dp !== 0) return dp;
+  cont.innerHTML = lista.sort((a,b)=>{
+    // Ordenar: local primero, luego por prioridad, luego por fecha
+    const prioVal = x => x.destino==='local' ? 0 : x.prioridad==='inmediato' ? 1 : x.prioridad ? 2 : 3;
+    const pa = prioVal(a), pb = prioVal(b);
+    if (pa !== pb) return pa - pb;
     return new Date(a.fechaCreacion) - new Date(b.fechaCreacion);
   }).map(o => `
-    <div class="ocard ${o.estado}${o.destino==='local'?' local-cliente':o.destino==='envio'?' envio':''}">
+    <div class="ocard ${o.estado}${o.destino==='local'?' local-dest':''}">
       <div style="flex:1">
         <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-          ${o.destino==='local'
-            ? '<span class="badge badge-local" style="font-size:11px">🏃 Cliente en el Local</span>'
-            : o.destino==='envio'
-              ? '<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>'
-              : ''}
+          ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':''}
         </div>
         <div class="ocard-sub">
           ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
           ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
           ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+          ${o.prioridadLabel ? `<br><span style="font-size:12px;font-weight:700;color:var(--red);background:rgba(255,61,61,.1);padding:2px 8px;border-radius:10px;border:1px solid var(--red)">${o.prioridadLabel}</span>` : ''}
           <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}${o.armador ? ` · 🔧 ${o.armador}` : ''}</span>
         </div>
       </div>
@@ -2135,6 +2185,34 @@ function renderOcards(contId, lista, tipo) {
       ${tipo==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
         ${tipo==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
         ${tipo==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderLocales(locales) {
+  const cont = document.getElementById('t-local-lista');
+  if (!cont) return;
+  if (!locales.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">⭐</div>Sin clientes en el local</div>'; return; }
+  const sorted = locales.sort((a,b) => {
+    const prio = o => o.prioridad==='inmediato' ? 0 : o.prioridad ? 1 : 2;
+    return prio(a) - prio(b) || new Date(a.fechaCreacion) - new Date(b.fechaCreacion);
+  });
+  cont.innerHTML = sorted.map(o => `
+    <div class="ocard ${o.estado}" style="border-left:3px solid var(--orange);border:1px solid rgba(255,98,0,.4)">
+      <div style="flex:1">
+        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo} <span class="badge badge-local">⭐ LOCAL</span></div>
+        <div class="ocard-sub">
+          ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>${o.obs ? ` · <em>${o.obs}</em>` : ''}
+          ${o.prioridadLabel ? `<br><span style="font-size:12px;font-weight:700;color:var(--red);background:rgba(255,61,61,.1);padding:2px 8px;border-radius:10px;border:1px solid var(--red)">${o.prioridadLabel}</span>` : ''}
+          <br>${fmtHora(o.fechaCreacion)} · ${estadoBadge(o)}
+        </div>
+      </div>
+      <div class="ocard-actions">
+        ${o.estado==='pendiente' ? `<button class="btn btn-o btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button>` : ''}
+        ${o.estado==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Listo</button>` : ''}
+        ${o.estado==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -2168,7 +2246,7 @@ function renderEnvios(envios) {
 function abrirModalAsignar(id) {
   ordenAsignarId = id;
   const o = DB.ordenes.find(x => x.id===id);
-  document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : o.destino==='local' ? ' 🏃 CLIENTE EN EL LOCAL' : ''}`;
+  document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : ''}`;
   const sel = document.getElementById('modal-armador');
   sel.innerHTML = '<option value="">— Elegí —</option>';
   DB.armadores.forEach(a => sel.innerHTML += `<option value="${a}">${a}</option>`);
@@ -2651,7 +2729,9 @@ function mostrarAlerta(orden) {
     <strong>${orden.cantidad}x ${orden.marca} ${orden.modelo}</strong><br>
     ${orden.talle ? `Talle: ${orden.talle}<br>` : ''}${orden.rodado ? `Rodado: ${orden.rodado}<br>` : ''}Color: ${orden.color}<br>
     ${orden.cliente ? `Cliente: ${orden.cliente}<br>` : ''}
+    ${orden.destino==='local' ? '<span style="color:var(--orange);font-weight:700;font-size:16px">⭐ CLIENTE EN EL LOCAL — PRIORIDAD MÁXIMA</span><br>' : ''}
     ${orden.destino==='envio' ? '<span style="color:var(--yellow);font-weight:700">🚚 ENVÍO A DOMICILIO</span><br>' : ''}
+    ${orden.prioridadLabel ? `<span style="color:var(--red);font-weight:700">${orden.prioridadLabel}</span><br>` : ''}
     ${orden.obs ? `Obs: ${orden.obs}<br>` : ''}
     Hora: ${fmtHora(orden.fechaCreacion)}
   `;
@@ -2873,14 +2953,11 @@ function renderComisiones() {
           ${tieneKit
             ? `<div style="display:flex;flex-direction:column;gap:6px">
                 <input type="number" id="comkit_${safeK}" value="${valKit}"
-                  onfocus="comisionesEditando=true"
                   style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Kit">
                 <input type="number" id="compre_${safeK}" value="${valPre}"
-                  onfocus="comisionesEditando=true"
                   style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">
                </div>`
             : `<input type="number" id="compre_${safeK}" value="${valPre}"
-                onfocus="comisionesEditando=true"
                 style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 10px;width:130px;border-radius:3px;font-size:14px" min="0" placeholder="$ Prearmado">`}
         </td>
       </tr>`;
@@ -2912,6 +2989,7 @@ async function toggleKitRow(safeK, marca, modelo) {
 }
 
 async function guardarComisiones() {
+  window._editandoComisiones = true;
   const claves = [...new Set(DB.catalogo.map(b=>`${b.marca}|${b.modelo}`))];
   claves.forEach(k => {
     const safeK = k.replace(/\|/g,'__');
@@ -2922,31 +3000,31 @@ async function guardarComisiones() {
     if (!DB.comisionesPre) DB.comisionesPre = {};
     if (elKit) { DB.comisionesKit[k] = parseInt(elKit.value)||0; DB.comisiones[k] = DB.comisionesKit[k]; }
     if (elPre) DB.comisionesPre[k] = parseInt(elPre.value)||0;
-    // si no tiene kit, la comisión "kit" = comisión pre (comisión única = prearmado)
     if (chkKit && !chkKit.checked) {
       DB.comisionesKit[k] = DB.comisionesPre[k] || 0;
       DB.comisiones[k] = DB.comisionesKit[k];
     }
   });
-  comisionesEditando = false; // liberar bloqueo de re-render
   await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
-  // NO re-renderizar la tabla de comisiones (perdería los valores editados)
-  // Solo actualizar catálogo en memoria si corresponde
   toast('💾 Comisiones guardadas ✅');
+  setTimeout(() => { window._editandoComisiones = false; }, 2000);
 }
 
 async function borrarTodasComisiones() {
-  if (!confirm('⚠️ ¿Estás seguro que querés borrar TODAS las comisiones? Esta acción no se puede deshacer.')) return;
-  DB.comisiones = {};
-  DB.comisionesKit = {};
-  DB.comisionesPre = {};
-  // También resetear tieneKitPre en el catálogo
-  DB.catalogo.forEach(b => { b.tieneKitPre = false; });
-  comisionesEditando = false;
-  await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre'); await saveKey('catalogo');
+  if (!confirm('¿Borrar TODAS las comisiones? Los valores quedarán en $0.\n\nEsta acción no se puede deshacer.')) return;
+  const claves = [...new Set(DB.catalogo.map(b=>`${b.marca}|${b.modelo}`))];
+  claves.forEach(k => {
+    DB.comisionesKit[k] = 0;
+    DB.comisionesPre[k] = 0;
+    DB.comisiones[k] = 0;
+  });
+  await saveKey('comisiones'); await saveKey('comisionesKit'); await saveKey('comisionesPre');
   renderComisiones();
-  toast('🗑️ Todas las comisiones fueron borradas','var(--red)');
+  toast('🗑️ Comisiones borradas','var(--red)');
 }
+
+// ARMADORES
+async function armAgregar() {
   const nombre = document.getElementById('arm-nombre').value.trim();
   if (!nombre) { toast('⚠️ Escribí un nombre','var(--red)'); return; }
   if (DB.armadores.includes(nombre)) { toast('⚠️ Ya existe','var(--red)'); return; }
@@ -3123,12 +3201,12 @@ function renderReporte() {
   const totalPago   = periodo.reduce((s,o)=>s+comisionOrden(o),0);
   const ventasCount = periodo.filter(o=>!o.esSalon).reduce((s,o)=>s+o.cantidad,0);
   const salonCount  = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
-  const localCount  = periodo.filter(o=>!o.esSalon && o.destino==='local').reduce((s,o)=>s+o.cantidad,0);
+  const localCount2 = periodo.filter(o=>!o.esSalon && o.destino==='local').reduce((s,o)=>s+o.cantidad,0);
   const envioCount  = periodo.filter(o=>!o.esSalon && o.destino==='envio').reduce((s,o)=>s+o.cantidad,0);
 
   // por armador
   const porArmador = {};
-  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,detalle:{}});
+  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,local:0,detalle:{}});
   periodo.forEach(o => {
     const esKitDosArmadores = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
     const esKitMismoArmador = o.tipoArmado === 'kit' && o.armador2 && o.armador2 === o.armador;
@@ -3145,7 +3223,7 @@ function renderReporte() {
       const fracBici = esKitDosArmadores ? o.cantidad * 0.5 : o.cantidad;
       porArmador[armNombre].bicis += fracBici;
       if (o.esSalon) porArmador[armNombre].salon += fracBici;
-      else porArmador[armNombre].ventas += fracBici;
+      else { porArmador[armNombre].ventas += fracBici; if (o.destino==='local') porArmador[armNombre].local += fracBici; }
       porArmador[armNombre].total += com;
       const dk = `${o.marca}|${o.modelo}`;
       const tipo = o.tipoArmado || 'prearmada';
@@ -3174,10 +3252,9 @@ function renderReporte() {
     <div class="stat-grid">
       <div class="stat-box stat-o"><div class="stat-num">${totalBicis}</div><div class="stat-lbl">Bicis Armadas</div></div>
       <div class="stat-box stat-g"><div class="stat-num">$${totalPago.toLocaleString('es-AR')}</div><div class="stat-lbl">Total a Pagar</div></div>
-      <div class="stat-box stat-b"><div class="stat-num">${ventasCount}</div><div class="stat-lbl">Por Ventas</div></div>
-      <div class="stat-box stat-p"><div class="stat-num">${salonCount}</div><div class="stat-lbl">Para Salón</div></div>
-      ${localCount > 0 ? `<div class="stat-box" style="border-color:var(--red)"><div class="stat-num" style="color:var(--red)">${localCount}</div><div class="stat-lbl">🏃 En el Local</div></div>` : ''}
-      ${envioCount > 0 ? `<div class="stat-box" style="border-color:var(--yellow)"><div class="stat-num" style="color:var(--yellow)">${envioCount}</div><div class="stat-lbl">🚚 Envíos</div></div>` : ''}
+      <div class="stat-box" style="border-color:var(--orange)"><div class="stat-num" style="color:var(--orange)">${localCount2}</div><div class="stat-lbl">⭐ En Local</div></div>
+      <div class="stat-box stat-b"><div class="stat-num">${envioCount}</div><div class="stat-lbl">🚚 Envíos</div></div>
+      <div class="stat-box stat-p"><div class="stat-num">${salonCount}</div><div class="stat-lbl">🏪 Para Salón</div></div>
     </div>
 
     <div class="panel" style="margin-bottom:14px">
@@ -3210,9 +3287,10 @@ function renderReporte() {
           <div class="rcard-head">
             <div>
               <div class="rcard-name">🔧 ${nombre}</div>
-              <div style="display:flex;gap:10px;margin-top:6px">
+              <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
                 <span class="badge badge-b">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis</span>
                 <span class="badge badge-g">${Number.isInteger(r.ventas)?r.ventas:r.ventas.toFixed(1)} ventas</span>
+                ${r.local>0?`<span class="badge badge-local">${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} local</span>`:''}
                 <span class="badge badge-p">${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} salón</span>
               </div>
             </div>
@@ -3258,7 +3336,8 @@ function exportarReporteSemanal() {
     'Tipo Armado': o.tipoArmado||'-',
     'Tiempo (min)': o.tiempoArmadoMin ?? '-',
     Tipo: o.esSalon?'Salón':'Venta',
-    Destino: o.destino==='local' ? 'Cliente en el Local' : o.destino==='envio' ? 'Envío a Domicilio' : o.destino==='salon' ? 'Para el Salón' : (o.destino||'-'),
+    Destino: o.destino==='local'?'⭐ Cliente en Local':o.destino==='envio'?'🚚 Envío':'🏪 Salón',
+    Prioridad: o.prioridadLabel || '-',
     'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
     'Total Comisión ($)': comisionOrden(o),
   }));
@@ -3308,15 +3387,22 @@ function renderHistorial() {
 
   const tbody = document.getElementById('t-historial');
   if (!lista.length) { tbody.innerHTML='<tr><td colspan="15" class="tbl-empty">Sin resultados</td></tr>'; return; }
+  // reset check-all
+  const checkAll = document.getElementById('h-check-all');
+  if (checkAll) checkAll.checked = false;
+  const btnBorrar = document.getElementById('btn-borrar-seleccionados');
+  if (btnBorrar) btnBorrar.style.display = 'none';
+
   tbody.innerHTML = lista.map(o=>{
     // tiempo armado (solo admin puede verlo — siempre se renderiza aquí)
     const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
     const tipoStr = o.esRetoque ? '✨ Retoque' : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
     const arm2Str = (o.tipoArmado==='kit' && o.armador2) ? `<br><span style="font-size:11px;color:var(--text2)">+${o.armador2}</span>` : '';
-    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':o.destino==='local'?'<span class="badge badge-local">🏃 Local</span>':'<span class="badge badge-sal">🏪 Salón vta</span>');
+    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='local'?'<span class="badge badge-local">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':'<span class="badge badge-sal">🏪 Salón</span>');
     const comStr = o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>' : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
     return `
     <tr>
+      <td><input type="checkbox" class="h-row-check" data-id="${o.id}" onchange="historialCheckChange()" style="accent-color:var(--orange);width:15px;height:15px"></td>
       <td style="color:var(--text2)">#${o.id}</td>
       <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
       <td>${o.cliente||'<span style="color:var(--text3)">—</span>'}</td>
@@ -3336,6 +3422,34 @@ function renderHistorial() {
   `}).join('');
 }
 
+function historialToggleAll(cb) {
+  document.querySelectorAll('.h-row-check').forEach(c => c.checked = cb.checked);
+  historialCheckChange();
+}
+
+function historialCheckChange() {
+  const checks = document.querySelectorAll('.h-row-check');
+  const any = [...checks].some(c => c.checked);
+  const btn = document.getElementById('btn-borrar-seleccionados');
+  if (btn) btn.style.display = any ? 'inline-flex' : 'none';
+  // update select-all state
+  const all = [...checks].every(c => c.checked);
+  const cb = document.getElementById('h-check-all');
+  if (cb) { cb.checked = all && checks.length > 0; cb.indeterminate = any && !all; }
+}
+
+async function borrarOrdenesSeleccionadas() {
+  const checks = [...document.querySelectorAll('.h-row-check:checked')];
+  if (!checks.length) return;
+  const ids = checks.map(c => parseInt(c.dataset.id));
+  if (!confirm(`¿Borrar ${ids.length} registro(s) seleccionado(s) del historial? Esta acción no se puede deshacer.`)) return;
+  DB.ordenes = DB.ordenes.filter(o => !ids.includes(o.id));
+  await saveKey('ordenes');
+  renderHistorial();
+  renderReporte();
+  toast(`🗑️ ${ids.length} registro(s) eliminado(s)`, 'var(--red)');
+}
+
 function exportarHistorial() {
   const datos = [...DB.ordenes].sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).map(o=>({
     'N° Orden': o.id,
@@ -3349,13 +3463,14 @@ function exportarHistorial() {
     'N° Cuadro': o.cuadro||'-',
     'Tipo Armado': o.tipoArmado||'-',
     'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
-    Destino: o.destino==='local' ? 'Cliente en el Local' : o.destino==='envio' ? 'Envío a Domicilio' : o.destino==='salon' ? 'Para el Salón' : (o.destino||'salon'),
+    Destino: o.destino||'salon',
     Observaciones: o.obs||'-',
     Tipo: o.esSalon?'Salón':'Venta',
     Estado: o.estado,
     'Fecha Completado': o.fechaCompletado ? fmtFecha(o.fechaCompletado) : '-',
     'Com. Kit ($)': (DB.comisionesKit||{})[`${o.marca}|${o.modelo}`]||0,
     'Com. Prearmada ($)': (DB.comisionesPre||{})[`${o.marca}|${o.modelo}`]||0,
+    Prioridad: o.prioridadLabel || '-',
     'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
     'Total Comisión ($)': comisionOrden(o),
   }));
