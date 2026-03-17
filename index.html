@@ -5,36 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>Rodados Lopez</title>
-<link rel="preconnect" href="https://www.gstatic.com">
-<link rel="preconnect" href="https://rodados-lopez-ea21b-default-rtdb.firebaseio.com">
-<script>
-// Polyfill Promise.allSettled para navegadores viejos de TV
-if (!Promise.allSettled) {
-  Promise.allSettled = function(ps) {
-    return Promise.all(ps.map(function(p) {
-      return Promise.resolve(p).then(function(v) {
-        return { status: 'fulfilled', value: v };
-      }, function(e) {
-        return { status: 'rejected', reason: e };
-      });
-    }));
-  };
-}
-// Polyfill Object.fromEntries para navegadores viejos
-if (!Object.fromEntries) {
-  Object.fromEntries = function(entries) {
-    var obj = {};
-    var arr = Array.from ? Array.from(entries) : [].slice.call(entries);
-    arr.forEach(function(e) { obj[e[0]] = e[1]; });
-    return obj;
-  };
-}
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="document.getElementById('loader').innerHTML='<p style=\'color:#ff6200;font-size:18px;padding:20px;text-align:center\'>&#10060; Error cargando Firebase SDK.<br><br>Verific&aacute; que el dispositivo tenga acceso a internet y recarg&aacute; la p&aacute;gina.</p>'"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="document.getElementById('loader').innerHTML='<p style=\'color:#ff6200;font-size:18px;padding:20px;text-align:center\'>&#10060; Error cargando Firebase Database SDK.<br><br>Verific&aacute; la conexi&oacute;n a internet.</p>'"></script>
+<!-- Firebase SDK eliminado: se usa REST API pura para compatibilidad con Smart TV -->
+<script>
+// ── Polyfills para navegadores viejos de TV ──
+if (!Object.assign) { Object.assign = function(t) { for (var i=1;i<arguments.length;i++){var s=arguments[i];for(var k in s){if(Object.prototype.hasOwnProperty.call(s,k))t[k]=s[k];}} return t; }; }
+if (!Array.isArray) { Array.isArray = function(a){ return Object.prototype.toString.call(a)==='[object Array]'; }; }
+if (!Object.fromEntries) { Object.fromEntries = function(e){ var o={}; var a=Array.prototype.slice.call(e); for(var i=0;i<a.length;i++){o[a[i][0]]=a[i][1];} return o; }; }
+if (!Promise) { alert('Tu navegador no soporta esta aplicación. Por favor usá Chrome o Firefox.'); }
+
+// ── Firebase REST API ── no requiere ningún SDK
+var FIREBASE_DB_URL = 'https://rodados-lopez-ea21b-default-rtdb.firebaseio.com';
+var FIREBASE_AUTH_TOKEN = ''; // vacío = reglas públicas
+
+function fbUrl(key) {
+  return FIREBASE_DB_URL + '/' + key + '.json' + (FIREBASE_AUTH_TOKEN ? '?auth=' + FIREBASE_AUTH_TOKEN : '');
+}
+
+// GET: leer clave
+function fbGet(key) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', fbUrl(key), true);
+    xhr.timeout = 10000;
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch(e) { resolve(null); }
+        } else {
+          reject(new Error('HTTP ' + xhr.status));
+        }
+      }
+    };
+    xhr.ontimeout = function() { reject(new Error('timeout')); };
+    xhr.onerror   = function() { reject(new Error('network')); };
+    xhr.send();
+  });
+}
+
+// PUT: escribir clave
+function fbPut(key, data) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', fbUrl(key), true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 10000;
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) { resolve(); }
+        else { reject(new Error('HTTP ' + xhr.status)); }
+      }
+    };
+    xhr.ontimeout = function() { reject(new Error('timeout')); };
+    xhr.onerror   = function() { reject(new Error('network')); };
+    xhr.send(JSON.stringify(data));
+  });
+}
+
+// ── Stubs para que el resto del código no rompa (no usa SDK) ──
+var fbApp = null;
+var fbDB  = null;
+var fbListeners = {};
+function initFirebase() { return true; } // ya no hace falta SDK
+</script>
 <style>
-/* Fuentes con fallback para cuando Google Fonts no carga en TV */
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
 
 :root {
@@ -58,7 +93,7 @@ if (!Object.fromEntries) {
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Barlow','Arial',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
 
 /* ── LOADER ── */
 #loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
@@ -1467,25 +1502,9 @@ input[type=file]{display:none;}
 
 <script>
 // ════════════════════════════════════════════════════════════
-//  FIREBASE CONFIG — reemplazá estos valores con los tuyos
-// ════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyAmaLKvwze9kvl04p9f3bZyY71IuEgbYzk",
-  authDomain:        "rodados-lopez-ea21b.firebaseapp.com",
-  databaseURL:       "https://rodados-lopez-ea21b-default-rtdb.firebaseio.com",
-  projectId:         "rodados-lopez-ea21b",
-  storageBucket:     "rodados-lopez-ea21b.firebasestorage.app",
-  messagingSenderId: "950585273289",
-  appId:             "1:950585273289:web:332081bcf4707282781618"
-};
-
-// ════════════════════════════════════════════════════════════
 //  ESTADO
 // ════════════════════════════════════════════════════════════
-let fbApp = null;
-let fbDB  = null;
-
-let DB = {
+var DB = {
   catalogo: [],
   comisiones: {},
   comisionesKit: {},
@@ -1495,180 +1514,157 @@ let DB = {
   counter: 1,
   usuarios: [],
   sinStockAlertas: [],
-  services: [],       // registros de service/garantía
+  services: [],
 };
 
-let ordenAsignarId  = null;
-let ordenCompletarId = null;
-let ordenEditarId   = null;
-let lastOrdenCount  = 0;
-let sesionActual    = null;
-let fbListeners     = {};  // referencias a listeners activos
+var ordenAsignarId   = null;
+var ordenCompletarId = null;
+var ordenEditarId    = null;
+var lastOrdenCount   = 0;
+var sesionActual     = null;
+var _pollingTimer    = null;
 
-// ── INIT FIREBASE ──
-function initFirebase() {
-  try {
-    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    fbDB  = firebase.database();
-    return true;
-  } catch(e) {
-    console.error('Firebase init error:', e);
-    return false;
-  }
-}
-
-// ── LOAD: lectura única al inicio ──
+// ── LOAD: lectura única al inicio via REST ──
 function loadDB() {
   var keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
-  
-  // Timeout de seguridad: si Firebase tarda más de 12 segundos, continuar con defaults
-  var timeoutReached = false;
-  var resolveLoad;
-  var loadPromise = new Promise(function(resolve) { resolveLoad = resolve; });
-  var safetyTimer = setTimeout(function() {
-    timeoutReached = true;
-    console.warn('Firebase load timeout - usando datos por defecto');
-    resolveLoad();
-  }, 12000);
+  var loaded = 0;
+  var total  = keys.length;
 
-  var promises = keys.map(function(key) {
-    return fbDB.ref(key).once('value').then(function(snap) {
-      var val = snap.val();
-      if (val !== null) DB[key] = val;
-    }).catch(function(e) { console.warn('Error cargando ' + key + ':', e); });
-  });
+  return new Promise(function(resolve) {
+    // Timeout de seguridad: si no termina en 12s, continuar igual
+    var timer = setTimeout(function() {
+      console.warn('loadDB timeout — usando defaults');
+      applyDefaults();
+      resolve();
+    }, 12000);
 
-  Promise.all(promises).then(function() {
-    clearTimeout(safetyTimer);
-    resolveLoad();
-  }).catch(function() {
-    clearTimeout(safetyTimer);
-    resolveLoad();
-  });
-
-  return loadPromise.then(function() {
-    // defaults si la BD está vacía
-    if (!DB.catalogo || !DB.catalogo.length)   DB.catalogo = getDefaultCatalogo();
-    if (!DB.comisionesKit || !Object.keys(DB.comisionesKit).length) {
-      if (DB.comisiones && Object.keys(DB.comisiones).length) {
-        DB.comisionesKit = Object.assign({}, DB.comisiones);
-        DB.comisionesPre = {};
-        Object.keys(DB.comisiones).forEach(function(k) {
-          DB.comisionesPre[k] = Math.round((DB.comisiones[k] || 0) * 0.5);
-        });
-      } else {
-        DB.comisionesKit = getDefaultComisiones();
-        DB.comisionesPre = getDefaultComisionesPre();
+    function onDone() {
+      loaded++;
+      if (loaded >= total) {
+        clearTimeout(timer);
+        applyDefaults();
+        resolve();
       }
     }
-    if (!DB.comisionesPre || !Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
-    if (!DB.armadores || !DB.armadores.length)  DB.armadores = ['Carlos','Diego','Mariela','Facundo','Sofía'];
-    if (!DB.usuarios || !DB.usuarios.length)    DB.usuarios  = getDefaultUsuarios();
-    if (!DB.sinStockAlertas)                    DB.sinStockAlertas = [];
-    if (!DB.services)                           DB.services = [];
+
+    keys.forEach(function(key) {
+      fbGet(key).then(function(val) {
+        if (val !== null && val !== undefined) DB[key] = val;
+        onDone();
+      }).catch(function() { onDone(); });
+    });
   });
 }
 
-// ── SAVE: escritura de una clave ──
-async function saveKey(key) {
-  try {
-    await fbDB.ref(key).set(DB[key]);
-  } catch(e) { console.error('Firebase save error:', key, e); toast('⚠️ Error guardando datos','var(--red)'); }
+function applyDefaults() {
+  if (!DB.catalogo || !DB.catalogo.length) DB.catalogo = getDefaultCatalogo();
+  if (!DB.comisionesKit || !Object.keys(DB.comisionesKit).length) {
+    if (DB.comisiones && Object.keys(DB.comisiones).length) {
+      DB.comisionesKit = Object.assign({}, DB.comisiones);
+      DB.comisionesPre = {};
+      Object.keys(DB.comisiones).forEach(function(k) {
+        DB.comisionesPre[k] = Math.round((DB.comisiones[k] || 0) * 0.5);
+      });
+    } else {
+      DB.comisionesKit = getDefaultComisiones();
+      DB.comisionesPre = getDefaultComisionesPre();
+    }
+  }
+  if (!DB.comisionesPre || !Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
+  if (!DB.armadores || !DB.armadores.length) DB.armadores = ['Carlos','Diego','Mariela','Facundo','Sofía'];
+  if (!DB.usuarios  || !DB.usuarios.length)  DB.usuarios  = getDefaultUsuarios();
+  if (!DB.sinStockAlertas) DB.sinStockAlertas = [];
+  if (!DB.services)        DB.services = [];
 }
 
-async function saveAll() {
-  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
-  for (var _i = 0; _i < keys.length; _i++) { await saveKey(keys[_i]); }
+// ── SAVE: escritura via REST ──
+function saveKey(key) {
+  return fbPut(key, DB[key]).catch(function(e) {
+    console.error('save error ' + key + ':', e);
+    toast('⚠️ Error guardando datos', 'var(--red)');
+  });
 }
 
-// ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
+function saveAll() {
+  var keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  var p = Promise.resolve();
+  keys.forEach(function(k) { p = p.then(function() { return saveKey(k); }); });
+  return p;
+}
+
+// ── POLLING cada 4 segundos (reemplaza WebSocket listeners del SDK) ──
 function startPolling() {
-  // Escuchar cambios en órdenes en tiempo real
-  if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
-  fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
-    const fresh = snap.val();
-    if (fresh === null) return;
-    const freshArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
+  if (_pollingTimer) clearInterval(_pollingTimer);
+  _pollingTimer = setInterval(function() { pollChanges(); }, 4000);
+}
 
-    // alerta taller: nuevas órdenes de venta
-    if (isScreen('taller') && freshArr.length > DB.ordenes.length) {
-      const nuevas = freshArr.filter(o => !DB.ordenes.find(x => x.id === o.id));
-      nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
+function pollChanges() {
+  // Siempre refresca órdenes y sinStockAlertas
+  fbGet('ordenes').then(function(fresh) {
+    if (fresh === null || fresh === undefined) return;
+    var freshArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
+
+    // alerta taller: nuevas órdenes
+    if (isScreen('taller') && freshArr.length > (DB.ordenes ? DB.ordenes.length : 0)) {
+      var prevIds = {};
+      (DB.ordenes || []).forEach(function(o){ prevIds[o.id] = true; });
+      freshArr.forEach(function(o) {
+        if (!prevIds[o.id] && !o.esSalon) mostrarAlerta(o);
+      });
     }
     DB.ordenes = freshArr;
 
-    // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
-    const ahora10 = Date.now();
-    let autoEntregaHecha = false;
-    DB.ordenes.forEach(o => {
+    // Auto-marcar como entregada si pasaron 10 minutos
+    var ahora10 = Date.now();
+    var autoEntregaHecha = false;
+    DB.ordenes.forEach(function(o) {
       if (o.estado === 'completada' && !o.entregada && o.fechaCompletado) {
-        const diff = ahora10 - new Date(o.fechaCompletado).getTime();
-        if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregaHecha = true; }
+        if (ahora10 - new Date(o.fechaCompletado).getTime() >= 600000) {
+          o.entregada = true;
+          o.fechaEntregada = new Date().toISOString();
+          autoEntregaHecha = true;
+        }
       }
     });
     if (autoEntregaHecha) saveKey('ordenes');
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
     if (isScreen('taller'))   tRenderAll();
-  });
+    if (isScreen('monitor'))  renderMonitor();
+  }).catch(function(){});
 
-  // Escuchar sinStockAlertas en tiempo real
-  if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
-  fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
-    const fresh = snap.val();
-    const nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+  fbGet('sinStockAlertas').then(function(fresh) {
+    var nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
     if (isScreen('vendedor')) {
-      // detectar alertas nuevas no vistas antes de actualizar DB
-      const noVistasAntes = new Set((DB.sinStockAlertas||[]).filter(a=>a.vista||a.resuelta).map(a=>a.id));
+      var noVistasAntes = {};
+      (DB.sinStockAlertas || []).filter(function(a){ return a.vista || a.resuelta; }).forEach(function(a){ noVistasAntes[a.id] = true; });
       DB.sinStockAlertas = nuevasAlertas;
       vRenderInbox();
-      // mostrar alerta sonora solo si hay una nueva no vista para este vendedor y el overlay no está ya abierto
-      const overlay = document.getElementById('alerta-vendedor');
+      var overlay = document.getElementById('alerta-vendedor');
       if (!overlay.classList.contains('on')) {
-        const noVistas = nuevasAlertas.filter(a =>
-          !a.vista && !a.resuelta && a.vendedor === sesionActual?.usuario && !noVistasAntes.has(a.id)
-        );
+        var noVistas = nuevasAlertas.filter(function(a) {
+          return !a.vista && !a.resuelta && a.vendedor === (sesionActual && sesionActual.usuario) && !noVistasAntes[a.id];
+        });
         if (noVistas.length > 0) mostrarAlertaVendedor(noVistas[0]);
       }
     } else {
       DB.sinStockAlertas = nuevasAlertas;
     }
-  });
+  }).catch(function(){});
 
-  // Escuchar catálogo en tiempo real (actualiza vendedor y taller automáticamente)
-  if (fbListeners.catalogo) fbDB.ref('catalogo').off('value', fbListeners.catalogo);
-  fbListeners.catalogo = fbDB.ref('catalogo').on('value', snap => {
-    const val = snap.val();
-    if (val === null) return;
-    DB.catalogo = Array.isArray(val) ? val : Object.values(val);
-    // refrescar selects de marca en las pantallas activas
-    if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
-    if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
-    if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
-  });
+  // Refrescar catálogo y comisiones si está en admin
+  if (isScreen('admin')) {
+    fbGet('catalogo').then(function(val) {
+      if (!val) return;
+      DB.catalogo = Array.isArray(val) ? val : Object.values(val);
+      renderCatalogo(); renderComisiones();
+    }).catch(function(){});
+  }
 
-  // Escuchar comisionesKit en tiempo real
-  if (fbListeners.comisionesKit) fbDB.ref('comisionesKit').off('value', fbListeners.comisionesKit);
-  fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.comisionesKit = val;
-    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
-  });
-
-  // Escuchar comisionesPre en tiempo real
-  if (fbListeners.comisionesPre) fbDB.ref('comisionesPre').off('value', fbListeners.comisionesPre);
-  fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.comisionesPre = val;
-    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
-  });
-
-  // Escuchar counter en tiempo real
-  if (fbListeners.counter) fbDB.ref('counter').off('value', fbListeners.counter);
-  fbListeners.counter = fbDB.ref('counter').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.counter = val;
-  });
+  // Refrescar counter
+  fbGet('counter').then(function(val) {
+    if (val !== null && val !== undefined) DB.counter = val;
+  }).catch(function(){});
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1731,7 +1727,7 @@ function go(screen) {
     document.getElementById('screen-inicio').style.display = 'flex';
     // detener monitor si estaba activo
     if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
-    if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+    if (monPollInterval)  { clearInterval(monPollInterval);  monPollInterval  = null; }
   } else if (screen === 'monitor') {
     document.getElementById('screen-monitor').classList.add('on');
     initMonitor();
@@ -1748,35 +1744,38 @@ function go(screen) {
 // ════════════════════════════════════════════════════════════
 //  MONITOR SALÓN
 // ════════════════════════════════════════════════════════════
-let monClockInterval  = null;
-let monFireListener   = null;
+var monClockInterval = null;
+var monPollInterval  = null;
 
 function initMonitor() {
   // reloj
   if (monClockInterval) clearInterval(monClockInterval);
-  monClockInterval = setInterval(() => {
-    const now = new Date();
-    document.getElementById('mon-clock').textContent =
-      now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  monClockInterval = setInterval(function() {
+    var now = new Date();
+    var el = document.getElementById('mon-clock');
+    if (el) el.textContent = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
   }, 1000);
-  // disparo inmediato
-  const now = new Date();
-  document.getElementById('mon-clock').textContent =
-    now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  var now = new Date();
+  var el = document.getElementById('mon-clock');
+  if (el) el.textContent = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
 
-  // listener Firebase en tiempo real (independiente del resto del sistema)
-  if (monFireListener) fbDB.ref('ordenes').off('value', monFireListener);
-  monFireListener = fbDB.ref('ordenes').on('value', snap => {
-    const val = snap.val();
-    if (val === null) { monRender([]); return; }
-    const arr = Array.isArray(val) ? val : Object.values(val);
-    monRender(arr);
-  });
+  // Polling de órdenes para el monitor (cada 3 segundos)
+  if (monPollInterval) clearInterval(monPollInterval);
+  function fetchMonitor() {
+    fbGet('ordenes').then(function(val) {
+      if (val === null || val === undefined) { monRender([]); return; }
+      var arr = Array.isArray(val) ? val : Object.values(val);
+      DB.ordenes = arr;
+      monRender(arr);
+    }).catch(function(){});
+  }
+  fetchMonitor();
+  monPollInterval = setInterval(fetchMonitor, 3000);
 }
 
 function monitorSalir() {
   if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
-  if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+  if (monPollInterval)  { clearInterval(monPollInterval);  monPollInterval  = null; }
   document.getElementById('screen-monitor').classList.remove('on');
   document.getElementById('screen-inicio').style.display = 'flex';
 }
@@ -1930,8 +1929,8 @@ async function vEnviarOrden() {
   const cantidad = parseInt(document.getElementById('v-cantidad').value);
   const obs = document.getElementById('v-obs').value.trim();
   const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'salon'
-  const prioridad = document.getElementById('v-prioridad')?.value || '';
-  const horaEspecifica = document.getElementById('v-hora-especifica')?.value || '';
+  const prioridad = ( document.getElementById('v-prioridad') ? document.getElementById('v-prioridad').value : '' ) || '';
+  const horaEspecifica = ( document.getElementById('v-hora-especifica') ? document.getElementById('v-hora-especifica').value : '' ) || '';
 
   if (!marca || !modelo || (!talle && !rodado) || !color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
 
@@ -2007,7 +2006,7 @@ function vRenderOrdenes() {
 function vRenderInbox() {
   const cont = document.getElementById('v-inbox-lista');
   if (!cont) return;
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const badge = document.getElementById('v-inbox-count');
   const tabCount = document.getElementById('v-inbox-tab-count');
   if (badge) { badge.textContent = alertas.length; badge.style.display = alertas.length ? 'flex' : 'none'; }
@@ -2042,7 +2041,7 @@ async function marcarEntregada(id) {
 }
 
 async function vDismissAlerta(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const alerta = alertas[idx];
   if (!alerta) return;
   const globalIdx = DB.sinStockAlertas.indexOf(alerta);
@@ -2055,7 +2054,7 @@ async function vDismissAlerta(idx) {
 let alertaVendedorIdx = -1;
 
 function abrirAlertaVendedorDesdeInbox(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const alerta = alertas[idx];
   if (!alerta) return;
   alertaVendedorIdx = DB.sinStockAlertas.indexOf(alerta);
@@ -2450,9 +2449,9 @@ async function confirmarCompletado() {
   await saveKey('ordenes');
   closeModal('modal-completar');
   tRenderAll(); vRenderOrdenes();
-  if (o?.esRetoque) {
+  if ((o && o.esRetoque)) {
     toast('✨ Retoque final registrado (sin comisión)');
-  } else if (o?.comisionDuplicada) {
+  } else if ((o && o.comisionDuplicada)) {
     toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
   } else {
     toast('🎉 Bici completada');
@@ -3210,8 +3209,8 @@ function getOrdenesDelPeriodo() {
     desde = new Date(ahora.getFullYear(), 0, 1);
     hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
   } else if (periodoActivo === 'custom') {
-    const d = document.getElementById('r-desde')?.value;
-    const h = document.getElementById('r-hasta')?.value;
+    const d = ( document.getElementById('r-desde') ? document.getElementById('r-desde').value : '' );
+    const h = ( document.getElementById('r-hasta') ? document.getElementById('r-hasta').value : '' );
     if (!d || !h) return { ordenes: [], label: 'Seleccioná las fechas' };
     desde = new Date(d + 'T00:00:00');
     hasta = new Date(h + 'T23:59:59');
@@ -3296,7 +3295,7 @@ function renderReporte() {
     porModelo[k]+=o.cantidad;
   });
   const topModelos = Object.entries(porModelo).sort((a,b)=>b[1]-a[1]);
-  const maxMod = topModelos[0]?.[1]||1;
+  const maxMod = (topModelos[0] ? topModelos[0][1] : 0)||1;
 
   cont.innerHTML = `
     <div class="stat-grid">
@@ -3578,10 +3577,14 @@ function renderBD(ctx) {
   const countLbl = document.getElementById(`bd-${ctx}-count-label`);
   if (!lista) return;
 
-  const fCliente = (document.getElementById(`bd-${ctx}-f-cliente`)?.value || '').toLowerCase().trim();
-  const fArmador = (document.getElementById(`bd-${ctx}-f-armador`)?.value || '').toLowerCase().trim();
-  const fCuadro  = (document.getElementById(`bd-${ctx}-f-cuadro`)?.value  || '').toLowerCase().trim();
-  const fTipo    = document.getElementById(`bd-${ctx}-f-tipo`)?.value || '';
+  var _fcEl = document.getElementById('bd-'+ctx+'-f-cliente');
+  var _faEl = document.getElementById('bd-'+ctx+'-f-armador');
+  var _fqEl = document.getElementById('bd-'+ctx+'-f-cuadro');
+  var _ftEl = document.getElementById('bd-'+ctx+'-f-tipo');
+  const fCliente = (_fcEl ? _fcEl.value : '').toLowerCase().trim();
+  const fArmador = (_faEl ? _faEl.value : '').toLowerCase().trim();
+  const fCuadro  = (_fqEl ? _fqEl.value : '').toLowerCase().trim();
+  const fTipo    = _ftEl ? _ftEl.value : '';
 
   let ordenes = getBDOrdenes(ctx);
 
@@ -3897,7 +3900,7 @@ async function srvRegistrarManual() {
 async function srvConfirmar(datosStr) {
   let datos;
   try { datos = (typeof datosStr === 'object') ? datosStr : JSON.parse(datosStr); } catch(e) { return; }
-  const obs = document.getElementById('srv-obs-confirm')?.value.trim() || '';
+  const obs = ( document.getElementById('srv-obs-confirm') ? document.getElementById('srv-obs-confirm').value : '' ).trim() || '';
   await srvGuardar(datos, obs);
 }
 
@@ -3918,7 +3921,7 @@ async function srvGuardar(datos, obs) {
     obs:        obs,
     fechaService,
     vencimiento,
-    armador:    sesionActual?.usuario || '',
+    armador:    (sesionActual && sesionActual.usuario) || '',
   });
   await saveKey('services');
 
@@ -3940,7 +3943,7 @@ function initAdmin() {
 function renderGarantias() {
   const tbody = document.getElementById('t-garantias');
   if (!tbody) return;
-  const filtro = document.getElementById('g-estado')?.value || '';
+  const filtro = ( document.getElementById('g-estado') ? document.getElementById('g-estado').value : '' ) || '';
   const ahora = new Date();
   const lista = [...(DB.services || [])].sort((a,b)=>new Date(b.fechaService)-new Date(a.fechaService));
 
@@ -4023,48 +4026,39 @@ function getDefaultUsuarios() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  BOOT — compatible con Smart TV y TV Box
+//  BOOT — Sin SDK, REST pura, compatible con Smart TV
 // ════════════════════════════════════════════════════════════
 (function() {
-  // Verificar que el usuario haya configurado Firebase
-  if (FIREBASE_CONFIG.apiKey === 'TU_API_KEY') {
-    document.getElementById('loader').innerHTML = '<div style="text-align:center;max-width:480px;padding:24px"><h1 style="font-family:\'Barlow Condensed\',Arial,sans-serif;font-size:42px;font-weight:900;margin-bottom:8px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1><div style="background:rgba(255,98,0,.1);border:2px solid var(--orange);border-radius:8px;padding:24px;margin-top:20px;text-align:left"><div style="font-size:22px;font-weight:700;color:var(--orange);margin-bottom:12px">&#9881;&#65039; Configuraci&oacute;n pendiente</div><p style="color:var(--text2);font-size:14px;line-height:1.7;margin-bottom:16px">Para que el sistema funcione en la nube necesit&aacute;s configurar Firebase.</p><div style="background:var(--bg3);border-radius:4px;padding:14px;font-size:12px;color:var(--text2);line-height:2">1. Cre&aacute; tu proyecto en <strong style="color:var(--text)">console.firebase.google.com</strong><br>2. Activ&aacute; <strong style="color:var(--text)">Realtime Database</strong><br>3. Copi&aacute; tu configuraci&oacute;n en este archivo (secci&oacute;n FIREBASE_CONFIG)<br>4. Sub&iacute; el archivo a GitHub Pages o Netlify</div></div></div>';
-    return;
+  var loaderEl = document.getElementById('loader');
+  var loaderTxt = loaderEl ? loaderEl.querySelector('span') : null;
+
+  function setLoaderMsg(msg) {
+    if (loaderTxt) loaderTxt.textContent = msg;
   }
 
-  var loaderEl = document.getElementById('loader');
-  var loaderStatus = loaderEl ? loaderEl.querySelector('span') : null;
-
   function showError(msg) {
-    if (loaderEl) loaderEl.innerHTML = '<p style="color:var(--red);font-size:16px;padding:20px;text-align:center">' + msg + '</p>';
+    if (loaderEl) loaderEl.innerHTML = '<div style="padding:32px;text-align:center"><p style="color:#ff6200;font-size:18px;line-height:1.8">' + msg + '</p><br><button onclick="location.reload()" style="padding:12px 28px;background:#ff6200;color:#000;border:none;font-size:16px;font-weight:700;border-radius:4px;cursor:pointer">🔄 REINTENTAR</button></div>';
   }
 
   function showApp() {
     if (loaderEl) loaderEl.style.display = 'none';
     var inicio = document.getElementById('screen-inicio');
-    if (inicio) { inicio.style.display = 'flex'; }
+    if (inicio) inicio.style.display = 'flex';
   }
 
-  // Paso 1: inicializar Firebase con retry
-  var ok = false;
-  try { ok = initFirebase(); } catch(e) { console.error('Firebase init:', e); }
+  setLoaderMsg('CONECTANDO...');
 
-  if (!ok) {
-    showError('&#10060; Error al conectar con Firebase. Verific&aacute; la configuraci&oacute;n.');
-    return;
-  }
-
-  if (loaderStatus) loaderStatus.textContent = 'CONECTANDO...';
-
-  // Paso 2: cargar datos y mostrar app
-  loadDB().then(function() {
+  // Probar conexión con Firebase REST antes de cargar todo
+  fbGet('counter').then(function(val) {
+    setLoaderMsg('CARGANDO DATOS...');
+    if (val !== null && val !== undefined) DB.counter = val;
+    return loadDB();
+  }).then(function() {
     showApp();
-    try { startPolling(); } catch(e) { console.error('startPolling:', e); }
+    startPolling();
   }).catch(function(e) {
-    console.error('loadDB error:', e);
-    // Igual mostramos la app con datos por defecto
-    showApp();
-    try { startPolling(); } catch(e2) { console.error('startPolling fallback:', e2); }
+    console.error('Boot error:', e);
+    showError('No se pudo conectar con el servidor.<br>Verific&aacute; la conexi&oacute;n a internet y recarg&aacute; la p&aacute;gina.');
   });
 })();</script>
 </body>
