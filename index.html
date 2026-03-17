@@ -3,11 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>Rodados Lopez</title>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://rodados-lopez-ea21b-default-rtdb.firebaseio.com">
+<script>
+// Polyfill Promise.allSettled para navegadores viejos de TV
+if (!Promise.allSettled) {
+  Promise.allSettled = function(ps) {
+    return Promise.all(ps.map(function(p) {
+      return Promise.resolve(p).then(function(v) {
+        return { status: 'fulfilled', value: v };
+      }, function(e) {
+        return { status: 'rejected', reason: e };
+      });
+    }));
+  };
+}
+// Polyfill Object.fromEntries para navegadores viejos
+if (!Object.fromEntries) {
+  Object.fromEntries = function(entries) {
+    var obj = {};
+    var arr = Array.from ? Array.from(entries) : [].slice.call(entries);
+    arr.forEach(function(e) { obj[e[0]] = e[1]; });
+    return obj;
+  };
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" onerror="document.getElementById('loader').innerHTML='<p style=\'color:#ff6200;font-size:18px;padding:20px;text-align:center\'>&#10060; Error cargando Firebase SDK.<br><br>Verific&aacute; que el dispositivo tenga acceso a internet y recarg&aacute; la p&aacute;gina.</p>'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js" onerror="document.getElementById('loader').innerHTML='<p style=\'color:#ff6200;font-size:18px;padding:20px;text-align:center\'>&#10060; Error cargando Firebase Database SDK.<br><br>Verific&aacute; la conexi&oacute;n a internet.</p>'"></script>
 <style>
+/* Fuentes con fallback para cuando Google Fonts no carga en TV */
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
 
 :root {
@@ -31,7 +58,7 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+html,body{height:100%;font-family:'Barlow','Arial',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
 
 /* ── LOADER ── */
 #loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
@@ -1491,32 +1518,55 @@ function initFirebase() {
 }
 
 // ── LOAD: lectura única al inicio ──
-async function loadDB() {
-  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
-  const promises = keys.map(key =>
-    fbDB.ref(key).once('value').then(snap => {
-      const val = snap.val();
-      if (val !== null) DB[key] = val;
-    }).catch(()=>{})
-  );
-  await Promise.all(promises);
+function loadDB() {
+  var keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  
+  // Timeout de seguridad: si Firebase tarda más de 12 segundos, continuar con defaults
+  var timeoutReached = false;
+  var resolveLoad;
+  var loadPromise = new Promise(function(resolve) { resolveLoad = resolve; });
+  var safetyTimer = setTimeout(function() {
+    timeoutReached = true;
+    console.warn('Firebase load timeout - usando datos por defecto');
+    resolveLoad();
+  }, 12000);
 
-  // defaults si la BD está vacía
-  if (!DB.catalogo.length)                DB.catalogo   = getDefaultCatalogo();
-  if (!Object.keys(DB.comisionesKit).length) {
-    if (Object.keys(DB.comisiones).length) {
-      DB.comisionesKit = {...DB.comisiones};
-      DB.comisionesPre = Object.fromEntries(Object.keys(DB.comisiones).map(k=>[k, Math.round((DB.comisiones[k]||0)*0.5)]));
-    } else {
-      DB.comisionesKit = getDefaultComisiones();
-      DB.comisionesPre = getDefaultComisionesPre();
+  var promises = keys.map(function(key) {
+    return fbDB.ref(key).once('value').then(function(snap) {
+      var val = snap.val();
+      if (val !== null) DB[key] = val;
+    }).catch(function(e) { console.warn('Error cargando ' + key + ':', e); });
+  });
+
+  Promise.all(promises).then(function() {
+    clearTimeout(safetyTimer);
+    resolveLoad();
+  }).catch(function() {
+    clearTimeout(safetyTimer);
+    resolveLoad();
+  });
+
+  return loadPromise.then(function() {
+    // defaults si la BD está vacía
+    if (!DB.catalogo || !DB.catalogo.length)   DB.catalogo = getDefaultCatalogo();
+    if (!DB.comisionesKit || !Object.keys(DB.comisionesKit).length) {
+      if (DB.comisiones && Object.keys(DB.comisiones).length) {
+        DB.comisionesKit = Object.assign({}, DB.comisiones);
+        DB.comisionesPre = {};
+        Object.keys(DB.comisiones).forEach(function(k) {
+          DB.comisionesPre[k] = Math.round((DB.comisiones[k] || 0) * 0.5);
+        });
+      } else {
+        DB.comisionesKit = getDefaultComisiones();
+        DB.comisionesPre = getDefaultComisionesPre();
+      }
     }
-  }
-  if (!Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
-  if (!DB.armadores.length)               DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
-  if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
-  if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
-  if (!DB.services)                       DB.services = [];
+    if (!DB.comisionesPre || !Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
+    if (!DB.armadores || !DB.armadores.length)  DB.armadores = ['Carlos','Diego','Mariela','Facundo','Sofía'];
+    if (!DB.usuarios || !DB.usuarios.length)    DB.usuarios  = getDefaultUsuarios();
+    if (!DB.sinStockAlertas)                    DB.sinStockAlertas = [];
+    if (!DB.services)                           DB.services = [];
+  });
 }
 
 // ── SAVE: escritura de una clave ──
@@ -1528,7 +1578,7 @@ async function saveKey(key) {
 
 async function saveAll() {
   const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
-  await Promise.all(keys.map(k => saveKey(k)));
+  for (var _i = 0; _i < keys.length; _i++) { await saveKey(keys[_i]); }
 }
 
 // ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
@@ -3973,41 +4023,49 @@ function getDefaultUsuarios() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  BOOT
+//  BOOT — compatible con Smart TV y TV Box
 // ════════════════════════════════════════════════════════════
-(async()=>{
+(function() {
   // Verificar que el usuario haya configurado Firebase
   if (FIREBASE_CONFIG.apiKey === 'TU_API_KEY') {
-    document.getElementById('loader').innerHTML = `
-      <div style="text-align:center;max-width:480px;padding:24px">
-        <h1 style="font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;margin-bottom:8px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1>
-        <div style="background:rgba(255,98,0,.1);border:2px solid var(--orange);border-radius:8px;padding:24px;margin-top:20px;text-align:left">
-          <div style="font-size:22px;font-weight:700;color:var(--orange);margin-bottom:12px">⚙️ Configuración pendiente</div>
-          <p style="color:var(--text2);font-size:14px;line-height:1.7;margin-bottom:16px">
-            Para que el sistema funcione en la nube necesitás configurar Firebase. Seguí los pasos del instructivo que te entregamos junto con este archivo.
-          </p>
-          <div style="background:var(--bg3);border-radius:4px;padding:14px;font-size:12px;color:var(--text2);line-height:2">
-            1. Creá tu proyecto en <strong style="color:var(--text)">console.firebase.google.com</strong><br>
-            2. Activá <strong style="color:var(--text)">Realtime Database</strong><br>
-            3. Copiá tu configuración en este archivo (sección FIREBASE_CONFIG)<br>
-            4. Subí el archivo a GitHub Pages o Netlify
-          </div>
-        </div>
-      </div>
-    `;
+    document.getElementById('loader').innerHTML = '<div style="text-align:center;max-width:480px;padding:24px"><h1 style="font-family:\'Barlow Condensed\',Arial,sans-serif;font-size:42px;font-weight:900;margin-bottom:8px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1><div style="background:rgba(255,98,0,.1);border:2px solid var(--orange);border-radius:8px;padding:24px;margin-top:20px;text-align:left"><div style="font-size:22px;font-weight:700;color:var(--orange);margin-bottom:12px">&#9881;&#65039; Configuraci&oacute;n pendiente</div><p style="color:var(--text2);font-size:14px;line-height:1.7;margin-bottom:16px">Para que el sistema funcione en la nube necesit&aacute;s configurar Firebase.</p><div style="background:var(--bg3);border-radius:4px;padding:14px;font-size:12px;color:var(--text2);line-height:2">1. Cre&aacute; tu proyecto en <strong style="color:var(--text)">console.firebase.google.com</strong><br>2. Activ&aacute; <strong style="color:var(--text)">Realtime Database</strong><br>3. Copi&aacute; tu configuraci&oacute;n en este archivo (secci&oacute;n FIREBASE_CONFIG)<br>4. Sub&iacute; el archivo a GitHub Pages o Netlify</div></div></div>';
     return;
   }
 
-  const ok = initFirebase();
+  var loaderEl = document.getElementById('loader');
+  var loaderStatus = loaderEl ? loaderEl.querySelector('span') : null;
+
+  function showError(msg) {
+    if (loaderEl) loaderEl.innerHTML = '<p style="color:var(--red);font-size:16px;padding:20px;text-align:center">' + msg + '</p>';
+  }
+
+  function showApp() {
+    if (loaderEl) loaderEl.style.display = 'none';
+    var inicio = document.getElementById('screen-inicio');
+    if (inicio) { inicio.style.display = 'flex'; }
+  }
+
+  // Paso 1: inicializar Firebase con retry
+  var ok = false;
+  try { ok = initFirebase(); } catch(e) { console.error('Firebase init:', e); }
+
   if (!ok) {
-    document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
+    showError('&#10060; Error al conectar con Firebase. Verific&aacute; la configuraci&oacute;n.');
     return;
   }
 
-  await loadDB();
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('screen-inicio').style.display = 'flex';
-  startPolling();
+  if (loaderStatus) loaderStatus.textContent = 'CONECTANDO...';
+
+  // Paso 2: cargar datos y mostrar app
+  loadDB().then(function() {
+    showApp();
+    try { startPolling(); } catch(e) { console.error('startPolling:', e); }
+  }).catch(function(e) {
+    console.error('loadDB error:', e);
+    // Igual mostramos la app con datos por defecto
+    showApp();
+    try { startPolling(); } catch(e2) { console.error('startPolling fallback:', e2); }
+  });
 })();</script>
 </body>
 </html>
