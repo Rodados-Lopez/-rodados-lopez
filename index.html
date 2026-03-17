@@ -1497,11 +1497,27 @@ let fbListeners     = {};  // referencias a listeners activos
 // ── INIT FIREBASE ──
 function initFirebase() {
   try {
-    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    fbDB  = firebase.database(fbApp);
+    // Evitar error "app already exists" si la página se recarga en Tizen
+    try {
+      fbApp = firebase.app();  // si ya existe, reutilizarla
+    } catch(notFound) {
+      fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    fbDB = firebase.database(fbApp);
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
+    // Mostrar el error real para diagnóstico en TV
+    var loaderEl = document.getElementById('loader');
+    if (loaderEl) {
+      loaderEl.innerHTML = '<div style="text-align:center;padding:24px;max-width:480px">'
+        + '<h1 style="font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;margin-bottom:16px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1>'
+        + '<div style="background:rgba(255,61,61,.1);border:2px solid var(--red);border-radius:8px;padding:20px;text-align:left">'
+        + '<div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:10px">❌ Error Firebase</div>'
+        + '<div style="background:var(--bg3);border-radius:4px;padding:12px;font-size:12px;color:var(--text2);word-break:break-all;line-height:1.7">' + String(e) + '</div>'
+        + '<button onclick="location.reload()" style="margin-top:14px;background:var(--orange);color:#000;border:none;padding:12px 24px;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700;border-radius:3px;cursor:pointer;width:100%">🔄 REINTENTAR</button>'
+        + '</div></div>';
+    }
     return false;
   }
 }
@@ -1611,7 +1627,7 @@ function startPolling() {
       const overlay = document.getElementById('alerta-vendedor');
       if (!overlay.classList.contains('on')) {
         const noVistas = nuevasAlertas.filter(a =>
-          !a.vista && !a.resuelta && a.vendedor === sesionActual?.usuario && !noVistasAntes.has(a.id)
+          !a.vista && !a.resuelta && a.vendedor === (sesionActual && sesionActual.usuario) && !noVistasAntes.has(a.id)
         );
         if (noVistas.length > 0) mostrarAlertaVendedor(noVistas[0]);
       }
@@ -1933,8 +1949,8 @@ async function vEnviarOrden() {
   const cantidad = parseInt(document.getElementById('v-cantidad').value);
   const obs = document.getElementById('v-obs').value.trim();
   const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'salon'
-  const prioridad = document.getElementById('v-prioridad')?.value || '';
-  const horaEspecifica = document.getElementById('v-hora-especifica')?.value || '';
+  const prioridad = (document.getElementById('v-prioridad') ? document.getElementById('v-prioridad').value : '');
+  const horaEspecifica = (document.getElementById('v-hora-especifica') ? document.getElementById('v-hora-especifica').value : '');
 
   if (!marca || !modelo || (!talle && !rodado) || !color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
 
@@ -2010,7 +2026,7 @@ function vRenderOrdenes() {
 function vRenderInbox() {
   const cont = document.getElementById('v-inbox-lista');
   if (!cont) return;
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const badge = document.getElementById('v-inbox-count');
   const tabCount = document.getElementById('v-inbox-tab-count');
   if (badge) { badge.textContent = alertas.length; badge.style.display = alertas.length ? 'flex' : 'none'; }
@@ -2045,7 +2061,7 @@ async function marcarEntregada(id) {
 }
 
 async function vDismissAlerta(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const alerta = alertas[idx];
   if (!alerta) return;
   const globalIdx = DB.sinStockAlertas.indexOf(alerta);
@@ -2058,7 +2074,7 @@ async function vDismissAlerta(idx) {
 let alertaVendedorIdx = -1;
 
 function abrirAlertaVendedorDesdeInbox(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
+  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === (sesionActual && sesionActual.usuario) && !a.resuelta);
   const alerta = alertas[idx];
   if (!alerta) return;
   alertaVendedorIdx = DB.sinStockAlertas.indexOf(alerta);
@@ -2453,9 +2469,9 @@ async function confirmarCompletado() {
   await saveKey('ordenes');
   closeModal('modal-completar');
   tRenderAll(); vRenderOrdenes();
-  if (o?.esRetoque) {
+  if (o && o.esRetoque) {
     toast('✨ Retoque final registrado (sin comisión)');
-  } else if (o?.comisionDuplicada) {
+  } else if (o && o.comisionDuplicada) {
     toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
   } else {
     toast('🎉 Bici completada');
@@ -2852,8 +2868,8 @@ function renderCatalogo() {
       rodados = (b.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test(t.trim())));
     }
     const key = `${b.marca}|${b.modelo}`;
-    const comKit = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
-    const comPre = (DB.comisionesPre||{})[key] ?? 0;
+    const comKit = ((DB.comisionesKit||{})[key] !== undefined ? (DB.comisionesKit||{})[key] : ((DB.comisiones||{})[key] !== undefined ? (DB.comisiones||{})[key] : 0));
+    const comPre = ((DB.comisionesPre||{})[key] !== undefined ? (DB.comisionesPre||{})[key] : 0);
     const tieneKitPre = b.tieneKitPre === true;
     return `<tr>
       <td><strong>${b.marca}</strong></td>
@@ -2926,14 +2942,14 @@ function importarExcel(input) {
         const existe = DB.catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
         if (!existe) {
           DB.catalogo.push({marca,modelo,talles,rodados,colores});
-          DB.comisionesKit[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
-          DB.comisionesPre[`${marca}|${modelo}`] = comisionPre ?? 0;
-          DB.comisiones[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
+          DB.comisionesKit[`${marca}|${modelo}`] = (comisionKit !== undefined && comisionKit !== null ? comisionKit : (comision !== undefined && comision !== null ? comision : 0));
+          DB.comisionesPre[`${marca}|${modelo}`] = (comisionPre !== undefined && comisionPre !== null ? comisionPre : 0);
+          DB.comisiones[`${marca}|${modelo}`] = (comisionKit !== undefined && comisionKit !== null ? comisionKit : (comision !== undefined && comision !== null ? comision : 0));
           added++;
           if (comisionKit !== null || comision !== null) comUpdated++;
         } else {
           if (comisionKit !== null || comision !== null) {
-            DB.comisionesKit[`${marca}|${modelo}`] = comisionKit ?? comision ?? 0;
+            DB.comisionesKit[`${marca}|${modelo}`] = (comisionKit !== undefined && comisionKit !== null ? comisionKit : (comision !== undefined && comision !== null ? comision : 0));
             DB.comisiones[`${marca}|${modelo}`] = DB.comisionesKit[`${marca}|${modelo}`];
             comUpdated++;
           }
@@ -2961,8 +2977,8 @@ function exportarCatalogo() {
       Talles: (b.talles||[]).join(', '),
       Rodados: (b.rodados||[]).join(', '),
       Colores: b.colores.join(', '),
-      'ComisionKit ($)': (DB.comisionesKit||{})[key] ?? DB.comisiones[key] ?? 0,
-      'ComisionPrearmada ($)': (DB.comisionesPre||{})[key] ?? 0,
+      'ComisionKit ($)': ((DB.comisionesKit||{})[key] !== undefined ? (DB.comisionesKit||{})[key] : (DB.comisiones[key] !== undefined ? DB.comisiones[key] : 0)),
+      'ComisionPrearmada ($)': ((DB.comisionesPre||{})[key] !== undefined ? (DB.comisionesPre||{})[key] : 0),
     };
   });
   exportXlsx([{name:'Catálogo', data:rows}], 'catalogo_bicicletas.xlsx');
@@ -2979,8 +2995,8 @@ function renderComisiones() {
     const [m, mo] = k.split('|');
     const bici = DB.catalogo.find(b => b.marca===m && b.modelo===mo);
     const tieneKit = bici ? bici.tieneKitPre === true : false;
-    const valKit = (DB.comisionesKit||{})[k] ?? (DB.comisiones||{})[k] ?? 0;
-    const valPre = (DB.comisionesPre||{})[k] ?? 0;
+    const valKit = ((DB.comisionesKit||{})[k] !== undefined ? (DB.comisionesKit||{})[k] : ((DB.comisiones||{})[k] !== undefined ? (DB.comisiones||{})[k] : 0));
+    const valPre = ((DB.comisionesPre||{})[k] !== undefined ? (DB.comisionesPre||{})[k] : 0);
     const safeK = k.replace(/\|/g,'__');
     return `
       <tr id="comrow_${safeK}">
@@ -3025,8 +3041,8 @@ async function toggleKitRow(safeK, marca, modelo) {
   await saveKey('catalogo');
   // Re-renderizar solo esa fila
   const key = `${marca}|${modelo}`;
-  const valKit = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
-  const valPre = (DB.comisionesPre||{})[key] ?? 0;
+  const valKit = ((DB.comisionesKit||{})[key] !== undefined ? (DB.comisionesKit||{})[key] : ((DB.comisiones||{})[key] !== undefined ? (DB.comisiones||{})[key] : 0));
+  const valPre = ((DB.comisionesPre||{})[key] !== undefined ? (DB.comisionesPre||{})[key] : 0);
   document.getElementById(`comrow_tipo_${safeK}`).innerHTML = checked
     ? `<div style="display:flex;flex-direction:column;gap:4px"><span style="color:var(--blue)">📦 Kit</span><span style="color:var(--purple)">🚲 Prearmado</span></div>`
     : `<span style="color:var(--purple)">🚲 Prearmado</span>`;
@@ -3213,8 +3229,8 @@ function getOrdenesDelPeriodo() {
     desde = new Date(ahora.getFullYear(), 0, 1);
     hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
   } else if (periodoActivo === 'custom') {
-    const d = document.getElementById('r-desde')?.value;
-    const h = document.getElementById('r-hasta')?.value;
+    const d = (document.getElementById('r-desde') ? document.getElementById('r-desde').value : null);
+    const h = (document.getElementById('r-hasta') ? document.getElementById('r-hasta').value : null);
     if (!d || !h) return { ordenes: [], label: 'Seleccioná las fechas' };
     desde = new Date(d + 'T00:00:00');
     hasta = new Date(h + 'T23:59:59');
@@ -3299,7 +3315,7 @@ function renderReporte() {
     porModelo[k]+=o.cantidad;
   });
   const topModelos = Object.entries(porModelo).sort((a,b)=>b[1]-a[1]);
-  const maxMod = topModelos[0]?.[1]||1;
+  const maxMod = ((topModelos[0] && topModelos[0][1]) || 1);
 
   cont.innerHTML = `
     <div class="stat-grid">
@@ -3387,7 +3403,7 @@ function exportarReporteSemanal() {
     Armador: o.armador||'-',
     'N° Cuadro': o.cuadro||'-',
     'Tipo Armado': o.tipoArmado||'-',
-    'Tiempo (min)': o.tiempoArmadoMin ?? '-',
+    'Tiempo (min)': (o.tiempoArmadoMin !== undefined && o.tiempoArmadoMin !== null ? o.tiempoArmadoMin : '-'),
     Tipo: o.esSalon?'Salón':'Venta',
     Destino: o.destino==='local'?'⭐ Cliente en Local':o.destino==='envio'?'🚚 Envío':'🏪 Salón',
     Prioridad: o.prioridadLabel || '-',
@@ -3515,7 +3531,7 @@ function exportarHistorial() {
     Armador: o.armador||'-',
     'N° Cuadro': o.cuadro||'-',
     'Tipo Armado': o.tipoArmado||'-',
-    'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
+    'Tiempo Armado (min)': (o.tiempoArmadoMin !== undefined && o.tiempoArmadoMin !== null ? o.tiempoArmadoMin : '-'),
     Destino: o.destino||'salon',
     Observaciones: o.obs||'-',
     Tipo: o.esSalon?'Salón':'Venta',
@@ -3581,10 +3597,10 @@ function renderBD(ctx) {
   const countLbl = document.getElementById(`bd-${ctx}-count-label`);
   if (!lista) return;
 
-  const fCliente = (document.getElementById(`bd-${ctx}-f-cliente`)?.value || '').toLowerCase().trim();
-  const fArmador = (document.getElementById(`bd-${ctx}-f-armador`)?.value || '').toLowerCase().trim();
-  const fCuadro  = (document.getElementById(`bd-${ctx}-f-cuadro`)?.value  || '').toLowerCase().trim();
-  const fTipo    = document.getElementById(`bd-${ctx}-f-tipo`)?.value || '';
+  const fCliente = ((document.getElementById('bd-'+ctx+'-f-cliente') ? document.getElementById('bd-'+ctx+'-f-cliente').value : '')).toLowerCase().trim();
+  const fArmador = ((document.getElementById('bd-'+ctx+'-f-armador') ? document.getElementById('bd-'+ctx+'-f-armador').value : '')).toLowerCase().trim();
+  const fCuadro  = ((document.getElementById('bd-'+ctx+'-f-cuadro') ? document.getElementById('bd-'+ctx+'-f-cuadro').value : '')).toLowerCase().trim();
+  const fTipo    = (document.getElementById('bd-'+ctx+'-f-tipo') ? document.getElementById('bd-'+ctx+'-f-tipo').value : '');
 
   let ordenes = getBDOrdenes(ctx);
 
@@ -3695,9 +3711,9 @@ function comisionOrden(o, paraArmador) {
   const tieneKitPre = biciCat ? biciCat.tieneKitPre === true : false;
   let comUnitaria = 0;
   if (tieneKitPre && o.tipoArmado === 'kit') {
-    comUnitaria = (DB.comisionesKit||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+    comUnitaria = ((DB.comisionesKit||{})[key] !== undefined ? (DB.comisionesKit||{})[key] : ((DB.comisiones||{})[key] !== undefined ? (DB.comisiones||{})[key] : 0));
   } else {
-    comUnitaria = (DB.comisionesPre||{})[key] ?? (DB.comisiones||{})[key] ?? 0;
+    comUnitaria = ((DB.comisionesPre||{})[key] !== undefined ? (DB.comisionesPre||{})[key] : ((DB.comisiones||{})[key] !== undefined ? (DB.comisiones||{})[key] : 0));
   }
   const totalCom = comUnitaria * o.cantidad;
   // Kit con dos armadores distintos: dividir comisión al 50% cada uno
@@ -3900,7 +3916,7 @@ async function srvRegistrarManual() {
 async function srvConfirmar(datosStr) {
   let datos;
   try { datos = (typeof datosStr === 'object') ? datosStr : JSON.parse(datosStr); } catch(e) { return; }
-  const obs = document.getElementById('srv-obs-confirm')?.value.trim() || '';
+  const obs = (document.getElementById('srv-obs-confirm') ? document.getElementById('srv-obs-confirm').value.trim() : '');
   await srvGuardar(datos, obs);
 }
 
@@ -3921,7 +3937,7 @@ async function srvGuardar(datos, obs) {
     obs:        obs,
     fechaService,
     vencimiento,
-    armador:    sesionActual?.usuario || '',
+    armador:    (sesionActual && sesionActual.usuario) || '',
   });
   await saveKey('services');
 
@@ -3943,7 +3959,7 @@ function initAdmin() {
 function renderGarantias() {
   const tbody = document.getElementById('t-garantias');
   if (!tbody) return;
-  const filtro = document.getElementById('g-estado')?.value || '';
+  const filtro = (document.getElementById('g-estado') ? document.getElementById('g-estado').value : '');
   const ahora = new Date();
   const lista = [...(DB.services || [])].sort((a,b)=>new Date(b.fechaService)-new Date(a.fechaService));
 
@@ -4085,7 +4101,7 @@ function getDefaultUsuarios() {
   const ok = initFirebase();
   if (!ok) {
     clearTimeout(globalTimeout);
-    document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
+    // El error real ya fue mostrado dentro de initFirebase()
     return;
   }
 
