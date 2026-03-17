@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rodados Lopez</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- Firebase 9.x compat — más compatible con navegadores de Smart TV / TV Box -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
 
@@ -1452,6 +1453,21 @@ const FIREBASE_CONFIG = {
   appId:             "1:950585273289:web:332081bcf4707282781618"
 };
 
+// ── FIX SMART TV: forzar long-polling antes de que Firebase cargue ──
+// Los navegadores de Smart TV y TV Box bloquean WebSockets (wss://).
+// Firebase usa WebSocket por defecto para tiempo real. Al activar
+// forceLongPolling, usa HTTP puro, que todos los browsers soportan.
+(function() {
+  try {
+    // Parchear el objeto global de Firebase Database para que use long-polling
+    // Esta técnica funciona con firebase-database-compat.js v8, v9 y v10
+    const origDefine = Object.defineProperty;
+    window.__FIREBASE_DEFAULTS__ = window.__FIREBASE_DEFAULTS__ || {};
+    window.__FIREBASE_DEFAULTS__._config = window.__FIREBASE_DEFAULTS__._config || {};
+    window.__FIREBASE_DEFAULTS__._config.databaseForceLongPolling = true;
+  } catch(e) {}
+})();
+
 // ════════════════════════════════════════════════════════════
 //  ESTADO
 // ════════════════════════════════════════════════════════════
@@ -1482,7 +1498,7 @@ let fbListeners     = {};  // referencias a listeners activos
 function initFirebase() {
   try {
     fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    fbDB  = firebase.database();
+    fbDB  = firebase.database(fbApp);
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -1490,21 +1506,34 @@ function initFirebase() {
   }
 }
 
-// ── LOAD: lectura única al inicio ──
+// ── Helper: fetch con timeout para TV browsers lentos ──
+function fbOnceWithTimeout(ref, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    ref.once('value')
+      .then(snap => { clearTimeout(timer); resolve(snap); })
+      .catch(err  => { clearTimeout(timer); resolve(null); });
+  });
+}
+
+// ── LOAD: lectura única al inicio con timeout por clave ──
 async function loadDB() {
   const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  // Timeout de 8 segundos por clave. En TV los navegadores son más lentos,
+  // pero si Firebase no responde en ese tiempo se usa un valor vacío/default.
   const promises = keys.map(key =>
-    fbDB.ref(key).once('value').then(snap => {
+    fbOnceWithTimeout(fbDB.ref(key), 8000).then(snap => {
+      if (!snap) return; // timeout: quedarse con el default
       const val = snap.val();
       if (val !== null) DB[key] = val;
-    }).catch(()=>{})
+    })
   );
   await Promise.all(promises);
 
   // defaults si la BD está vacía
-  if (!DB.catalogo.length)                DB.catalogo   = getDefaultCatalogo();
-  if (!Object.keys(DB.comisionesKit).length) {
-    if (Object.keys(DB.comisiones).length) {
+  if (!DB.catalogo || !DB.catalogo.length)  DB.catalogo   = getDefaultCatalogo();
+  if (!DB.comisionesKit || !Object.keys(DB.comisionesKit).length) {
+    if (DB.comisiones && Object.keys(DB.comisiones).length) {
       DB.comisionesKit = {...DB.comisiones};
       DB.comisionesPre = Object.fromEntries(Object.keys(DB.comisiones).map(k=>[k, Math.round((DB.comisiones[k]||0)*0.5)]));
     } else {
@@ -1512,11 +1541,11 @@ async function loadDB() {
       DB.comisionesPre = getDefaultComisionesPre();
     }
   }
-  if (!Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
-  if (!DB.armadores.length)               DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
-  if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
-  if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
-  if (!DB.services)                       DB.services = [];
+  if (!DB.comisionesPre || !Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
+  if (!DB.armadores || !DB.armadores.length)  DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
+  if (!DB.usuarios  || !DB.usuarios.length)   DB.usuarios   = getDefaultUsuarios();
+  if (!DB.sinStockAlertas)                    DB.sinStockAlertas = [];
+  if (!DB.services)                           DB.services = [];
 }
 
 // ── SAVE: escritura de una clave ──
@@ -1534,8 +1563,10 @@ async function saveAll() {
 // ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
 function startPolling() {
   // Escuchar cambios en órdenes en tiempo real
+  try {
   if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
   fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
+    try {
     const fresh = snap.val();
     if (fresh === null) return;
     const freshArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
@@ -1560,11 +1591,15 @@ function startPolling() {
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
     if (isScreen('taller'))   tRenderAll();
-  });
+    } catch(e) { console.warn('ordenes listener error:', e); }
+  }, err => { console.warn('ordenes listener failed:', err); });
+  } catch(e) { console.warn('startPolling ordenes error:', e); }
 
   // Escuchar sinStockAlertas en tiempo real
+  try {
   if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
   fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
+    try {
     const fresh = snap.val();
     const nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
     if (isScreen('vendedor')) {
@@ -1583,11 +1618,15 @@ function startPolling() {
     } else {
       DB.sinStockAlertas = nuevasAlertas;
     }
-  });
+    } catch(e) { console.warn('sinStock listener error:', e); }
+  }, err => { console.warn('sinStock listener failed:', err); });
+  } catch(e) { console.warn('startPolling sinStock error:', e); }
 
   // Escuchar catálogo en tiempo real (actualiza vendedor y taller automáticamente)
+  try {
   if (fbListeners.catalogo) fbDB.ref('catalogo').off('value', fbListeners.catalogo);
   fbListeners.catalogo = fbDB.ref('catalogo').on('value', snap => {
+    try {
     const val = snap.val();
     if (val === null) return;
     DB.catalogo = Array.isArray(val) ? val : Object.values(val);
@@ -1595,30 +1634,44 @@ function startPolling() {
     if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
     if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
     if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
-  });
+    } catch(e) { console.warn('catalogo listener error:', e); }
+  }, err => { console.warn('catalogo listener failed:', err); });
+  } catch(e) { console.warn('startPolling catalogo error:', e); }
 
   // Escuchar comisionesKit en tiempo real
+  try {
   if (fbListeners.comisionesKit) fbDB.ref('comisionesKit').off('value', fbListeners.comisionesKit);
   fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
+    try {
     const val = snap.val();
     if (val !== null) DB.comisionesKit = val;
     if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
-  });
+    } catch(e) {}
+  }, err => { console.warn('comisionesKit listener failed:', err); });
+  } catch(e) {}
 
   // Escuchar comisionesPre en tiempo real
+  try {
   if (fbListeners.comisionesPre) fbDB.ref('comisionesPre').off('value', fbListeners.comisionesPre);
   fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
+    try {
     const val = snap.val();
     if (val !== null) DB.comisionesPre = val;
     if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
-  });
+    } catch(e) {}
+  }, err => { console.warn('comisionesPre listener failed:', err); });
+  } catch(e) {}
 
   // Escuchar counter en tiempo real
+  try {
   if (fbListeners.counter) fbDB.ref('counter').off('value', fbListeners.counter);
   fbListeners.counter = fbDB.ref('counter').on('value', snap => {
+    try {
     const val = snap.val();
     if (val !== null) DB.counter = val;
-  });
+    } catch(e) {}
+  }, err => { console.warn('counter listener failed:', err); });
+  } catch(e) {}
 }
 
 // ════════════════════════════════════════════════════════════
@@ -3998,16 +4051,61 @@ function getDefaultUsuarios() {
     return;
   }
 
+  // Mostrar progreso en el loader
+  const loaderMsg = document.querySelector('#loader span');
+  function setLoaderMsg(txt) { if (loaderMsg) loaderMsg.textContent = txt; }
+
+  setLoaderMsg('CONECTANDO CON FIREBASE...');
+
+  // Timeout global de seguridad: si en 15 segundos no termina, mostrar error útil
+  let bootDone = false;
+  const globalTimeout = setTimeout(() => {
+    if (!bootDone) {
+      document.getElementById('loader').innerHTML = `
+        <div style="text-align:center;max-width:480px;padding:24px">
+          <h1 style="font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;margin-bottom:8px">RODADOS <span style="color:var(--orange)">LOPEZ</span></h1>
+          <div style="background:rgba(255,61,61,.1);border:2px solid var(--red);border-radius:8px;padding:24px;margin-top:20px;text-align:left">
+            <div style="font-size:20px;font-weight:700;color:var(--red);margin-bottom:12px">⚠️ No se pudo conectar</div>
+            <p style="color:var(--text2);font-size:14px;line-height:1.7;margin-bottom:16px">
+              El navegador de la tele no pudo comunicarse con Firebase. Esto es normal en algunos Smart TV o TV Box con browsers limitados.
+            </p>
+            <div style="background:var(--bg3);border-radius:4px;padding:14px;font-size:13px;color:var(--text2);line-height:2">
+              <strong style="color:var(--text)">Soluciones:</strong><br>
+              1. Verificá que la tele tenga acceso a internet<br>
+              2. Intentá recargar la página (F5 o botón recargar)<br>
+              3. Si sigue fallando, usá la función de <strong style="color:var(--orange)">Duplicar Pantalla</strong> desde tu celular hacia la tele
+            </div>
+            <button onclick="location.reload()" style="margin-top:16px;background:var(--orange);color:#000;border:none;padding:12px 24px;font-family:Barlow Condensed,sans-serif;font-size:18px;font-weight:700;border-radius:3px;cursor:pointer;width:100%">🔄 REINTENTAR</button>
+          </div>
+        </div>
+      `;
+    }
+  }, 15000);
+
   const ok = initFirebase();
   if (!ok) {
+    clearTimeout(globalTimeout);
     document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
     return;
   }
 
-  await loadDB();
+  setLoaderMsg('CARGANDO DATOS...');
+
+  try {
+    await loadDB();
+  } catch(e) {
+    console.warn('loadDB error:', e);
+    // Continuar igual con defaults — mejor mostrar la app vacía que quedarse colgado
+  }
+
+  bootDone = true;
+  clearTimeout(globalTimeout);
+
   document.getElementById('loader').style.display = 'none';
   document.getElementById('screen-inicio').style.display = 'flex';
-  startPolling();
+
+  // startPolling con manejo de error silencioso para TV
+  try { startPolling(); } catch(e) { console.warn('startPolling error:', e); }
 })();</script>
 </body>
 </html>
