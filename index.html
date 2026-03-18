@@ -1343,6 +1343,24 @@ input[type=file]{display:none;}
   </div>
 </div>
 
+<!-- MODAL CANCELAR ORDEN -->
+<div id="modal-cancelar-orden" class="modal-bg">
+  <div class="modal" style="max-width:480px">
+    <h3 style="color:var(--red)">🗑️ Cancelar Orden</h3>
+    <p id="modal-cancelar-info" style="color:var(--text2);font-size:13px;margin-bottom:4px"></p>
+    <div id="modal-cancelar-cuadro-aviso" style="display:none;background:rgba(255,193,7,.1);border:1px solid var(--yellow);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--yellow)"></div>
+    <div class="fld" style="margin-bottom:16px">
+      <label>Motivo de cancelación <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+      <textarea id="modal-cancelar-motivo" rows="3" placeholder="Escribí el motivo de la cancelación..." style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:11px 13px;font-family:'Barlow',sans-serif;font-size:14px;border-radius:3px;outline:none;resize:vertical;width:100%;transition:border-color .15s;"></textarea>
+      <div id="modal-cancelar-error" style="display:none;color:var(--red);font-size:12px;margin-top:4px">⚠️ El motivo es obligatorio.</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cancelar-orden')">← Volver</button>
+      <button class="btn btn-r" style="flex:1" onclick="confirmarCancelarOrden()">🗑️ CONFIRMAR CANCELACIÓN</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR ORDEN -->
 <div id="modal-editar" class="modal-bg">
   <div class="modal" style="max-width:520px">
@@ -2755,7 +2773,6 @@ async function confirmarEdicion() {
 }
 
 async function cancelarOrden() {
-  // Capturar el ID inmediatamente antes de cualquier operación async
   const targetId = ordenEditarId;
   const o = DB.ordenes.find(x => x.id === targetId);
 
@@ -2766,8 +2783,12 @@ async function cancelarOrden() {
     return;
   }
 
-  // Info sobre el cuadro si ya está en BD
-  let infoCuadro = '';
+  // Llenar el modal de cancelación
+  document.getElementById('modal-cancelar-info').textContent =
+    `Orden #${o.id} — ${o.cantidad}x ${o.marca} ${o.modelo}${o.cliente ? ' · ' + o.cliente : ''}`;
+
+  // Aviso de cuadro si ya está en BD
+  const avisoEl = document.getElementById('modal-cancelar-cuadro-aviso');
   if (o.cuadro) {
     const relacionadas = DB.ordenes.filter(x =>
       x.id !== o.id && x.cuadro &&
@@ -2780,30 +2801,46 @@ async function cancelarOrden() {
           ? `exposición salón (${fmtFecha(x.fechaCreacion)})`
           : `venta a ${x.cliente||'cliente'} (${fmtFecha(x.fechaCompletado||x.fechaCreacion)})`
       ).join(', ');
-      infoCuadro = `\n\n⚠️ N° cuadro "${o.cuadro}" ya está registrado en: ${destinos}.\nEl cuadro quedará en ese historial, la cancelación solo afecta esta orden.`;
+      avisoEl.textContent = `⚠️ El N° de cuadro "${o.cuadro}" ya está registrado en: ${destinos}. El cuadro quedará en ese historial; la cancelación solo afecta esta orden.`;
+      avisoEl.style.display = 'block';
+    } else {
+      avisoEl.style.display = 'none';
     }
+  } else {
+    avisoEl.style.display = 'none';
   }
 
-  // Pedir motivo obligatorio con prompt nativo
-  const motivo = prompt(`Motivo de cancelación de la Orden #${targetId} (obligatorio):${infoCuadro}`);
-  if (motivo === null) return;           // el usuario cerró el prompt → no cancelar
-  if (!motivo.trim()) {
-    alert('⚠️ Debés escribir un motivo para cancelar la orden.');
+  document.getElementById('modal-cancelar-motivo').value = '';
+  document.getElementById('modal-cancelar-error').style.display = 'none';
+
+  // Cerrar el modal de edición y abrir el de cancelación
+  closeModal('modal-editar');
+  document.getElementById('modal-cancelar-orden').classList.add('on');
+  setTimeout(() => document.getElementById('modal-cancelar-motivo').focus(), 100);
+}
+
+async function confirmarCancelarOrden() {
+  const motivo = document.getElementById('modal-cancelar-motivo').value.trim();
+  if (!motivo) {
+    document.getElementById('modal-cancelar-error').style.display = 'block';
+    document.getElementById('modal-cancelar-motivo').focus();
     return;
   }
 
-  // Ejecutar cancelación
+  const o = DB.ordenes.find(x => x.id === ordenEditarId);
+  if (!o) { closeModal('modal-cancelar-orden'); ordenEditarId = null; return; }
+
   o.estado = 'cancelada';
   o.fechaCompletado = new Date().toISOString();
-  o.motivoCancelacion = motivo.trim();
+  o.motivoCancelacion = motivo;
+  const idCancelado = ordenEditarId;
   await saveKey('ordenes');
 
-  // Limpiar ID y cerrar modal DESPUÉS de guardar
   ordenEditarId = null;
-  closeModal('modal-editar');
+  closeModal('modal-cancelar-orden');
   tRenderAll();
   vRenderOrdenes();
-  toast(`🗑️ Orden #${targetId} cancelada — ${motivo.trim()}`, 'var(--red)');
+  toast(`🗑️ Orden #${idCancelado} cancelada`, 'var(--red)');
 }
 function sFillModelos() {
   const marca = document.getElementById('s-marca').value;
