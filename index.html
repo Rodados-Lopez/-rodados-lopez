@@ -1410,7 +1410,7 @@ input[type=file]{display:none;}
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cancelar</button>
-      <button class="btn btn-r btn-sm" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
+      <button class="btn btn-r btn-sm" id="btn-cancelar-orden" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
       <button class="btn btn-o" style="flex:1" onclick="confirmarEdicion()">✅ GUARDAR CAMBIOS</button>
     </div>
   </div>
@@ -2697,6 +2697,10 @@ async function devolverSinStock(motivo) {
 // EDITAR ORDEN
 function abrirModalEditar(id) {
   ordenEditarId = id;
+  // Guardar el ID también en el botón para que no dependa solo de la variable global
+  const btnCancelar = document.getElementById('btn-cancelar-orden');
+  if (btnCancelar) btnCancelar.setAttribute('data-orden-id', id);
+
   const o = DB.ordenes.find(x => x.id===id);
   document.getElementById('modal-editar-info').textContent =
     `Orden #${o.id} · Creada: ${fmtHora(o.fechaCreacion)}${o.cliente ? ' · Cliente: '+o.cliente : ''}`;
@@ -2773,7 +2777,12 @@ async function confirmarEdicion() {
 }
 
 async function cancelarOrden() {
-  const targetId = ordenEditarId;
+  // Leer el ID desde el data-attribute del botón (más confiable que la variable global
+  // que puede ser sobreescrita por re-renders del listener de Firebase)
+  const btnCancelar = document.getElementById('btn-cancelar-orden');
+  const idFromBtn = btnCancelar ? parseInt(btnCancelar.getAttribute('data-orden-id')) : null;
+  const targetId = idFromBtn || ordenEditarId;
+
   const o = DB.ordenes.find(x => x.id === targetId);
 
   if (!o || o.estado === 'cancelada') {
@@ -2783,11 +2792,14 @@ async function cancelarOrden() {
     return;
   }
 
-  // Llenar el modal de cancelación
+  // Llenar info del modal de cancelación
   document.getElementById('modal-cancelar-info').textContent =
     `Orden #${o.id} — ${o.cantidad}x ${o.marca} ${o.modelo}${o.cliente ? ' · ' + o.cliente : ''}`;
 
-  // Aviso de cuadro si ya está en BD
+  // Guardar el ID en el modal de cancelación también
+  document.getElementById('modal-cancelar-orden').setAttribute('data-orden-id', targetId);
+
+  // Aviso si el cuadro ya está en BD
   const avisoEl = document.getElementById('modal-cancelar-cuadro-aviso');
   if (o.cuadro) {
     const relacionadas = DB.ordenes.filter(x =>
@@ -2813,7 +2825,7 @@ async function cancelarOrden() {
   document.getElementById('modal-cancelar-motivo').value = '';
   document.getElementById('modal-cancelar-error').style.display = 'none';
 
-  // Cerrar el modal de edición y abrir el de cancelación
+  // Cerrar modal de edición y abrir el de cancelación
   closeModal('modal-editar');
   document.getElementById('modal-cancelar-orden').classList.add('on');
   setTimeout(() => document.getElementById('modal-cancelar-motivo').focus(), 100);
@@ -2827,20 +2839,29 @@ async function confirmarCancelarOrden() {
     return;
   }
 
-  const o = DB.ordenes.find(x => x.id === ordenEditarId);
-  if (!o) { closeModal('modal-cancelar-orden'); ordenEditarId = null; return; }
+  // Leer el ID desde el data-attribute del modal (no depende de la variable global)
+  const modalEl = document.getElementById('modal-cancelar-orden');
+  const targetId = parseInt(modalEl.getAttribute('data-orden-id')) || ordenEditarId;
+  const o = DB.ordenes.find(x => x.id === targetId);
+
+  if (!o) {
+    closeModal('modal-cancelar-orden');
+    ordenEditarId = null;
+    tRenderAll(); vRenderOrdenes();
+    return;
+  }
 
   o.estado = 'cancelada';
   o.fechaCompletado = new Date().toISOString();
   o.motivoCancelacion = motivo;
-  const idCancelado = ordenEditarId;
   await saveKey('ordenes');
 
   ordenEditarId = null;
+  modalEl.removeAttribute('data-orden-id');
   closeModal('modal-cancelar-orden');
   tRenderAll();
   vRenderOrdenes();
-  toast(`🗑️ Orden #${idCancelado} cancelada`, 'var(--red)');
+  toast(`🗑️ Orden #${targetId} cancelada`, 'var(--red)');
 }
 function sFillModelos() {
   const marca = document.getElementById('s-marca').value;
