@@ -31,7 +31,7 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow-x:hidden;}
+html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
 
 /* ── LOADER ── */
 #loader{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;}
@@ -59,7 +59,7 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
 
 /* ── PANTALLA ── */
-.screen{display:none;min-height:100vh;flex-direction:column;max-width:100vw;overflow-x:hidden;}
+.screen{display:none;min-height:100vh;flex-direction:column;}
 .screen.on{display:flex;}
 
 /* ── HEADER ── */
@@ -75,8 +75,7 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 .live-badge::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;}
 
 /* ── BODY ── */
-.body{flex:1;overflow-y:auto;padding:20px;max-width:1200px;width:100%;margin:0 auto;box-sizing:border-box;}
-@media(max-width:700px){.body{padding:12px;}}
+.body{flex:1;overflow-y:auto;padding:20px;max-width:1000px;width:100%;margin:0 auto;}
 
 /* ── TABS ── */
 .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:3px;margin-bottom:18px;overflow-x:auto;}
@@ -86,7 +85,7 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 .tab-body.on{display:block;}
 
 /* ── PANEL ── */
-.panel{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:20px;margin-bottom:16px;min-width:0;overflow:hidden;}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:20px;margin-bottom:16px;}
 .ptitle{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
 .ptitle-g{color:var(--green);}
 
@@ -136,17 +135,12 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 .badge-p{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid var(--purple);}
 
 /* ── TABLA ── */
-.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;width:100%;}
-table{width:100%;border-collapse:collapse;min-width:0;}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
 th{background:var(--bg);padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--orange);white-space:nowrap;}
-td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;font-size:13px;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
 tr:hover td{background:rgba(255,98,0,.03);}
 .tbl-empty{text-align:center;padding:32px;color:var(--text3);}
-tr.clickable-row{cursor:pointer;}
-tr.clickable-row:hover td{background:rgba(255,98,0,.08);}
-.tbl-wrap table{table-layout:auto;}
-@media(max-width:900px){ th{font-size:9px;padding:6px 8px;letter-spacing:1px;} td{padding:7px 8px;font-size:12px;} }
-@media(max-width:600px){ th{font-size:8px;padding:5px 6px;} td{padding:5px 6px;font-size:11px;} }
 
 /* ── MODAL ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:500;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
@@ -167,7 +161,7 @@ tr.clickable-row:hover td{background:rgba(255,98,0,.08);}
 .alerta-detail strong{color:var(--orange);font-family:'Barlow Condensed',sans-serif;font-size:18px;}
 
 /* ── REPORTE ── */
-.rcard{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:18px 20px;margin-bottom:12px;min-width:0;overflow:hidden;}
+.rcard{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:18px 20px;margin-bottom:12px;}
 .rcard-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
 .rcard-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;}
 .rcard-total{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:800;color:var(--green);}
@@ -492,8 +486,7 @@ input[type=file]{display:none;}
   <div class="body">
     <div class="tabs">
       <button class="tab on" onclick="switchTab('v','v-nueva-tab')">📋 Nueva Orden</button>
-      <button class="tab" onclick="switchTab('v','v-mis-ordenes-tab');vRenderOrdenes()">📦 Mis Órdenes</button>
-      <button class="tab" onclick="switchTab('v','v-historico-tab');vRenderHistorico()">📅 Mis Histórico</button>
+      <button class="tab" onclick="switchTab('v','v-mis-ordenes-tab')">📦 Mis Órdenes</button>
       <button class="tab" onclick="switchTab('v','v-inbox-tab')">📬 Bandeja <span id="v-inbox-tab-count" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
     </div>
 
@@ -549,6 +542,7 @@ input[type=file]{display:none;}
           <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
           <select id="v-destino">
             <option value="local">⭐ Cliente en el Local</option>
+            <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
         </div>
@@ -582,26 +576,10 @@ input[type=file]{display:none;}
     <!-- MIS ÓRDENES TAB -->
     <div id="v-mis-ordenes-tab" class="tab-body">
     <div class="panel">
-      <div class="ptitle">📦 Mis Órdenes Activas</div>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Solo órdenes enviadas y no completadas. Para ver el historial completo usá la pestaña <strong>Mis Histórico</strong>.</p>
-      <div id="v-lista-ordenes"><div class="empty"><div class="empty-icon">📭</div>Sin órdenes activas</div></div>
+      <div class="ptitle">📦 Órdenes del Día</div>
+      <div id="v-lista-ordenes"><div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div></div>
     </div>
     </div><!-- /v-mis-ordenes-tab -->
-
-    <!-- HISTÓRICO VENDEDOR TAB -->
-    <div id="v-historico-tab" class="tab-body">
-    <div class="panel">
-      <div class="ptitle">📅 Mis Órdenes Históricas</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <button class="btn btn-sm" id="vh-pbtn-hoy"    onclick="setVHPeriodo('hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
-        <button class="btn btn-sm" id="vh-pbtn-semana" onclick="setVHPeriodo('semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
-        <button class="btn btn-sm" id="vh-pbtn-mes"    onclick="setVHPeriodo('mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
-        <button class="btn btn-sm" id="vh-pbtn-anio"   onclick="setVHPeriodo('anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
-        <button class="btn btn-sm" id="vh-pbtn-todos"  onclick="setVHPeriodo('todos')"  style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Todos</button>
-      </div>
-      <div id="v-lista-historico"><div class="empty"><div class="empty-icon">📭</div>Sin órdenes</div></div>
-    </div>
-    </div><!-- /v-historico-tab -->
 
     <!-- BANDEJA TAB -->
     <div id="v-inbox-tab" class="tab-body">
@@ -632,6 +610,8 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('t','local-tab')">⭐ Local <span id="t-local-count" style="display:none;background:var(--orange);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
+      <button class="tab" onclick="switchTab('t','service-tab')">🔩 Service</button>
+      <button class="tab" onclick="switchTab('t','bd-tab-t');renderBD('t')">🗄️ Base de Datos</button>
     </div>
 
     <!-- ÓRDENES TAB -->
@@ -828,10 +808,10 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('a','a-comisiones')">💰 Comisiones</button>
       <button class="tab" onclick="switchTab('a','a-armadores')">👥 Armadores</button>
       <button class="tab" onclick="switchTab('a','a-usuarios')">🔐 Usuarios</button>
-      <button class="tab" onclick="switchTab('a','a-reportes');renderReporte()">📊 Comisiones del Período</button>
-      <button class="tab" onclick="switchTab('a','a-historial-comisiones');fillHCFiltros();renderHistorialComisiones()">💰 Historial con Comisión</button>
-      <button class="tab" onclick="switchTab('a','a-historial');fillHistorialFiltros();renderHistorial()">📁 Historial Completo</button>
-      <button class="tab" onclick="switchTab('a','a-bd-admin');renderBDAdmin()">🗄️ Base de Datos</button>
+      <button class="tab" onclick="switchTab('a','a-reportes')">📊 Reportes</button>
+      <button class="tab" onclick="switchTab('a','a-historial')">📁 Historial</button>
+      <button class="tab" onclick="switchTab('a','a-garantias')">🛡️ Garantías</button>
+      <button class="tab" onclick="switchTab('a','a-bd');renderBD('a')">🗄️ Base de Datos</button>
     </div>
 
     <!-- CATÁLOGO -->
@@ -967,7 +947,7 @@ input[type=file]{display:none;}
     <div id="a-reportes" class="tab-body">
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-          <div class="ptitle" style="margin:0;border:none;padding:0">📊 Comisiones del Período</div>
+          <div class="ptitle" style="margin:0;border:none;padding:0">📊 Reportes</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" onclick="renderReporte()">🔄 Actualizar</button>
             <button class="btn btn-b btn-sm" onclick="exportarReporteSemanal()">⬇️ Exportar Excel</button>
@@ -1002,109 +982,28 @@ input[type=file]{display:none;}
       </div>
     </div>
 
-    <!-- HISTORIAL CON COMISIÓN -->
-    <div id="a-historial-comisiones" class="tab-body">
-      <div class="panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <div class="ptitle" style="margin:0;border:none;padding:0">💰 Historial con Comisión</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="limpiarFiltrosHC()">✕ Limpiar filtros</button>
-            <button class="btn btn-b btn-sm" onclick="exportarHistorialComisiones()">⬇️ Exportar</button>
-          </div>
-        </div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Solo muestra bicis que generaron comisión real (excluye retoques finales y duplicados de cuadro). Hacé <strong>doble clic</strong> en una fila para ir al historial completo filtrado.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="btn btn-sm" id="hc-pbtn-hoy"    onclick="setHCPeriodo('hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
-          <button class="btn btn-sm" id="hc-pbtn-semana" onclick="setHCPeriodo('semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
-          <button class="btn btn-sm" id="hc-pbtn-mes"    onclick="setHCPeriodo('mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
-          <button class="btn btn-sm" id="hc-pbtn-anio"   onclick="setHCPeriodo('anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
-          <button class="btn btn-sm" id="hc-pbtn-todos"  onclick="setHCPeriodo('todos')"  style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Todos</button>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px">
-          <div class="fld"><label>Armador</label>
-            <select id="hc-armador" onchange="renderHistorialComisiones()"><option value="">Todos</option></select>
-          </div>
-          <div class="fld"><label>Marca</label>
-            <select id="hc-marca" onchange="hcFillModelos();renderHistorialComisiones()"><option value="">Todas</option></select>
-          </div>
-          <div class="fld"><label>Modelo</label>
-            <select id="hc-modelo" onchange="renderHistorialComisiones()"><option value="">Todos</option></select>
-          </div>
-          <div class="fld"><label>Tipo Armado</label>
-            <select id="hc-tipo-arm" onchange="renderHistorialComisiones()">
-              <option value="">Todos</option>
-              <option value="kit">📦 Kit</option>
-              <option value="prearmada">🚲 Prearmada</option>
-            </select>
-          </div>
-          <div class="fld"><label>Destino</label>
-            <select id="hc-destino" onchange="renderHistorialComisiones()">
-              <option value="">Todos</option>
-              <option value="local">⭐ Cliente en Local</option>
-              <option value="envio">🚚 Envío</option>
-              <option value="expo">🏪 Exposición</option>
-            </select>
-          </div>
-          <div class="fld"><label>N° Cuadro</label>
-            <input type="text" id="hc-cuadro" placeholder="ej: A123456" oninput="renderHistorialComisiones()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-          </div>
-          <div class="fld"><label>Cliente</label>
-            <input type="text" id="hc-cliente" placeholder="Nombre..." oninput="renderHistorialComisiones()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-          </div>
-          <div class="fld"><label>Fecha desde</label>
-            <input type="date" id="hc-desde" onchange="renderHistorialComisiones()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-          </div>
-          <div class="fld"><label>Fecha hasta</label>
-            <input type="date" id="hc-hasta" onchange="renderHistorialComisiones()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-          </div>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca</th><th>Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>Arm. 2</th><th>N° Cuadro</th><th>Tipo</th><th>Destino</th><th>Comisión</th></tr></thead>
-            <tbody id="t-historial-comisiones"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- HISTORIAL COMPLETO -->
     <div id="a-historial" class="tab-body">
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">📁 Historial Completo</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="limpiarFiltrosH()">✕ Limpiar filtros</button>
             <button class="btn btn-b btn-sm" onclick="exportarHistorial()">⬇️ Exportar Todo</button>
             <button class="btn btn-r btn-sm" id="btn-borrar-seleccionados" onclick="borrarOrdenesSeleccionadas()" style="display:none">🗑️ Borrar Seleccionados</button>
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="btn btn-sm" id="h-pbtn-hoy"    onclick="setHistorialPeriodo('hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
-          <button class="btn btn-sm" id="h-pbtn-semana" onclick="setHistorialPeriodo('semana')" style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Esta Semana</button>
-          <button class="btn btn-sm" id="h-pbtn-mes"    onclick="setHistorialPeriodo('mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
-          <button class="btn btn-sm" id="h-pbtn-anio"   onclick="setHistorialPeriodo('anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
-          <button class="btn btn-sm" id="h-pbtn-todos"  onclick="setHistorialPeriodo('todos')"  style="background:var(--orange);color:#000;border:none">Todos</button>
-        </div>
-        <div class="fg" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+        <div class="fg fg4" style="margin-bottom:14px">
           <div class="fld"><label>Filtrar Armador</label>
             <select id="h-armador" onchange="renderHistorial()"><option value="">Todos</option></select>
           </div>
           <div class="fld"><label>Filtrar Marca</label>
             <select id="h-marca" onchange="renderHistorial()"><option value="">Todas</option></select>
           </div>
-          <div class="fld"><label>Tipo Registro</label>
+          <div class="fld"><label>Tipo</label>
             <select id="h-tipo" onchange="renderHistorial()">
               <option value="">Todos</option>
               <option value="venta">Pedidos venta</option>
               <option value="salon">Para salón</option>
-            </select>
-          </div>
-          <div class="fld"><label>Tipo Armado</label>
-            <select id="h-tipo-armado" onchange="renderHistorial()">
-              <option value="">Todos</option>
-              <option value="kit">📦 Kit</option>
-              <option value="prearmada">🚲 Prearmada</option>
-              <option value="retoque">✨ Retoque Final</option>
             </select>
           </div>
           <div class="fld"><label>Estado</label>
@@ -1114,32 +1013,26 @@ input[type=file]{display:none;}
               <option value="pendiente">Pendientes</option>
               <option value="en-proceso">En proceso</option>
               <option value="cancelada">Cancelados</option>
-              <option value="sin-stock">Sin Stock</option>
             </select>
-          </div>
-          <div class="fld"><label>N° de Cuadro</label>
-            <input type="text" id="h-cuadro" placeholder="ej: A123456" oninput="renderHistorial()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-          </div>
-          <div class="fld"><label>Buscar Cliente</label>
-            <input type="text" id="h-cliente" placeholder="Nombre cliente" oninput="renderHistorial()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
           </div>
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th><input type="checkbox" id="h-check-all" onchange="historialToggleAll(this)" style="accent-color:var(--orange);width:15px;height:15px"></th><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador Ppal.</th><th>Armador 2</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
+            <thead><tr><th><input type="checkbox" id="h-check-all" onchange="historialToggleAll(this)" style="accent-color:var(--orange);width:15px;height:15px"></th><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
             <tbody id="t-historial"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- GARANTÍAS (solo admin) - OCULTA -->
-    <div id="a-garantias" class="tab-body" style="display:none!important">
+    <!-- GARANTÍAS (solo admin) -->
+    <div id="a-garantias" class="tab-body">
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">🛡️ Control de Garantías</div>
           <button class="btn btn-b btn-sm" onclick="exportarGarantias()">⬇️ Exportar</button>
         </div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Registro de todos los service realizados. La garantía rige por <strong>2 meses</strong> desde la fecha del service.</p>
         <div class="fg fg2" style="margin-bottom:14px">
           <div class="fld"><label>Filtrar Estado</label>
             <select id="g-estado" onchange="renderGarantias()">
@@ -1158,58 +1051,18 @@ input[type=file]{display:none;}
       </div>
     </div>
 
-    <!-- BASE DE DATOS ADMIN - NUEVA -->
-    <div id="a-bd-admin" class="tab-body">
-      <div class="panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos — Bicis Armadas y Entregadas</div>
-          <button class="btn btn-b btn-sm" onclick="exportarBDAdmin()">⬇️ Exportar Excel</button>
-        </div>
-        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
-          Registro completo de bicis entregadas a clientes. Si una bici fue primero armada para exposición y luego entregada, se muestra el historial completo: armado para exposición + retoque + entrega.
-        </p>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-            <button class="btn btn-sm" id="bda-pbtn-hoy"    onclick="setBDAPeriodo('hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
-            <button class="btn btn-sm" id="bda-pbtn-semana" onclick="setBDAPeriodo('semana')" style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Esta Semana</button>
-            <button class="btn btn-sm" id="bda-pbtn-mes"    onclick="setBDAPeriodo('mes')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Mes</button>
-            <button class="btn btn-sm" id="bda-pbtn-anio"   onclick="setBDAPeriodo('anio')"   style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Este Año</button>
-            <button class="btn btn-sm" id="bda-pbtn-todos"  onclick="setBDAPeriodo('todos')"  style="background:var(--orange);color:#000;border:none">Todos</button>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
-            <div class="fld">
-              <label>Buscar Cliente</label>
-              <input type="text" id="bda-f-cliente" placeholder="Nombre..." oninput="renderBDAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-            </div>
-            <div class="fld">
-              <label>Buscar Armador</label>
-              <input type="text" id="bda-f-armador" placeholder="Nombre..." oninput="renderBDAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-            </div>
-            <div class="fld">
-              <label>N° Cuadro</label>
-              <input type="text" id="bda-f-cuadro" placeholder="Ej: A123456" oninput="renderBDAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-            </div>
-            <div class="fld">
-              <label>Marca</label>
-              <input type="text" id="bda-f-marca" placeholder="Ej: Trek" oninput="renderBDAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:3px;font-size:13px;width:100%;outline:none;">
-            </div>
-          </div>
-          <div style="margin-top:8px;font-size:12px;color:var(--text2)" id="bda-count-label"></div>
-        </div>
-        <div id="bda-lista"></div>
-      </div>
-    </div>
-
   </div>
 
-    <!-- BASE DE DATOS TAB (ADMIN) - legado oculto -->
-    <div id="a-bd" class="tab-body" style="display:none!important">
+    <!-- BASE DE DATOS TAB (ADMIN) -->
+    <div id="a-bd" class="tab-body">
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos de Bicicletas</div>
           <button class="btn btn-b btn-sm" onclick="exportarBD()">⬇️ Exportar Excel</button>
         </div>
+        <!-- FILTROS -->
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px">Filtros</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-sm" id="bd-a-pbtn-hoy"    onclick="setBDPeriodo('a','hoy')"    style="background:var(--bg4);color:var(--text2);border:1px solid var(--border2)">Hoy</button>
             <button class="btn btn-sm" id="bd-a-pbtn-semana" onclick="setBDPeriodo('a','semana')" style="background:var(--orange);color:#000;border:none">Esta Semana</button>
@@ -1343,24 +1196,6 @@ input[type=file]{display:none;}
   </div>
 </div>
 
-<!-- MODAL CANCELAR ORDEN -->
-<div id="modal-cancelar-orden" class="modal-bg">
-  <div class="modal" style="max-width:480px">
-    <h3 style="color:var(--red)">🗑️ Cancelar Orden</h3>
-    <p id="modal-cancelar-info" style="color:var(--text2);font-size:13px;margin-bottom:4px"></p>
-    <div id="modal-cancelar-cuadro-aviso" style="display:none;background:rgba(255,193,7,.1);border:1px solid var(--yellow);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--yellow)"></div>
-    <div class="fld" style="margin-bottom:16px">
-      <label>Motivo de cancelación <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
-      <textarea id="modal-cancelar-motivo" rows="3" placeholder="Escribí el motivo de la cancelación..." style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:11px 13px;font-family:'Barlow',sans-serif;font-size:14px;border-radius:3px;outline:none;resize:vertical;width:100%;transition:border-color .15s;"></textarea>
-      <div id="modal-cancelar-error" style="display:none;color:var(--red);font-size:12px;margin-top:4px">⚠️ El motivo es obligatorio.</div>
-    </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-cancelar-orden')">← Volver</button>
-      <button class="btn btn-r" style="flex:1" onclick="confirmarCancelarOrden()">🗑️ CONFIRMAR CANCELACIÓN</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL EDITAR ORDEN -->
 <div id="modal-editar" class="modal-bg">
   <div class="modal" style="max-width:520px">
@@ -1410,7 +1245,7 @@ input[type=file]{display:none;}
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cancelar</button>
-      <button class="btn btn-r btn-sm" id="btn-cancelar-orden" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
+      <button class="btn btn-r btn-sm" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
       <button class="btn btn-o" style="flex:1" onclick="confirmarEdicion()">✅ GUARDAR CAMBIOS</button>
     </div>
   </div>
@@ -1643,6 +1478,129 @@ let lastOrdenCount  = 0;
 let sesionActual    = null;
 let fbListeners     = {};  // referencias a listeners activos
 
+// ── PROTECCIÓN DOBLE CLIC ──────────────────────────────────
+let _enviandoOrden   = false;  // vendedor: evita doble envío
+let _registrandoBici = false;  // taller salón: evita doble registro
+let _completandoBici = false;  // taller: evita doble finalización
+
+// ── COLA OFFLINE ──────────────────────────────────────────
+const OFFLINE_QUEUE_KEY = 'rl_offline_queue';
+const OFFLINE_DB_KEY    = 'rl_offline_db';
+let   isOnline          = navigator.onLine;
+let   syncInProgress    = false;
+
+function getOfflineQueue() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch { return []; }
+}
+function setOfflineQueue(q) {
+  try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch {}
+}
+function saveOfflineDB() {
+  try { localStorage.setItem(OFFLINE_DB_KEY, JSON.stringify(DB)); } catch {}
+}
+function loadOfflineDB() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_DB_KEY);
+    if (raw) { const saved = JSON.parse(raw); Object.assign(DB, saved); return true; }
+  } catch {}
+  return false;
+}
+
+// Encolar operación para sincronizar cuando vuelva internet
+function queueOfflineOp(key) {
+  const q = getOfflineQueue();
+  if (!q.includes(key)) q.push(key);
+  setOfflineQueue(q);
+  saveOfflineDB();
+}
+
+// saveKey con soporte offline
+const _originalSaveKey = async function(key) {
+  try {
+    await fbDB.ref(key).set(DB[key]);
+    return true;
+  } catch(e) {
+    console.warn('Firebase save error (offline?):', key, e);
+    return false;
+  }
+};
+
+async function saveKey(key) {
+  if (!isOnline) {
+    // Guardar localmente y encolar
+    queueOfflineOp(key);
+    updateConnectionBadge();
+    return;
+  }
+  const ok = await _originalSaveKey(key);
+  if (!ok) {
+    queueOfflineOp(key);
+    updateConnectionBadge();
+    toast('📶 Sin internet — guardado localmente','var(--yellow)');
+  } else {
+    saveOfflineDB(); // mantener copia local actualizada
+  }
+}
+
+// Sincronizar cola pendiente cuando vuelve internet
+async function syncOfflineQueue() {
+  if (syncInProgress) return;
+  const q = getOfflineQueue();
+  if (!q.length) return;
+  syncInProgress = true;
+  updateConnectionBadge();
+  toast('🔄 Sincronizando datos pendientes...','var(--blue)');
+  let allOk = true;
+  const pendingKeys = [...new Set(q)]; // deduplicar
+  for (const key of pendingKeys) {
+    try {
+      await fbDB.ref(key).set(DB[key]);
+    } catch(e) {
+      console.error('Sync error for key:', key, e);
+      allOk = false;
+    }
+  }
+  if (allOk) {
+    setOfflineQueue([]);
+    toast('✅ Todo sincronizado con la nube','var(--green)');
+  } else {
+    toast('⚠️ Algunos datos no pudieron sincronizarse','var(--red)');
+  }
+  syncInProgress = false;
+  updateConnectionBadge();
+}
+
+function updateConnectionBadge() {
+  const q = getOfflineQueue();
+  const pending = q.length > 0;
+  // Actualizar todos los indicadores de conexión en la UI
+  document.querySelectorAll('.sync-dot').forEach(dot => {
+    dot.style.background = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
+    dot.style.animation = pending ? 'blink .5s infinite' : 'blink 2s infinite';
+  });
+  document.querySelectorAll('.live-badge').forEach(badge => {
+    badge.style.color = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
+    badge.style.borderColor = badge.style.color;
+    badge.textContent = !isOnline ? '📶 OFFLINE' : (pending ? '🔄 SYNC...' : 'EN VIVO');
+    badge.style.display = 'flex';
+    badge.style.alignItems = 'center';
+    badge.style.gap = '5px';
+  });
+}
+
+// Listeners de conexión
+window.addEventListener('online', async () => {
+  isOnline = true;
+  updateConnectionBadge();
+  toast('✅ Conexión restaurada — sincronizando...','var(--green)');
+  await syncOfflineQueue();
+});
+window.addEventListener('offline', () => {
+  isOnline = false;
+  updateConnectionBadge();
+  toast('📶 Sin internet — el sistema sigue funcionando offline','var(--yellow)');
+});
+
 // ── INIT FIREBASE ──
 function initFirebase() {
   try {
@@ -1711,6 +1669,7 @@ function startPolling() {
       nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
     }
     DB.ordenes = freshArr;
+    saveOfflineDB(); // mantener caché local actualizado
 
     // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
     const ahora10 = Date.now();
@@ -2036,6 +1995,12 @@ function vGetPrioridadLabel(prioridad, horaEspecifica) {
 }
 
 async function vEnviarOrden() {
+  if (_enviandoOrden) { toast('⏳ Ya se está enviando la orden, esperá...','var(--yellow)'); return; }
+  _enviandoOrden = true;
+  const btnEnviar = document.querySelector('[onclick="vEnviarOrden()"]');
+  if (btnEnviar) { btnEnviar.disabled = true; btnEnviar.style.opacity = '0.5'; }
+
+  try {
   const cliente = document.getElementById('v-cliente').value.trim();
   const marca = document.getElementById('v-marca').value;
   const modelo = document.getElementById('v-modelo').value;
@@ -2044,13 +2009,16 @@ async function vEnviarOrden() {
   const color = document.getElementById('v-color').value;
   const cantidad = parseInt(document.getElementById('v-cantidad').value);
   const obs = document.getElementById('v-obs').value.trim();
-  const destinoRaw = document.getElementById('v-destino').value;
-  // "salon" era el valor antiguo — se unifica con "local"
-  const destino = (destinoRaw === 'salon') ? 'local' : destinoRaw;
+  const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'salon'
   const prioridad = document.getElementById('v-prioridad')?.value || '';
   const horaEspecifica = document.getElementById('v-hora-especifica')?.value || '';
 
-  if (!marca || !modelo || (!talle && !rodado) || !color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
+  if (!marca || !modelo || (!talle && !rodado) || !color) {
+    toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)');
+    _enviandoOrden = false;
+    if (btnEnviar) { btnEnviar.disabled = false; btnEnviar.style.opacity = ''; }
+    return;
+  }
 
   const prioridadLabel = vGetPrioridadLabel(prioridad, horaEspecifica);
 
@@ -2089,15 +2057,22 @@ async function vEnviarOrden() {
   const destinoMsg = destino==='local' ? ' ⭐ (Cliente en el Local)' : destino==='envio' ? ' 🚚 (Envío a domicilio)' : ' 🏪 (Para salón)';
   const priorMsg = prioridadLabel ? ` · ${prioridadLabel}` : '';
   toast(`✅ Orden enviada al taller${destinoMsg}${priorMsg}`);
+  } finally {
+    _enviandoOrden = false;
+    if (btnEnviar) { btnEnviar.disabled = false; btnEnviar.style.opacity = ''; }
+  }
 }
 
-function vOrdenCard(o) {
-  const dest = (o.destino === 'salon') ? 'local' : o.destino; // compatibilidad legado
-  return `
-    <div class="ocard ${o.estado}${dest==='envio'?' envio':''}${dest==='local'?' local-dest':''}">
+function vRenderOrdenes() {
+  const cont = document.getElementById('v-lista-ordenes');
+  const lista = [...DB.ordenes].filter(o => !o.esSalon)
+    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).slice(0,30);
+  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div>'; return; }
+  cont.innerHTML = lista.map(o => `
+    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}${o.destino==='local'?' local-dest':''}">
       <div style="flex:1">
         <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-          ${dest==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':dest==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
+          ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
         </div>
         <div class="ocard-sub">
           ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
@@ -2115,64 +2090,7 @@ function vOrdenCard(o) {
         ${o.estado==='completada' && o.entregada ? `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>` : ''}
       </div>
     </div>
-  `;
-}
-
-function vRenderOrdenes() {
-  const cont = document.getElementById('v-lista-ordenes');
-  if (!cont) return;
-  // Solo activas: enviadas pero NO completadas ni canceladas
-  const activos = ['pendiente','en-proceso','sin-stock'];
-  const lista = [...DB.ordenes]
-    .filter(o => !o.esSalon && activos.includes(o.estado))
-    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes activas</div>'; return; }
-  cont.innerHTML = lista.map(o => vOrdenCard(o)).join('');
-}
-
-// ── HISTÓRICO VENDEDOR ─────────────────────────────────────
-let vhPeriodo = 'semana';
-
-function setVHPeriodo(p) {
-  vhPeriodo = p;
-  ['hoy','semana','mes','anio','todos'].forEach(k => {
-    const btn = document.getElementById('vh-pbtn-'+k);
-    if (!btn) return;
-    if (k===p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
-    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  vRenderHistorico();
-}
-
-function vRenderHistorico() {
-  const cont = document.getElementById('v-lista-historico');
-  if (!cont) return;
-  const ahora = new Date();
-  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  let desde, hasta;
-  if (vhPeriodo === 'hoy') {
-    desde = hoy; hasta = new Date(hoy.getTime() + 86400000 - 1);
-  } else if (vhPeriodo === 'semana') {
-    const dow = ahora.getDay();
-    const lunes = new Date(hoy.getTime() - ((dow===0?6:dow-1)*86400000));
-    desde = lunes; hasta = new Date(lunes.getTime() + 7*86400000 - 1);
-  } else if (vhPeriodo === 'mes') {
-    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    hasta = new Date(ahora.getFullYear(), ahora.getMonth()+1, 0, 23, 59, 59);
-  } else if (vhPeriodo === 'anio') {
-    desde = new Date(ahora.getFullYear(), 0, 1);
-    hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
-  }
-  let lista = [...DB.ordenes].filter(o => !o.esSalon);
-  if (vhPeriodo !== 'todos') {
-    lista = lista.filter(o => {
-      const f = new Date(o.fechaCreacion);
-      return f >= desde && f <= hasta;
-    });
-  }
-  lista.sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📅</div>Sin órdenes en este período</div>'; return; }
-  cont.innerHTML = lista.map(o => vOrdenCard(o)).join('');
+  `).join('');
 }
 
 function vRenderInbox() {
@@ -2357,26 +2275,15 @@ function initTaller() {
 }
 
 function tRenderAll() {
-  const pendientes  = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon);
-  const enProceso   = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
-  // Solo mostrar completadas/canceladas recientes (últimas 2 horas) que no estén entregadas
-  const ahora2h = Date.now() - 2 * 60 * 60 * 1000;
-  const completadas = DB.ordenes.filter(o =>
-    (o.estado==='completada' || o.estado==='cancelada') &&
-    !o.esSalon && !o.entregada &&
-    new Date(o.fechaCompletado || o.fechaCreacion).getTime() >= ahora2h
-  );
-  // Envíos: solo pendientes y en proceso (no completados ni entregados)
-  const envios  = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && (o.estado==='pendiente'||o.estado==='en-proceso'));
-  // Locales: solo pendientes y en proceso
-  const locales = DB.ordenes.filter(o => (o.destino==='local'||o.destino==='salon') && !o.esSalon && (o.estado==='pendiente'||o.estado==='en-proceso'));
-
-  const localPend = locales.length;
+  const pendientes = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon);
+  const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
+  const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
+  const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
+  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada');
+  // Count badge for local
+  const localPend = locales.filter(o=>o.estado!=='completada').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
-  const enviosPend = envios.length;
-  const enviosCount = document.getElementById('t-envios-count');
-  if (enviosCount) { enviosCount.textContent = enviosPend; enviosCount.style.display = enviosPend ? 'inline-block' : 'none'; }
 
   renderOcards('t-pendientes', pendientes, 'pendiente');
   renderOcards('t-en-proceso', enProceso, 'en-proceso');
@@ -2444,6 +2351,7 @@ function renderLocales(locales) {
       <div class="ocard-actions">
         ${o.estado==='pendiente' ? `<button class="btn btn-o btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button>` : ''}
         ${o.estado==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Listo</button>` : ''}
+        ${o.estado==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -2451,7 +2359,10 @@ function renderLocales(locales) {
 
 function renderEnvios(envios) {
   const cont = document.getElementById('t-envios-lista');
-  if (!envios.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🚚</div>Sin pedidos de envío pendientes</div>'; return; }
+  const countEl = document.getElementById('t-envios-count');
+  const pendEnvios = envios.filter(o => o.estado !== 'completada');
+  if (countEl) { countEl.textContent = pendEnvios.length; countEl.style.display = pendEnvios.length ? 'inline-block' : 'none'; }
+  if (!envios.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🚚</div>Sin pedidos de envío</div>'; return; }
   cont.innerHTML = envios.sort((a,b)=>new Date(a.fechaCreacion)-new Date(b.fechaCreacion)).map(o => `
     <div class="ocard ${o.estado}" style="border-left-color:var(--yellow)">
       <div style="flex:1">
@@ -2464,6 +2375,7 @@ function renderEnvios(envios) {
       <div class="ocard-actions">
         ${o.estado==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button>` : ''}
         ${o.estado==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Listo</button>` : ''}
+        ${o.estado==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -2601,8 +2513,18 @@ function checkCuadroDuplicado(cuadro) {
 }
 
 async function confirmarCompletado() {
+  if (_completandoBici) { toast('⏳ Ya se está guardando, esperá...','var(--yellow)'); return; }
+  _completandoBici = true;
+  const btnComp = document.querySelector('[onclick="confirmarCompletado()"]');
+  if (btnComp) { btnComp.disabled = true; btnComp.style.opacity = '0.5'; }
+  try {
   const cuadro = document.getElementById('modal-comp-cuadro').value.trim();
-  if (!cuadro) { toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)'); return; }
+  if (!cuadro) {
+    toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)');
+    _completandoBici = false;
+    if (btnComp) { btnComp.disabled = false; btnComp.style.opacity = ''; }
+    return;
+  }
   
   const o = DB.ordenes.find(x => x.id===ordenCompletarId);
   if (o) { 
@@ -2613,11 +2535,6 @@ async function confirmarCompletado() {
     if (o.fechaAsignado) {
       const minutos = Math.round((new Date(o.fechaCompletado) - new Date(o.fechaAsignado)) / 60000);
       o.tiempoArmadoMin = minutos;
-    }
-    // Envíos y órdenes de local → marcar como entregada automáticamente
-    if (!o.esSalon && (o.destino==='envio' || o.destino==='local' || o.destino==='salon')) {
-      o.entregada = true;
-      o.fechaEntregada = new Date().toISOString();
     }
     // Si es retoque, marcar sin comisión
     if (o.tipoArmado === 'retoque') {
@@ -2638,6 +2555,10 @@ async function confirmarCompletado() {
     toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
   } else {
     toast('🎉 Bici completada');
+  }
+  } finally {
+    _completandoBici = false;
+    if (btnComp) { btnComp.disabled = false; btnComp.style.opacity = ''; }
   }
 }
 
@@ -2697,10 +2618,6 @@ async function devolverSinStock(motivo) {
 // EDITAR ORDEN
 function abrirModalEditar(id) {
   ordenEditarId = id;
-  // Guardar el ID también en el botón para que no dependa solo de la variable global
-  const btnCancelar = document.getElementById('btn-cancelar-orden');
-  if (btnCancelar) btnCancelar.setAttribute('data-orden-id', id);
-
   const o = DB.ordenes.find(x => x.id===id);
   document.getElementById('modal-editar-info').textContent =
     `Orden #${o.id} · Creada: ${fmtHora(o.fechaCreacion)}${o.cliente ? ' · Cliente: '+o.cliente : ''}`;
@@ -2777,91 +2694,14 @@ async function confirmarEdicion() {
 }
 
 async function cancelarOrden() {
-  // Leer el ID desde el data-attribute del botón (más confiable que la variable global
-  // que puede ser sobreescrita por re-renders del listener de Firebase)
-  const btnCancelar = document.getElementById('btn-cancelar-orden');
-  const idFromBtn = btnCancelar ? parseInt(btnCancelar.getAttribute('data-orden-id')) : null;
-  const targetId = idFromBtn || ordenEditarId;
-
-  const o = DB.ordenes.find(x => x.id === targetId);
-
-  if (!o || o.estado === 'cancelada') {
-    closeModal('modal-editar');
-    ordenEditarId = null;
-    tRenderAll(); vRenderOrdenes();
-    return;
-  }
-
-  // Llenar info del modal de cancelación
-  document.getElementById('modal-cancelar-info').textContent =
-    `Orden #${o.id} — ${o.cantidad}x ${o.marca} ${o.modelo}${o.cliente ? ' · ' + o.cliente : ''}`;
-
-  // Guardar el ID en el modal de cancelación también
-  document.getElementById('modal-cancelar-orden').setAttribute('data-orden-id', targetId);
-
-  // Aviso si el cuadro ya está en BD
-  const avisoEl = document.getElementById('modal-cancelar-cuadro-aviso');
-  if (o.cuadro) {
-    const relacionadas = DB.ordenes.filter(x =>
-      x.id !== o.id && x.cuadro &&
-      x.cuadro.toLowerCase() === o.cuadro.toLowerCase() &&
-      x.estado === 'completada'
-    );
-    if (relacionadas.length > 0) {
-      const destinos = relacionadas.map(x =>
-        x.esSalon
-          ? `exposición salón (${fmtFecha(x.fechaCreacion)})`
-          : `venta a ${x.cliente||'cliente'} (${fmtFecha(x.fechaCompletado||x.fechaCreacion)})`
-      ).join(', ');
-      avisoEl.textContent = `⚠️ El N° de cuadro "${o.cuadro}" ya está registrado en: ${destinos}. El cuadro quedará en ese historial; la cancelación solo afecta esta orden.`;
-      avisoEl.style.display = 'block';
-    } else {
-      avisoEl.style.display = 'none';
-    }
-  } else {
-    avisoEl.style.display = 'none';
-  }
-
-  document.getElementById('modal-cancelar-motivo').value = '';
-  document.getElementById('modal-cancelar-error').style.display = 'none';
-
-  // Cerrar modal de edición y abrir el de cancelación
-  closeModal('modal-editar');
-  document.getElementById('modal-cancelar-orden').classList.add('on');
-  setTimeout(() => document.getElementById('modal-cancelar-motivo').focus(), 100);
-}
-
-async function confirmarCancelarOrden() {
-  const motivo = document.getElementById('modal-cancelar-motivo').value.trim();
-  if (!motivo) {
-    document.getElementById('modal-cancelar-error').style.display = 'block';
-    document.getElementById('modal-cancelar-motivo').focus();
-    return;
-  }
-
-  // Leer el ID desde el data-attribute del modal (no depende de la variable global)
-  const modalEl = document.getElementById('modal-cancelar-orden');
-  const targetId = parseInt(modalEl.getAttribute('data-orden-id')) || ordenEditarId;
-  const o = DB.ordenes.find(x => x.id === targetId);
-
-  if (!o) {
-    closeModal('modal-cancelar-orden');
-    ordenEditarId = null;
-    tRenderAll(); vRenderOrdenes();
-    return;
-  }
-
-  o.estado = 'cancelada';
-  o.fechaCompletado = new Date().toISOString();
-  o.motivoCancelacion = motivo;
+  if (!confirm('¿Cancelar esta orden? Quedará registrada como cancelada en el historial.')) return;
+  
+  const o = DB.ordenes.find(x => x.id===ordenEditarId);
+  if (o) { o.estado = 'cancelada'; o.fechaCompletado = new Date().toISOString(); }
   await saveKey('ordenes');
-
-  ordenEditarId = null;
-  modalEl.removeAttribute('data-orden-id');
-  closeModal('modal-cancelar-orden');
-  tRenderAll();
-  vRenderOrdenes();
-  toast(`🗑️ Orden #${targetId} cancelada`, 'var(--red)');
+  closeModal('modal-editar');
+  tRenderAll(); vRenderOrdenes();
+  toast('🗑️ Orden cancelada','var(--red)');
 }
 function sFillModelos() {
   const marca = document.getElementById('s-marca').value;
@@ -2912,6 +2752,11 @@ function checkCuadroDuplicadoSalon(cuadro) {
 }
 
 async function sRegistrar() {
+  if (_registrandoBici) { toast('⏳ Ya se está registrando, esperá...','var(--yellow)'); return; }
+  _registrandoBici = true;
+  const btnReg = document.querySelector('[onclick="sRegistrar()"]');
+  if (btnReg) { btnReg.disabled = true; btnReg.style.opacity = '0.5'; }
+  try {
   const armador  = document.getElementById('s-armador').value;
   const marca    = document.getElementById('s-marca').value;
   const modelo   = document.getElementById('s-modelo').value;
@@ -2968,6 +2813,10 @@ async function sRegistrar() {
   if (esRetoque) toast('✨ Retoque final registrado (sin comisión)');
   else if (comisionDuplicada) toast('⚠️ Registrado — Comisión NO sumada (cuadro ya armado previamente)','var(--yellow)');
   else toast('✅ Registrado para salón');
+  } finally {
+    _registrandoBici = false;
+    if (btnReg) { btnReg.disabled = false; btnReg.style.opacity = ''; }
+  }
 }
 
 function renderSalon() {
@@ -3501,61 +3350,57 @@ function getOrdenesDelPeriodo() {
 function renderReporte() {
   const cont = document.getElementById('reporte-body');
   const lbl  = document.getElementById('periodo-label');
-  const { ordenes: todoPeriodo, label } = getOrdenesDelPeriodo();
+  const { ordenes: periodo, label } = getOrdenesDelPeriodo();
   if (lbl) lbl.textContent = label ? `Mostrando: ${label}` : '';
 
-  // Solo órdenes que generaron comisión real (excluye retoques y duplicados)
-  const periodo = todoPeriodo.filter(o =>
-    !o.esRetoque && o.tipoArmado !== 'retoque' && !o.comisionDuplicada
-  );
-
   if (!periodo.length) {
-    cont.innerHTML='<div class="empty"><div class="empty-icon">📊</div>Sin datos con comisión para el período seleccionado</div>';
+    cont.innerHTML='<div class="empty"><div class="empty-icon">📊</div>Sin datos para el período seleccionado</div>';
     return;
   }
 
-  // stats globales — "salon" legado se unifica con "local"
+  // stats globales
   const totalBicis  = periodo.reduce((s,o)=>s+o.cantidad,0);
   const totalPago   = periodo.reduce((s,o)=>s+comisionOrden(o),0);
-  const expoCount   = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
-  // local = destino 'local' O legado 'salon' (de venta, no esSalon)
-  const clienteCount = periodo.filter(o=>!o.esSalon && (o.destino==='local'||o.destino==='salon')).reduce((s,o)=>s+o.cantidad,0);
-  const envioCount   = periodo.filter(o=>!o.esSalon && o.destino==='envio').reduce((s,o)=>s+o.cantidad,0);
+  const ventasCount = periodo.filter(o=>!o.esSalon).reduce((s,o)=>s+o.cantidad,0);
+  const salonCount  = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
+  const localCount2 = periodo.filter(o=>!o.esSalon && o.destino==='local').reduce((s,o)=>s+o.cantidad,0);
+  const envioCount  = periodo.filter(o=>!o.esSalon && o.destino==='envio').reduce((s,o)=>s+o.cantidad,0);
 
   // por armador
   const porArmador = {};
-  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,cliente:0,expo:0,envio:0,detalle:{}});
+  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,local:0,detalle:{}});
   periodo.forEach(o => {
     const esKitDosArmadores = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+    const esKitMismoArmador = o.tipoArmado === 'kit' && o.armador2 && o.armador2 === o.armador;
+    // Determinar lista de armadores únicos para esta orden
     const armadoresUnicos = esKitDosArmadores ? [o.armador, o.armador2] : [o.armador];
     armadoresUnicos.forEach(armNombre => {
       if (!armNombre) return;
-      if (!porArmador[armNombre]) porArmador[armNombre]={bicis:0,total:0,cliente:0,expo:0,envio:0,detalle:{}};
+      if (!porArmador[armNombre]) porArmador[armNombre]={bicis:0,total:0,ventas:0,salon:0,detalle:{}};
       const com = comisionOrden(o, armNombre);
+      // Fracción de bici que le corresponde a este armador:
+      // - Kit mismo armador (arm1 == arm2): cuenta 1 bici completa y comisión completa
+      // - Kit dos armadores distintos: cada uno cuenta 0.5 bici
+      // - Cualquier otro caso: 1 bici completa
       const fracBici = esKitDosArmadores ? o.cantidad * 0.5 : o.cantidad;
       porArmador[armNombre].bicis += fracBici;
-      if (o.esSalon) {
-        porArmador[armNombre].expo += fracBici;
-      } else if (o.destino==='envio') {
-        porArmador[armNombre].envio += fracBici;
-      } else {
-        // local o salon (legado) = cliente en el local
-        porArmador[armNombre].cliente += fracBici;
-      }
+      if (o.esSalon) porArmador[armNombre].salon += fracBici;
+      else { porArmador[armNombre].ventas += fracBici; if (o.destino==='local') porArmador[armNombre].local += fracBici; }
       porArmador[armNombre].total += com;
       const dk = `${o.marca}|${o.modelo}`;
       const tipo = o.tipoArmado || 'prearmada';
       const comKey = `${dk}||${tipo}||${armNombre}`;
       if (!porArmador[armNombre].detalle[comKey]) {
         const comUn = com > 0 ? Math.round(com / fracBici) : 0;
-        porArmador[armNombre].detalle[comKey]={marca:o.marca,modelo:o.modelo,tipo,cantidad:0,ganado:0,comUn};
+        const tipoLabel = o.esRetoque ? 'retoque' : tipo;
+        porArmador[armNombre].detalle[comKey]={marca:o.marca,modelo:o.modelo,tipo:tipoLabel,cantidad:0,ganado:0,comUn};
       }
       porArmador[armNombre].detalle[comKey].cantidad += fracBici;
       porArmador[armNombre].detalle[comKey].ganado += com;
     });
   });
 
-  // ranking modelos (solo los que tienen comisión)
+  // ranking modelos
   const porModelo = {};
   periodo.forEach(o=>{
     const k=`${o.marca} ${o.modelo}`;
@@ -3567,15 +3412,15 @@ function renderReporte() {
 
   cont.innerHTML = `
     <div class="stat-grid">
-      <div class="stat-box stat-o"><div class="stat-num">${totalBicis}</div><div class="stat-lbl">Bicis con Comisión</div></div>
+      <div class="stat-box stat-o"><div class="stat-num">${totalBicis}</div><div class="stat-lbl">Bicis Armadas</div></div>
       <div class="stat-box stat-g"><div class="stat-num">$${totalPago.toLocaleString('es-AR')}</div><div class="stat-lbl">Total a Pagar</div></div>
-      <div class="stat-box" style="border-color:var(--orange)"><div class="stat-num" style="color:var(--orange)">${clienteCount}</div><div class="stat-lbl">⭐ Cliente en Local</div></div>
+      <div class="stat-box" style="border-color:var(--orange)"><div class="stat-num" style="color:var(--orange)">${localCount2}</div><div class="stat-lbl">⭐ En Local</div></div>
       <div class="stat-box stat-b"><div class="stat-num">${envioCount}</div><div class="stat-lbl">🚚 Envíos</div></div>
-      <div class="stat-box stat-p"><div class="stat-num">${expoCount}</div><div class="stat-lbl">🏪 Exposición</div></div>
+      <div class="stat-box stat-p"><div class="stat-num">${salonCount}</div><div class="stat-lbl">🏪 Para Salón</div></div>
     </div>
 
     <div class="panel" style="margin-bottom:14px">
-      <div class="section-label" style="margin-bottom:10px">📊 Modelos más armados (con comisión)</div>
+      <div class="section-label" style="margin-bottom:10px">📊 Modelos más armados</div>
       <div class="bar-chart">
         ${topModelos.slice(0,8).map(([k,v],i)=>`
           <div class="bar-row">
@@ -3596,7 +3441,7 @@ function renderReporte() {
         <div class="rcard" style="opacity:.35">
           <div class="rcard-head">
             <div class="rcard-name">🔧 ${nombre}</div>
-            <div style="color:var(--text2);font-size:13px">Sin armados con comisión en este período</div>
+            <div style="color:var(--text2);font-size:13px">Sin armados en este período</div>
           </div>
         </div>`;
       return `
@@ -3604,13 +3449,11 @@ function renderReporte() {
           <div class="rcard-head">
             <div>
               <div class="rcard-name">🔧 ${nombre}</div>
-              <div style="margin-top:4px;font-size:13px;color:var(--text2)">
-                Total: <strong style="color:var(--text)">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis con comisión</strong>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-                ${r.cliente>0?`<span class="badge badge-local" title="Clientes en el local">⭐ ${Number.isInteger(r.cliente)?r.cliente:r.cliente.toFixed(1)} local</span>`:''}
-                ${r.envio>0?`<span class="badge badge-env" title="Envíos a domicilio">🚚 ${Number.isInteger(r.envio)?r.envio:r.envio.toFixed(1)} envíos</span>`:''}
-                ${r.expo>0?`<span class="badge badge-p" title="Armadas para exposición">🏪 ${Number.isInteger(r.expo)?r.expo:r.expo.toFixed(1)} exposición</span>`:''}
+              <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+                <span class="badge badge-b">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis</span>
+                <span class="badge badge-g">${Number.isInteger(r.ventas)?r.ventas:r.ventas.toFixed(1)} ventas</span>
+                ${r.local>0?`<span class="badge badge-local">${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} local</span>`:''}
+                <span class="badge badge-p">${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} salón</span>
               </div>
             </div>
             <div class="rcard-total">$${r.total.toLocaleString('es-AR')}</div>
@@ -3619,9 +3462,9 @@ function renderReporte() {
             <thead><tr><th style="padding:4px 8px;font-size:10px;color:var(--text3)">Modelo</th><th>Tipo</th><th>Cant.</th><th>Com. Unit.</th><th>Subtotal</th></tr></thead>
             <tbody>
               ${Object.entries(r.detalle).map(([k,d])=>`
-                <tr class="clickable-row" ondblclick="irAHistorialFiltrado('${d.marca}','${d.modelo}','${nombre}','${d.tipo}')" title="Doble clic → Historial con Comisión filtrado">
+                <tr>
                   <td>${d.marca} ${d.modelo}</td>
-                  <td>${d.tipo==='kit' ? '<span style="color:var(--blue);font-size:11px;font-weight:700">📦 Kit</span>' : '<span style="color:var(--purple);font-size:11px;font-weight:700">🚲 Prearmado</span>'}</td>
+                  <td>${d.tipo==='kit' ? '<span style="color:var(--blue);font-size:11px;font-weight:700">📦 Kit</span>' : d.tipo==='retoque' ? '<span style="color:var(--green);font-size:11px;font-weight:700">✨ Retoque</span>' : '<span style="color:var(--purple);font-size:11px;font-weight:700">🚲 Prearmado</span>'}</td>
                   <td><strong>${Number.isInteger(d.cantidad)?d.cantidad:d.cantidad.toFixed(1)}</strong></td>
                   <td style="color:var(--text2)">$${d.comUn.toLocaleString('es-AR')}</td>
                   <td><strong style="color:var(--green)">$${d.ganado.toLocaleString('es-AR')}</strong></td>
@@ -3633,6 +3476,7 @@ function renderReporte() {
     }).join('')}
   `;
 }
+
 function exportarReporteSemanal() {
   const { ordenes: periodo, label } = getOrdenesDelPeriodo();
   const resumen = DB.armadores.map(nombre=>{
@@ -3681,92 +3525,43 @@ async function ejecutarReset() {
 // ════════════════════════════════════════════════════════════
 //  HISTORIAL
 // ════════════════════════════════════════════════════════════
-let historialPeriodo = 'todos';
-
-function setHistorialPeriodo(p) {
-  historialPeriodo = p;
-  ['hoy','semana','mes','anio','todos'].forEach(k => {
-    const btn = document.getElementById('h-pbtn-'+k);
-    if (!btn) return;
-    if (k===p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
-    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  renderHistorial();
-}
-
-function getHistorialOrdenes(periodo) {
-  if (!periodo || periodo === 'todos') return [...DB.ordenes];
-  const ahora = new Date();
-  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  let desde, hasta;
-  if (periodo === 'hoy') {
-    desde = hoy; hasta = new Date(hoy.getTime() + 86400000 - 1);
-  } else if (periodo === 'semana') {
-    const dow = ahora.getDay();
-    const lunes = new Date(hoy.getTime() - ((dow===0?6:dow-1)*86400000));
-    desde = lunes; hasta = new Date(lunes.getTime() + 7*86400000 - 1);
-  } else if (periodo === 'mes') {
-    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    hasta = new Date(ahora.getFullYear(), ahora.getMonth()+1, 0, 23, 59, 59);
-  } else if (periodo === 'anio') {
-    desde = new Date(ahora.getFullYear(), 0, 1);
-    hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
-  }
-  return DB.ordenes.filter(o => {
-    const f = new Date(o.fechaCreacion);
-    return f >= desde && f <= hasta;
-  });
-}
-
 function fillHistorialFiltros() {
   const sA = document.getElementById('h-armador');
   const sM = document.getElementById('h-marca');
-  if (sA) {
-    sA.innerHTML = '<option value="">Todos</option>';
-    [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
-  }
-  if (sM) {
-    sM.innerHTML = '<option value="">Todas</option>';
-    [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
-  }
+  sA.innerHTML = '<option value="">Todos</option>';
+  sM.innerHTML = '<option value="">Todas</option>';
+  [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
+  [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
 }
 
 function renderHistorial() {
-  const fA   = document.getElementById('h-armador')?.value || '';
-  const fM   = document.getElementById('h-marca')?.value || '';
-  const fT   = document.getElementById('h-tipo')?.value || '';
-  const fTA  = document.getElementById('h-tipo-armado')?.value || '';
-  const fE   = document.getElementById('h-estado')?.value || '';
-  const fC   = (document.getElementById('h-cuadro')?.value || '').toLowerCase().trim();
-  const fCli = (document.getElementById('h-cliente')?.value || '').toLowerCase().trim();
+  const fA = document.getElementById('h-armador').value;
+  const fM = document.getElementById('h-marca').value;
+  const fT = document.getElementById('h-tipo').value;
+  const fE = document.getElementById('h-estado').value;
 
-  let lista = getHistorialOrdenes(historialPeriodo)
-    .filter(o => !fA || o.armador===fA || o.armador2===fA)
+  let lista = [...DB.ordenes]
+    .filter(o => !fA || o.armador===fA)
     .filter(o => !fM || o.marca===fM)
     .filter(o => !fT || (fT==='salon'?o.esSalon:!o.esSalon))
-    .filter(o => !fTA || (o.tipoArmado===fTA || (fTA==='retoque' && o.esRetoque)))
     .filter(o => !fE || o.estado===fE)
-    .filter(o => !fC || (o.cuadro||'').toLowerCase().includes(fC))
-    .filter(o => !fCli || (o.cliente||'').toLowerCase().includes(fCli))
     .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
 
   const tbody = document.getElementById('t-historial');
-  if (!lista.length) { tbody.innerHTML='<tr><td colspan="17" class="tbl-empty">Sin resultados</td></tr>'; return; }
+  if (!lista.length) { tbody.innerHTML='<tr><td colspan="15" class="tbl-empty">Sin resultados</td></tr>'; return; }
+  // reset check-all
   const checkAll = document.getElementById('h-check-all');
   if (checkAll) checkAll.checked = false;
   const btnBorrar = document.getElementById('btn-borrar-seleccionados');
   if (btnBorrar) btnBorrar.style.display = 'none';
 
   tbody.innerHTML = lista.map(o=>{
+    // tiempo armado (solo admin puede verlo — siempre se renderiza aquí)
     const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
     const tipoStr = o.esRetoque ? '✨ Retoque' : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
-    const destinoStr = o.esSalon ? '<span class="badge badge-p">Exposición</span>'
-      : ((o.destino==='local'||o.destino==='salon')?'<span class="badge badge-local">⭐ Local</span>'
-      : o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>'
-      : '<span class="badge badge-sal">🏪 Venta</span>');
+    const arm2Str = (o.tipoArmado==='kit' && o.armador2) ? `<br><span style="font-size:11px;color:var(--text2)">+${o.armador2}</span>` : '';
+    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='local'?'<span class="badge badge-local">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':'<span class="badge badge-sal">🏪 Salón</span>');
     const comStr = o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>' : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
-    const cancelInfo = o.estado==='cancelada' && o.motivoCancelacion
-      ? `<br><span style="color:var(--red);font-size:11px">Motivo: ${o.motivoCancelacion}</span>` : '';
     return `
     <tr>
       <td><input type="checkbox" class="h-row-check" data-id="${o.id}" onchange="historialCheckChange()" style="accent-color:var(--orange);width:15px;height:15px"></td>
@@ -3778,349 +3573,15 @@ function renderHistorial() {
       <td>${o.rodado||'<span style="color:var(--text3)">—</span>'}</td>
       <td>${o.color}</td>
       <td style="text-align:center"><strong>${o.cantidad}</strong></td>
-      <td>${o.armador||'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${o.armador2||'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${o.armador||'<span style="color:var(--text3)">—</span>'}${arm2Str}</td>
       <td style="font-family:monospace;font-size:12px">${o.cuadro||'<span style="color:var(--text3)">—</span>'}</td>
       <td>${tipoStr}</td>
       <td style="color:var(--blue);font-size:12px">${tiempoStr}</td>
       <td>${destinoStr}</td>
-      <td>${estadoBadge(o)}${cancelInfo}</td>
+      <td>${estadoBadge(o)}</td>
       <td>${comStr}</td>
     </tr>
   `}).join('');
-}
-
-// ════════════════════════════════════════════════════════════
-//  HISTORIAL CON COMISIÓN
-// ════════════════════════════════════════════════════════════
-let hcPeriodo = 'semana';
-
-function fillHCFiltros() {
-  const sA = document.getElementById('hc-armador');
-  const sM = document.getElementById('hc-marca');
-  if (sA) {
-    sA.innerHTML = '<option value="">Todos</option>';
-    [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
-  }
-  if (sM) {
-    sM.innerHTML = '<option value="">Todas</option>';
-    [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
-  }
-  // Reset modelo
-  const sMo = document.getElementById('hc-modelo');
-  if (sMo) sMo.innerHTML = '<option value="">Todos</option>';
-}
-
-function hcFillModelos() {
-  const marca = document.getElementById('hc-marca')?.value || '';
-  const sMo = document.getElementById('hc-modelo');
-  if (!sMo) return;
-  sMo.innerHTML = '<option value="">Todos</option>';
-  if (!marca) return;
-  const modelos = [...new Set(DB.catalogo.filter(b=>b.marca===marca).map(b=>b.modelo))].sort((a,b)=>a.localeCompare(b,'es'));
-  modelos.forEach(m => sMo.innerHTML += `<option value="${m}">${m}</option>`);
-}
-
-function setHCPeriodo(p) {
-  hcPeriodo = p;
-  ['hoy','semana','mes','anio','todos'].forEach(k => {
-    const btn = document.getElementById('hc-pbtn-'+k);
-    if (!btn) return;
-    if (k===p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
-    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  renderHistorialComisiones();
-}
-
-function getHCOrdenes() {
-  // Solo completadas CON comisión real
-  const base = getHistorialOrdenes(hcPeriodo);
-  return base.filter(o =>
-    o.estado === 'completada' &&
-    o.armador &&
-    !o.esRetoque &&
-    o.tipoArmado !== 'retoque' &&
-    !o.comisionDuplicada
-  );
-}
-
-function renderHistorialComisiones() {
-  const fA    = document.getElementById('hc-armador')?.value || '';
-  const fM    = document.getElementById('hc-marca')?.value || '';
-  const fMo   = document.getElementById('hc-modelo')?.value || '';
-  const fTA   = document.getElementById('hc-tipo-arm')?.value || '';
-  const fDest = document.getElementById('hc-destino')?.value || '';
-  const fC    = (document.getElementById('hc-cuadro')?.value || '').toLowerCase().trim();
-  const fCli  = (document.getElementById('hc-cliente')?.value || '').toLowerCase().trim();
-  const fDesde = document.getElementById('hc-desde')?.value || '';
-  const fHasta = document.getElementById('hc-hasta')?.value || '';
-
-  let lista = getHCOrdenes()
-    .filter(o => !fA || o.armador===fA || o.armador2===fA)
-    .filter(o => !fM || o.marca===fM)
-    .filter(o => !fMo || o.modelo===fMo)
-    .filter(o => !fTA || o.tipoArmado===fTA)
-    .filter(o => !fC  || (o.cuadro||'').toLowerCase().includes(fC))
-    .filter(o => !fCli || (o.cliente||'').toLowerCase().includes(fCli))
-    .filter(o => {
-      if (!fDest) return true;
-      if (fDest==='local') return !o.esSalon && (o.destino==='local' || o.destino==='salon');
-      if (fDest==='envio') return !o.esSalon && o.destino==='envio';
-      if (fDest==='expo')  return o.esSalon;
-      return true;
-    })
-    .filter(o => {
-      if (!fDesde && !fHasta) return true;
-      const f = new Date(o.fechaCreacion);
-      if (fDesde && f < new Date(fDesde+'T00:00:00')) return false;
-      if (fHasta && f > new Date(fHasta+'T23:59:59')) return false;
-      return true;
-    })
-    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-
-  const tbody = document.getElementById('t-historial-comisiones');
-  if (!tbody) return;
-  if (!lista.length) { tbody.innerHTML='<tr><td colspan="15" class="tbl-empty">Sin registros con comisión para los filtros aplicados</td></tr>'; return; }
-
-  tbody.innerHTML = lista.map(o => {
-    const tipoStr = o.tipoArmado==='kit' ? '📦 Kit' : '🚲 Prearm.';
-    const dest = (o.destino==='salon') ? 'local' : o.destino;
-    const destinoStr = o.esSalon ? '<span class="badge badge-p">Exposición</span>'
-      : (dest==='local'?'<span class="badge badge-local">⭐ Local</span>'
-      : dest==='envio'?'<span class="badge badge-env">🚚 Envío</span>'
-      : '<span class="badge badge-sal">Venta</span>');
-    const com = comisionOrden(o);
-    const arm2 = o.armador2 || '—';
-    // Escapar para uso en ondblclick
-    const marcaEsc = o.marca.replace(/'/g,"\\'");
-    const modeloEsc = o.modelo.replace(/'/g,"\\'");
-    const armEsc = (o.armador||'').replace(/'/g,"\\'");
-    return `
-    <tr class="clickable-row" ondblclick="irAHistorialPorId(${o.id})" title="Doble clic → ver este registro exacto en Historial Completo">
-      <td style="color:var(--text2)">#${o.id}</td>
-      <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
-      <td>${o.cliente||'<span style="color:var(--text3)">—</span>'}</td>
-      <td><strong>${o.marca}</strong></td>
-      <td>${o.modelo}</td>
-      <td>${o.talle||'—'}</td>
-      <td>${o.rodado||'—'}</td>
-      <td>${o.color}</td>
-      <td style="text-align:center"><strong>${o.cantidad}</strong></td>
-      <td>${o.armador||'—'}</td>
-      <td>${arm2}</td>
-      <td style="font-family:monospace;font-size:12px">${o.cuadro||'—'}</td>
-      <td>${tipoStr}</td>
-      <td>${destinoStr}</td>
-      <td><strong style="color:var(--green)">$${com.toLocaleString('es-AR')}</strong></td>
-    </tr>
-  `}).join('');
-}
-
-function exportarHistorialComisiones() {
-  const lista = getHCOrdenes().sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-  const datos = lista.map(o => ({
-    'N° Orden': o.id,
-    Fecha: fmtFecha(o.fechaCreacion),
-    Hora: fmtHora(o.fechaCreacion),
-    Cliente: o.cliente||'-',
-    Marca: o.marca, Modelo: o.modelo,
-    Talle: o.talle||'-', Rodado: o.rodado||'-', Color: o.color,
-    Cantidad: o.cantidad,
-    'Armador Ppal.': o.armador||'-',
-    'Armador 2': o.armador2||'-',
-    'N° Cuadro': o.cuadro||'-',
-    'Tipo Armado': o.tipoArmado||'-',
-    Destino: o.esSalon ? 'Exposición' : o.destino==='local' ? 'Local' : o.destino==='envio' ? 'Envío' : 'Venta',
-    'Total Comisión ($)': comisionOrden(o),
-  }));
-  exportXlsx([{name:'Historial Comisión', data:datos}], `historial_comision_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast('⬇️ Historial exportado');
-}
-
-function limpiarFiltrosHC() {
-  hcPeriodo = 'semana';
-  ['hoy','mes','anio','todos'].forEach(k => {
-    const btn = document.getElementById('hc-pbtn-'+k);
-    if (btn) { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  const semBtn = document.getElementById('hc-pbtn-semana');
-  if (semBtn) { semBtn.style.background='var(--orange)'; semBtn.style.color='#000'; semBtn.style.border='none'; }
-  fillHCFiltros();
-  ['hc-armador','hc-marca','hc-modelo','hc-tipo-arm','hc-destino'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value = '';
-  });
-  ['hc-cuadro','hc-cliente','hc-desde','hc-hasta'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value = '';
-  });
-  renderHistorialComisiones();
-}
-
-// Navegar al historial completo mostrando UN registro exacto (por ID)
-function irAHistorialPorId(ordenId) {
-  // Ir a tab Historial Completo
-  const tabsParent = document.getElementById('a-historial').parentElement;
-  tabsParent.querySelectorAll('.tab-body').forEach(t => t.classList.remove('on'));
-  tabsParent.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  document.getElementById('a-historial').classList.add('on');
-  const tabs = tabsParent.querySelectorAll('.tab');
-  const bodies = tabsParent.querySelectorAll('.tab-body');
-  bodies.forEach((b,i) => { if (b.id==='a-historial') { if(tabs[i]) tabs[i].classList.add('on'); } });
-
-  // Limpiar todos los filtros y mostrar período=todos
-  historialPeriodo = 'todos';
-  ['hoy','semana','mes','anio'].forEach(k => {
-    const btn = document.getElementById('h-pbtn-'+k);
-    if (btn) { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  const todosBtn = document.getElementById('h-pbtn-todos');
-  if (todosBtn) { todosBtn.style.background='var(--orange)'; todosBtn.style.color='#000'; todosBtn.style.border='none'; }
-
-  // Resetear todos los filtros del historial completo
-  fillHistorialFiltros();
-  ['h-armador','h-marca','h-tipo','h-tipo-armado','h-estado'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value='';
-  });
-  ['h-cuadro','h-cliente'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value='';
-  });
-
-  // Renderizar con filtro especial por ID exacto
-  const o = DB.ordenes.find(x => x.id === ordenId);
-  if (!o) { renderHistorial(); return; }
-
-  // Usar cuadro como filtro si existe, sino filtrar por ID directamente en tbody
-  const tbody = document.getElementById('t-historial');
-  if (!tbody) return;
-
-  // Renderizar SOLO esa fila
-  const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
-  const tipoStr = o.esRetoque ? '✨ Retoque' : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
-  const dest2 = (o.destino==='salon')?'local':o.destino;
-  const destinoStr2 = o.esSalon ? '<span class="badge badge-p">Exposición</span>'
-    : (dest2==='local'?'<span class="badge badge-local">⭐ Local</span>'
-    : dest2==='envio'?'<span class="badge badge-env">🚚 Envío</span>'
-    : '<span class="badge badge-sal">🏪 Venta</span>');
-  const comStr2 = o.comisionDuplicada
-    ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica</span>'
-    : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
-  const cancelInfo2 = o.estado==='cancelada' && o.motivoCancelacion
-    ? `<br><span style="color:var(--red);font-size:11px">Motivo: ${o.motivoCancelacion}</span>` : '';
-  const arm2Str = o.armador2 || '—';
-
-  tbody.innerHTML = `
-    <tr style="background:rgba(255,98,0,.08);outline:2px solid var(--orange);">
-      <td><input type="checkbox" class="h-row-check" data-id="${o.id}" onchange="historialCheckChange()" style="accent-color:var(--orange);width:15px;height:15px"></td>
-      <td style="color:var(--text2)">#${o.id}</td>
-      <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
-      <td>${o.cliente||'<span style="color:var(--text3)">—</span>'}</td>
-      <td><strong>${o.marca}</strong> ${o.modelo}</td>
-      <td>${o.talle||'—'}</td>
-      <td>${o.rodado||'—'}</td>
-      <td>${o.color}</td>
-      <td style="text-align:center"><strong>${o.cantidad}</strong></td>
-      <td>${o.armador||'—'}</td>
-      <td>${arm2Str}</td>
-      <td style="font-family:monospace;font-size:12px">${o.cuadro||'—'}</td>
-      <td>${tipoStr}</td>
-      <td style="color:var(--blue);font-size:12px">${tiempoStr}</td>
-      <td>${destinoStr2}</td>
-      <td>${estadoBadge(o)}${cancelInfo2}</td>
-      <td>${comStr2}</td>
-    </tr>`;
-  toast(`🔍 Mostrando orden #${ordenId} — ${o.marca} ${o.modelo}`);
-}
-
-function limpiarFiltrosH() {
-  historialPeriodo = 'todos';
-  ['hoy','semana','mes','anio'].forEach(k => {
-    const btn = document.getElementById('h-pbtn-'+k);
-    if (btn) { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  const todosBtn = document.getElementById('h-pbtn-todos');
-  if (todosBtn) { todosBtn.style.background='var(--orange)'; todosBtn.style.color='#000'; todosBtn.style.border='none'; }
-  fillHistorialFiltros();
-  if (document.getElementById('h-armador'))    document.getElementById('h-armador').value = '';
-  if (document.getElementById('h-marca'))      document.getElementById('h-marca').value = '';
-  if (document.getElementById('h-tipo'))       document.getElementById('h-tipo').value = '';
-  if (document.getElementById('h-tipo-armado')) document.getElementById('h-tipo-armado').value = '';
-  if (document.getElementById('h-estado'))     document.getElementById('h-estado').value = '';
-  if (document.getElementById('h-cuadro'))     document.getElementById('h-cuadro').value = '';
-  if (document.getElementById('h-cliente'))    document.getElementById('h-cliente').value = '';
-  renderHistorial();
-}
-
-// Desde doble clic en reporte: mostrar exactamente las órdenes que componen esa fila
-function irAHistorialFiltrado(marca, modelo, armador, tipoArmado) {
-  // Ir a tab Historial con Comisión
-  const tabsParent = document.getElementById('a-historial-comisiones').parentElement;
-  tabsParent.querySelectorAll('.tab-body').forEach(t => t.classList.remove('on'));
-  tabsParent.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  document.getElementById('a-historial-comisiones').classList.add('on');
-  const tabs = tabsParent.querySelectorAll('.tab');
-  const bodies = tabsParent.querySelectorAll('.tab-body');
-  bodies.forEach((b,i) => { if (b.id==='a-historial-comisiones') { if(tabs[i]) tabs[i].classList.add('on'); } });
-
-  // Calcular el rango de fechas del período activo del reporte
-  const { desde: rDesde, hasta: rHasta } = getRangoReporte();
-
-  // Período HС = todos (usamos desde/hasta manual para filtrar)
-  hcPeriodo = 'todos';
-  ['hoy','semana','mes','anio'].forEach(k => {
-    const btn = document.getElementById('hc-pbtn-'+k);
-    if (btn) { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  const todosBtn = document.getElementById('hc-pbtn-todos');
-  if (todosBtn) { todosBtn.style.background='var(--orange)'; todosBtn.style.color='#000'; todosBtn.style.border='none'; }
-
-  // Poblar selects
-  fillHCFiltros();
-  const sMo = document.getElementById('hc-modelo');
-  if (sMo) {
-    sMo.innerHTML = '<option value="">Todos</option>';
-    const modelos = [...new Set(DB.catalogo.filter(b=>b.marca===marca).map(b=>b.modelo))].sort((a,b)=>a.localeCompare(b,'es'));
-    modelos.forEach(m => sMo.innerHTML += `<option value="${m}">${m}</option>`);
-  }
-  if (document.getElementById('hc-marca'))   document.getElementById('hc-marca').value = marca;
-  if (document.getElementById('hc-modelo'))  document.getElementById('hc-modelo').value = modelo;
-  if (document.getElementById('hc-armador')) document.getElementById('hc-armador').value = armador;
-  if (document.getElementById('hc-tipo-arm')) document.getElementById('hc-tipo-arm').value = (tipoArmado==='kit'||tipoArmado==='prearmada') ? tipoArmado : '';
-  if (document.getElementById('hc-destino')) document.getElementById('hc-destino').value = '';
-  if (document.getElementById('hc-cuadro'))  document.getElementById('hc-cuadro').value = '';
-  if (document.getElementById('hc-cliente')) document.getElementById('hc-cliente').value = '';
-  // Aplicar el mismo rango de fechas del reporte
-  if (document.getElementById('hc-desde') && rDesde)
-    document.getElementById('hc-desde').value = rDesde.toISOString().slice(0,10);
-  if (document.getElementById('hc-hasta') && rHasta)
-    document.getElementById('hc-hasta').value = rHasta.toISOString().slice(0,10);
-
-  renderHistorialComisiones();
-  toast(`🔍 ${marca} ${modelo} · ${armador}`);
-}
-
-// Devuelve el rango de fechas del período activo del reporte
-function getRangoReporte() {
-  const ahora = new Date();
-  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  let desde, hasta;
-  if (periodoActivo === 'hoy') {
-    desde = hoy; hasta = hoy;
-  } else if (periodoActivo === 'semana') {
-    const dow = ahora.getDay();
-    desde = new Date(hoy.getTime() - ((dow===0?6:dow-1)*86400000));
-    hasta = new Date(desde.getTime() + 6*86400000);
-  } else if (periodoActivo === 'mes') {
-    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    hasta = new Date(ahora.getFullYear(), ahora.getMonth()+1, 0);
-  } else if (periodoActivo === 'anio') {
-    desde = new Date(ahora.getFullYear(), 0, 1);
-    hasta = new Date(ahora.getFullYear(), 11, 31);
-  } else if (periodoActivo === 'custom') {
-    const d = document.getElementById('r-desde')?.value;
-    const h = document.getElementById('r-hasta')?.value;
-    desde = d ? new Date(d+'T00:00:00') : null;
-    hasta = h ? new Date(h+'T23:59:59') : null;
-  }
-  return { desde: desde || null, hasta: hasta || null };
 }
 
 function historialToggleAll(cb) {
@@ -4328,185 +3789,6 @@ function exportarBD() {
     'Observaciones': o.obs||'-',
   }));
   exportXlsx([{name:'Base de Datos Bicis', data:datos}], `bd_bicicletas_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast('⬇️ Base de datos exportada');
-}
-
-// ════════════════════════════════════════════════════════════
-//  BASE DE DATOS ADMIN — ENTREGADAS CON HISTORIAL COMPLETO
-// ════════════════════════════════════════════════════════════
-let bdaPeriodo = 'todos';
-
-function setBDAPeriodo(p) {
-  bdaPeriodo = p;
-  ['hoy','semana','mes','anio','todos'].forEach(k => {
-    const btn = document.getElementById('bda-pbtn-'+k);
-    if (!btn) return;
-    if (k===p) { btn.style.background='var(--orange)'; btn.style.color='#000'; btn.style.border='none'; }
-    else { btn.style.background='var(--bg4)'; btn.style.color='var(--text2)'; btn.style.border='1px solid var(--border2)'; }
-  });
-  renderBDAdmin();
-}
-
-function renderBDAdmin() {
-  const lista = document.getElementById('bda-lista');
-  const countLbl = document.getElementById('bda-count-label');
-  if (!lista) return;
-
-  const fCliente = (document.getElementById('bda-f-cliente')?.value || '').toLowerCase().trim();
-  const fArmador = (document.getElementById('bda-f-armador')?.value || '').toLowerCase().trim();
-  const fCuadro  = (document.getElementById('bda-f-cuadro')?.value || '').toLowerCase().trim();
-  const fMarca   = (document.getElementById('bda-f-marca')?.value || '').toLowerCase().trim();
-
-  // Calcular rango de fechas
-  const ahora = new Date();
-  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  let desde = null, hasta = null;
-  if (bdaPeriodo === 'hoy') {
-    desde = hoy; hasta = new Date(hoy.getTime() + 86400000 - 1);
-  } else if (bdaPeriodo === 'semana') {
-    const dow = ahora.getDay();
-    const lunes = new Date(hoy.getTime() - ((dow===0?6:dow-1)*86400000));
-    desde = lunes; hasta = new Date(lunes.getTime() + 7*86400000 - 1);
-  } else if (bdaPeriodo === 'mes') {
-    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    hasta = new Date(ahora.getFullYear(), ahora.getMonth()+1, 0, 23, 59, 59);
-  } else if (bdaPeriodo === 'anio') {
-    desde = new Date(ahora.getFullYear(), 0, 1);
-    hasta = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
-  }
-
-  // Órdenes de venta completadas — incluye local, envío, y cualquier destino de venta
-  let ordenes = DB.ordenes.filter(o => {
-    if (o.esSalon) return false;
-    if (o.estado !== 'completada') return false;
-    if (desde && hasta) {
-      const f = new Date(o.fechaCompletado || o.fechaCreacion);
-      if (f < desde || f > hasta) return false;
-    }
-    return true;
-  });
-
-  // Aplicar filtros de texto
-  if (fCliente) ordenes = ordenes.filter(o => (o.cliente||'').toLowerCase().includes(fCliente));
-  if (fArmador) ordenes = ordenes.filter(o =>
-    (o.armador||'').toLowerCase().includes(fArmador) ||
-    (o.armador2||'').toLowerCase().includes(fArmador)
-  );
-  if (fCuadro)  ordenes = ordenes.filter(o => (o.cuadro||'').toLowerCase().includes(fCuadro));
-  if (fMarca)   ordenes = ordenes.filter(o => (o.marca||'').toLowerCase().includes(fMarca));
-
-  ordenes.sort((a,b) => new Date(b.fechaCompletado||b.fechaCreacion) - new Date(a.fechaCompletado||a.fechaCreacion));
-
-  const totalBicis = ordenes.reduce((s,o) => s + o.cantidad, 0);
-  if (countLbl) countLbl.textContent = `${ordenes.length} orden${ordenes.length!==1?'es':''} · ${totalBicis} bici${totalBicis!==1?'s':''}`;
-
-  if (!ordenes.length) {
-    lista.innerHTML = '<div class="empty"><div class="empty-icon">🗄️</div>Sin bicis entregadas para los filtros seleccionados</div>';
-    return;
-  }
-
-  lista.innerHTML = ordenes.map(o => {
-    const dest = (o.destino === 'salon') ? 'local' : o.destino;
-    const destLabel = dest === 'envio'
-      ? '<span class="badge badge-env">🚚 Envío</span>'
-      : '<span class="badge badge-local">⭐ Cliente en Local</span>';
-
-    const tipoArmLabel = o.esRetoque ? '✨ Retoque Final'
-      : o.tipoArmado === 'kit' ? '📦 Kit'
-      : o.tipoArmado === 'prearmada' ? '🚲 Prearmada'
-      : '—';
-
-    // Buscar si este cuadro también tiene un armado previo para salón (exposición)
-    let historialSalon = '';
-    if (o.cuadro) {
-      const cuadroLow = o.cuadro.toLowerCase();
-      const ordenesExpo = DB.ordenes.filter(x =>
-        x.esSalon &&
-        x.cuadro && x.cuadro.toLowerCase() === cuadroLow &&
-        x.estado === 'completada'
-      ).sort((a,b) => new Date(a.fechaCreacion) - new Date(b.fechaCreacion));
-
-      if (ordenesExpo.length > 0) {
-        historialSalon = `
-          <div style="margin-top:10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);border-radius:4px;padding:10px 14px;">
-            <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:8px">📋 Historial Previo en Salón / Exhibición</div>
-            ${ordenesExpo.map(ex => {
-              const tipoEx = ex.esRetoque ? '✨ Retoque Final'
-                : ex.tipoArmado === 'kit' ? '📦 Kit'
-                : '🚲 Prearmada';
-              const arm2Ex = ex.armador2 ? ` <span style="color:var(--text2)">+ ${ex.armador2}</span>` : '';
-              return `<div style="font-size:13px;line-height:1.9;padding:4px 0;border-bottom:1px solid rgba(168,85,247,.15)">
-                <span style="color:var(--purple);font-weight:700">${tipoEx}</span>
-                · Armado: <strong>${ex.armador||'—'}${arm2Ex}</strong>
-                · <span style="color:var(--text2)">${fmtFecha(ex.fechaCreacion)} ${fmtHora(ex.fechaCreacion)}</span>
-              </div>`;
-            }).join('')}
-          </div>`;
-      }
-    }
-
-    const arm2 = o.armador2 ? ` <span style="font-size:12px;color:var(--text2)">+ ${o.armador2}</span>` : '';
-    const fechaEntrega = o.fechaCompletado || o.fechaCreacion;
-
-    return `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:12px;animation:fadeUp .2s ease">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
-        <div style="flex:1;min-width:220px">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800">${o.marca} ${o.modelo}</span>
-            <span class="qty" style="width:26px;height:26px;font-size:13px">${o.cantidad}</span>
-            ${destLabel}
-          </div>
-          ${o.cliente ? `<div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px">👤 ${o.cliente}</div>` : ''}
-          <div style="font-size:13px;color:var(--text2);line-height:1.9">
-            ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
-            ${o.cuadro ? `<br>🔢 <strong style="color:var(--text);font-size:14px;font-family:monospace">${o.cuadro}</strong>` : '<br><span style="color:var(--text3);font-size:12px">Sin N° de cuadro</span>'}
-            ${o.obs ? `<br>📝 <em style="color:var(--text3)">${o.obs}</em>` : ''}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;text-align:right">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">🔧 ${o.armador||'—'}${arm2}</div>
-          <div style="font-size:12px;color:var(--text3)">${tipoArmLabel}</div>
-          <div style="font-size:13px;color:var(--green);font-weight:700">Entregada: ${fmtFecha(fechaEntrega)}</div>
-          <div style="font-size:11px;color:var(--text3)">${fmtHora(fechaEntrega)}</div>
-        </div>
-      </div>
-      ${historialSalon}
-    </div>`;
-  }).join('');
-}
-
-function exportarBDAdmin() {
-  const ordenes = DB.ordenes.filter(o => !o.esSalon && o.estado === 'completada')
-    .sort((a,b) => new Date(b.fechaCompletado||b.fechaCreacion) - new Date(a.fechaCompletado||a.fechaCreacion));
-
-  const datos = ordenes.map(o => {
-    // Buscar historial de exposición
-    const expos = o.cuadro ? DB.ordenes.filter(x =>
-      x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase() && x.estado === 'completada'
-    ).sort((a,b) => new Date(a.fechaCreacion) - new Date(b.fechaCreacion)) : [];
-
-    const row = {
-      'N° Orden': o.id,
-      'Fecha Entrega': fmtFecha(o.fechaCompletado||o.fechaCreacion),
-      'Cliente': o.cliente||'-',
-      'Marca': o.marca, 'Modelo': o.modelo,
-      'Talle': o.talle||'-', 'Rodado': o.rodado||'-', 'Color': o.color,
-      'Cantidad': o.cantidad,
-      'N° Cuadro': o.cuadro||'-',
-      'Armador Entrega': o.armador||'-',
-      'Armador 2 Entrega': o.armador2||'-',
-      'Tipo Armado Entrega': o.esRetoque ? 'Retoque Final' : (o.tipoArmado||'-'),
-      'Destino': (o.destino==='envio') ? 'Envío' : 'Cliente en Local',
-    };
-    expos.forEach((ex, i) => {
-      row[`Exposición ${i+1} — Fecha`] = fmtFecha(ex.fechaCreacion);
-      row[`Exposición ${i+1} — Armador`] = ex.armador||'-';
-      row[`Exposición ${i+1} — Tipo`] = ex.esRetoque ? 'Retoque Final' : (ex.tipoArmado||'-');
-    });
-    return row;
-  });
-  exportXlsx([{name:'BD Entregadas', data:datos}], `bd_entregadas_${new Date().toISOString().slice(0,10)}.xlsx`);
   toast('⬇️ Base de datos exportada');
 }
 
@@ -4763,7 +4045,6 @@ async function srvGuardar(datos, obs) {
 function initAdmin() {
   renderCatalogo(); renderComisiones(); renderArmadores(); renderUsuarios();
   fillHistorialFiltros(); renderHistorial();
-  fillHCFiltros();
   renderGarantias();
   setTimeout(()=>{ setPeriodo(periodoActivo); }, 50);
 }
@@ -4881,11 +4162,34 @@ function getDefaultUsuarios() {
 
   const ok = initFirebase();
   if (!ok) {
-    document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
+    // Intentar cargar desde caché local
+    if (loadOfflineDB()) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('screen-inicio').style.display = 'flex';
+      isOnline = false;
+      updateConnectionBadge();
+      toast('📶 Firebase no disponible — trabajando con datos locales','var(--yellow)');
+      startPolling();
+    } else {
+      document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
+    }
     return;
   }
 
-  await loadDB();
+  // Verificar conectividad real antes de cargar
+  try {
+    await loadDB();
+    saveOfflineDB(); // guardar copia local tras carga exitosa
+  } catch(e) {
+    // Sin internet: usar caché local si existe
+    if (loadOfflineDB()) {
+      toast('📶 Sin internet — cargando datos locales guardados','var(--yellow)');
+      isOnline = false;
+    } else {
+      document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Sin conexión y sin datos guardados localmente.</p>';
+      return;
+    }
+  }
   document.getElementById('loader').style.display = 'none';
   document.getElementById('screen-inicio').style.display = 'flex';
   startPolling();
