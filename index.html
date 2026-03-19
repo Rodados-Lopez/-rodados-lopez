@@ -4673,13 +4673,15 @@ function renderTableroCuadro() {
     return;
   }
 
-  // Detectar si hay internet real con un ping a Firebase
-  const hayInternet = navigator.onLine && await new Promise(resolve => {
-    const t = setTimeout(() => resolve(false), 5000);
-    fbDB.ref('.info/connected').once('value')
-      .then(snap => { clearTimeout(t); resolve(snap.val() === true); })
-      .catch(() => { clearTimeout(t); resolve(false); });
-  });
+  // Detectar conectividad intentando leer de Firebase directamente
+  let hayInternet = navigator.onLine;
+  if (hayInternet) {
+    // Verificar con un read real con timeout de 6 segundos
+    hayInternet = await Promise.race([
+      fbDB.ref('counter').once('value').then(() => true).catch(() => false),
+      new Promise(resolve => setTimeout(() => resolve(false), 6000))
+    ]);
+  }
 
   if (!hayInternet) {
     // Sin internet: cargar desde caché local
