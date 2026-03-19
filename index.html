@@ -122,7 +122,7 @@ html,body{height:100%;font-family:'Barlow',sans-serif;background:var(--bg);color
 @keyframes fadeUp{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
 .ocard.pendiente{border-left:3px solid var(--yellow);}
 .ocard.en-proceso{border-left:3px solid var(--blue);}
-.ocard.completada{border-left:3px solid var(--green);opacity:.65;}
+.ocard.completada{border-left:4px solid var(--green);border:1px solid rgba(0,200,83,.45);opacity:.92;}
 .ocard-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;}
 .ocard-sub{font-size:14px;color:var(--text2);margin-top:6px;line-height:1.8;}
 .ocard-sub strong{color:var(--text);font-size:15px;}
@@ -185,6 +185,29 @@ tr:hover td{background:rgba(255,98,0,.03);}
 .empty-icon{font-size:36px;margin-bottom:8px;}
 
 /* ── MISC ── */
+/* ── TABLERO ── */
+.tbln-btn{background:var(--bg4);color:var(--text2);border:1px solid var(--border2);}
+.tbln-btn.tbln-on{background:var(--blue);color:#fff;border-color:var(--blue);}
+.tbl-rank-card{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:16px 20px;margin-bottom:12px;transition:border-color .2s;}
+.tbl-rank-card:hover{border-color:var(--blue);}
+.tbl-rank-pos{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;line-height:1;min-width:52px;text-align:center;}
+.tbl-rank-name{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;letter-spacing:.5px;}
+.tbl-rank-total{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--green);}
+.tbl-rank-bar{height:6px;background:var(--bg4);border-radius:3px;margin-top:8px;overflow:hidden;}
+.tbl-rank-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .6s ease;}
+.tbl-pill{display:inline-flex;align-items:center;gap:5px;background:var(--bg4);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--text2);margin:2px;}
+.tbl-stat-mini{background:var(--bg4);border-radius:4px;padding:8px 12px;text-align:center;flex:1;min-width:90px;}
+.tbl-stat-mini-num{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;}
+.tbl-stat-mini-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-top:2px;}
+/* ── SEPARADOR DE DÍAS ── */
+.day-separator{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:10px 16px;margin:18px 0 10px;display:flex;align-items:center;gap:10px;}
+.day-separator-label{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.day-separator-hoy{color:var(--orange);}
+.day-separator-ant{color:var(--text3);}
+/* ── RESUMEN VENDEDOR ── */
+.v-resumen-pill{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:10px 16px;flex:1;min-width:120px;}
+.v-resumen-num{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;}
+.v-resumen-lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);}
 .separator{border:none;border-top:1px solid var(--border);margin:16px 0;}
 .chip{display:inline-block;background:var(--bg4);border:1px solid var(--border2);border-radius:3px;padding:2px 7px;font-size:11px;color:var(--text2);margin:1px;}
 .section-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
@@ -222,7 +245,7 @@ input[type=file]{display:none;}
 
 /* ── BADGE CANCELADA ── */
 .badge-r{background:rgba(255,61,61,.12);color:var(--red);border:1px solid var(--red);}
-.ocard.cancelada{border-left:3px solid var(--red);opacity:.5;}
+.ocard.cancelada{border-left:4px solid var(--red);border:1px solid rgba(255,61,61,.45);opacity:.78;}
 
 /* ── USER BADGE HEADER ── */
 .user-chip{font-size:11px;background:var(--bg4);border:1px solid var(--border2);padding:4px 10px;border-radius:20px;color:var(--text2);display:flex;align-items:center;gap:6px;}
@@ -542,7 +565,6 @@ input[type=file]{display:none;}
           <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
           <select id="v-destino">
             <option value="local">⭐ Cliente en el Local</option>
-            <option value="salon">🏪 Para el Salón</option>
             <option value="envio">🚚 Envío a Domicilio</option>
           </select>
         </div>
@@ -577,6 +599,7 @@ input[type=file]{display:none;}
     <div id="v-mis-ordenes-tab" class="tab-body">
     <div class="panel">
       <div class="ptitle">📦 Órdenes del Día</div>
+      <div id="v-resumen-dia" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <div id="v-lista-ordenes"><div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div></div>
     </div>
     </div><!-- /v-mis-ordenes-tab -->
@@ -610,8 +633,7 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('t','local-tab')">⭐ Local <span id="t-local-count" style="display:none;background:var(--orange);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
-      <button class="tab" onclick="switchTab('t','service-tab')">🔩 Service</button>
-      <button class="tab" onclick="switchTab('t','bd-tab-t');renderBD('t')">🗄️ Base de Datos</button>
+      <button class="tab" onclick="switchTab('t','tablero-tab');renderTableroCuadro()">📊 Tablero</button>
     </div>
 
     <!-- ÓRDENES TAB -->
@@ -788,6 +810,31 @@ input[type=file]{display:none;}
           <div style="margin-top:8px;font-size:12px;color:var(--text2)" id="bd-t-count-label"></div>
         </div>
         <div id="bd-t-lista"></div>
+      </div>
+    </div>
+
+    <!-- TABLERO TAB -->
+    <div id="tablero-tab" class="tab-body">
+      <div class="panel">
+        <!-- Filtros período -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+          <div class="ptitle" style="margin:0;border:none;padding:0;color:var(--blue)">📊 Tablero de Armadores</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-sm tbln-btn tbln-on" id="tbl-btn-hoy"    onclick="tblSetPeriodo('hoy')">Hoy</button>
+            <button class="btn btn-sm tbln-btn" id="tbl-btn-semana" onclick="tblSetPeriodo('semana')">Semana</button>
+            <button class="btn btn-sm tbln-btn" id="tbl-btn-mes"    onclick="tblSetPeriodo('mes')">Mes</button>
+            <button class="btn btn-sm tbln-btn" id="tbl-btn-anio"   onclick="tblSetPeriodo('anio')">Año</button>
+            <button class="btn btn-sm tbln-btn" id="tbl-btn-rango"  onclick="tblSetPeriodo('rango')">Rango</button>
+          </div>
+        </div>
+        <div id="tbl-rango-wrap" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:14px">
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="fld"><label>Desde</label><input type="date" id="tbl-desde" style="background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:3px;font-size:13px"></div>
+            <div class="fld"><label>Hasta</label><input type="date" id="tbl-hasta" style="background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:3px;font-size:13px"></div>
+            <button class="btn btn-o btn-sm" onclick="renderTableroCuadro()">Aplicar</button>
+          </div>
+        </div>
+        <div id="tablero-body"></div>
       </div>
     </div>
 
@@ -1243,9 +1290,18 @@ input[type=file]{display:none;}
     <div style="background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.3);border-radius:3px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--yellow)">
       ⚠️ Si cambiás el modelo, la comisión del armador se recalcula automáticamente con el nuevo modelo.
     </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cancelar</button>
-      <button class="btn btn-r btn-sm" onclick="cancelarOrden()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
+    <!-- Motivo cancelación (se muestra al hacer click en Cancelar Orden) -->
+    <div id="cancel-motivo-wrap" style="display:none;background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px">⚠️ Motivo de cancelación <span style="color:var(--red)">★ obligatorio</span></div>
+      <input type="text" id="cancel-motivo-input" placeholder="Describí el motivo de la cancelación..." style="background:var(--bg3);border:1px solid var(--red);color:var(--text);padding:11px 13px;border-radius:3px;font-size:14px;width:100%;outline:none;font-family:Barlow,sans-serif">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="ocultarCancelMotivo()">← Volver</button>
+        <button class="btn btn-r" style="flex:1" onclick="confirmarCancelacion()">🗑️ CONFIRMAR CANCELACIÓN</button>
+      </div>
+    </div>
+    <div id="editar-actions" style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cerrar</button>
+      <button class="btn btn-r btn-sm" onclick="mostrarCancelMotivo()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
       <button class="btn btn-o" style="flex:1" onclick="confirmarEdicion()">✅ GUARDAR CAMBIOS</button>
     </div>
   </div>
@@ -2065,32 +2121,93 @@ async function vEnviarOrden() {
 
 function vRenderOrdenes() {
   const cont = document.getElementById('v-lista-ordenes');
-  const lista = [...DB.ordenes].filter(o => !o.esSalon)
-    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).slice(0,30);
-  if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes hoy</div>'; return; }
-  cont.innerHTML = lista.map(o => `
-    <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}${o.destino==='local'?' local-dest':''}">
-      <div style="flex:1">
-        <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-          ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':'<span class="badge badge-sal" style="font-size:11px">🏪 Salón</span>'}
+  const resumenEl = document.getElementById('v-resumen-dia');
+
+  const todas = [...DB.ordenes].filter(o => !o.esSalon)
+    .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
+
+  // ── Resumen del día ──
+  const hoyStr = new Date().toDateString();
+  const hoy = todas.filter(o => new Date(o.fechaCreacion).toDateString() === hoyStr);
+  const entregadasHoy = hoy.filter(o => o.estado==='completada' && o.entregada).length;
+  const pendientesHoy = hoy.filter(o => o.estado==='pendiente'||o.estado==='en-proceso').length;
+  const completadasHoy = hoy.filter(o => o.estado==='completada').length;
+  if (resumenEl) {
+    resumenEl.innerHTML = `
+      <div class="v-resumen-pill"><span class="v-resumen-num" style="color:var(--green)">${entregadasHoy}</span><span class="v-resumen-lbl">Entregadas<br>hoy</span></div>
+      <div class="v-resumen-pill"><span class="v-resumen-num" style="color:var(--yellow)">${pendientesHoy}</span><span class="v-resumen-lbl">Pendientes<br>de cierre</span></div>
+      <div class="v-resumen-pill"><span class="v-resumen-num" style="color:var(--blue)">${completadasHoy}</span><span class="v-resumen-lbl">Completadas<br>hoy</span></div>
+    `;
+  }
+
+  if (!todas.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📭</div>Sin órdenes</div>'; return; }
+
+  // ── Agrupar por día ──
+  const grupos = {};
+  todas.forEach(o => {
+    const d = new Date(o.fechaCreacion).toDateString();
+    if (!grupos[d]) grupos[d] = [];
+    grupos[d].push(o);
+  });
+
+  const hoyDate = new Date(); hoyDate.setHours(0,0,0,0);
+  const ayerDate = new Date(hoyDate); ayerDate.setDate(ayerDate.getDate()-1);
+
+  let html = '';
+  Object.keys(grupos).forEach(dia => {
+    const diaDate = new Date(dia);
+    const esHoy = diaDate.toDateString() === hoyDate.toDateString();
+    const esAyer = diaDate.toDateString() === ayerDate.toDateString();
+    const labelDia = esHoy ? 'HOY' : esAyer ? 'AYER' : diaDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+    const clsDay = esHoy ? 'day-separator-hoy' : 'day-separator-ant';
+
+    // Ocultar completadas/canceladas de días anteriores (colapsar)
+    const ordenesDia = grupos[dia];
+    const tieneActivas = ordenesDia.some(o => o.estado==='pendiente'||o.estado==='en-proceso'||o.estado==='sin-stock');
+
+    html += `<div class="day-separator"><span class="day-separator-label ${clsDay}">📅 ${labelDia}</span><span style="font-size:12px;color:var(--text3)">${ordenesDia.length} orden${ordenesDia.length!==1?'es':''}</span></div>`;
+
+    // Si es día anterior y no hay activas, mostrar solo un resumen colapsado
+    if (!esHoy && !tieneActivas) {
+      const comp = ordenesDia.filter(o=>o.estado==='completada').length;
+      const canc = ordenesDia.filter(o=>o.estado==='cancelada').length;
+      html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:8px;font-size:13px;color:var(--text2)">
+        ${comp ? `<span style="color:var(--green);font-weight:700">✅ ${comp} completada${comp!==1?'s':''}</span>` : ''}${comp&&canc?' · ':''}${canc ? `<span style="color:var(--red);font-weight:700">🗑️ ${canc} cancelada${canc!==1?'s':''}</span>` : ''}
+        <span style="margin-left:10px;font-size:11px;color:var(--text3)">— Día cerrado</span>
+      </div>`;
+      return;
+    }
+
+    ordenesDia.forEach(o => {
+      const esCompletada = o.estado==='completada';
+      const esCancelada = o.estado==='cancelada';
+      html += `
+      <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}${o.destino==='local'?' local-dest':''}">
+        <div style="flex:1">
+          <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+            ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':''}
+          </div>
+          <div class="ocard-sub">
+            ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+            ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
+            ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+            ${o.prioridadLabel ? `<br><span style="font-size:12px;font-weight:700;color:var(--red);background:rgba(255,61,61,.1);padding:2px 8px;border-radius:10px;border:1px solid var(--red)">${o.prioridadLabel}</span>` : ''}
+            <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span>
+            ${o.estado==='sin-stock' && o.motivoSinStock ? `<br><span style="color:var(--red);font-weight:600">⚠️ Sin stock: ${o.motivoSinStock}</span>` : ''}
+            ${esCancelada && o.motivoCancelacion ? `<br><span style="color:var(--red);font-weight:600">🗑️ Motivo: ${o.motivoCancelacion}</span>` : ''}
+          </div>
         </div>
-        <div class="ocard-sub">
-          ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
-          ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
-          ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
-          ${o.prioridadLabel ? `<br><span style="font-size:12px;font-weight:700;color:var(--red);background:rgba(255,61,61,.1);padding:2px 8px;border-radius:10px;border:1px solid var(--red)">${o.prioridadLabel}</span>` : ''}
-          <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span>
-          ${o.estado==='sin-stock' && o.motivoSinStock ? `<br><span style="color:var(--red);font-weight:600">⚠️ Motivo sin stock: ${o.motivoSinStock}</span>` : ''}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          ${estadoBadge(o)}
+          ${(o.estado==='pendiente'||o.estado==='en-proceso') ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})" style="font-size:12px;padding:5px 10px">✏️ Modificar</button>` : ''}
+          ${esCompletada && !o.entregada ? `<button class="btn btn-g btn-sm" onclick="marcarEntregada(${o.id})" style="font-size:12px;padding:5px 10px">✅ Entregado</button>` : ''}
+          ${esCompletada && o.entregada ? `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>` : ''}
         </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        ${estadoBadge(o)}
-        ${(o.estado==='pendiente'||o.estado==='en-proceso') ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})" style="font-size:12px;padding:5px 10px">✏️ Modificar</button>` : ''}
-        ${o.estado==='completada' && !o.entregada ? `<button class="btn btn-g btn-sm" onclick="marcarEntregada(${o.id})" style="font-size:12px;padding:5px 10px">✅ Entregado</button>` : ''}
-        ${o.estado==='completada' && o.entregada ? `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>` : ''}
-      </div>
-    </div>
-  `).join('');
+      </div>`;
+    });
+  });
+
+  cont.innerHTML = html;
 }
 
 function vRenderInbox() {
@@ -2280,7 +2397,6 @@ function tRenderAll() {
   const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
   const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
   const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada');
-  // Count badge for local
   const localPend = locales.filter(o=>o.estado!=='completada').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
@@ -2300,8 +2416,58 @@ function renderOcards(contId, lista, tipo) {
     cont.innerHTML = `<div class="empty"><div class="empty-icon">${tipo==='pendiente'?'📋':tipo==='en-proceso'?'🔧':'🏁'}</div>${msgs[tipo]}</div>`;
     return;
   }
+
+  // Para completadas/canceladas: agrupar por día
+  if (tipo === 'completada') {
+    const hoyDate = new Date(); hoyDate.setHours(0,0,0,0);
+    const ayerDate = new Date(hoyDate); ayerDate.setDate(ayerDate.getDate()-1);
+    const grupos = {};
+    lista.forEach(o => {
+      const d = new Date(o.fechaCompletado || o.fechaCreacion).toDateString();
+      if (!grupos[d]) grupos[d] = [];
+      grupos[d].push(o);
+    });
+    const diasOrdenados = Object.keys(grupos).sort((a,b)=>new Date(b)-new Date(a));
+    let html = '';
+    diasOrdenados.forEach(dia => {
+      const diaDate = new Date(dia);
+      const esHoy = diaDate.toDateString() === hoyDate.toDateString();
+      const esAyer = diaDate.toDateString() === ayerDate.toDateString();
+      const labelDia = esHoy ? 'HOY' : esAyer ? 'AYER' : diaDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+      const clsDay = esHoy ? 'day-separator-hoy' : 'day-separator-ant';
+      const ordDia = grupos[dia].sort((a,b)=>new Date(b.fechaCompletado||b.fechaCreacion)-new Date(a.fechaCompletado||a.fechaCreacion));
+
+      // días anteriores: solo resumen colapsado
+      if (!esHoy) {
+        html += `<div class="day-separator"><span class="day-separator-label ${clsDay}">📅 ${labelDia}</span><span style="font-size:12px;color:var(--text3)">${ordDia.length} orden${ordDia.length!==1?'es':''} — día cerrado</span></div>`;
+        return;
+      }
+      html += `<div class="day-separator"><span class="day-separator-label ${clsDay}">📅 ${labelDia}</span><span style="font-size:12px;color:var(--text3)">${ordDia.length} orden${ordDia.length!==1?'es':''}</span></div>`;
+      ordDia.forEach(o => {
+        html += `<div class="ocard ${o.estado}${o.destino==='local'?' local-dest':''}">
+          <div style="flex:1">
+            <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+              ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':''}
+            </div>
+            <div class="ocard-sub">
+              ${o.cliente ? `<span style="font-size:15px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+              ${o.talle ? `<strong>Talle:</strong> ${o.talle}&nbsp;&nbsp;` : ''}${o.rodado ? `<strong>Rodado:</strong> ${o.rodado}&nbsp;&nbsp;` : ''}<strong>Color:</strong> ${o.color}
+              ${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+              ${o.motivoCancelacion ? `<br><span style="color:var(--red);font-weight:600;font-size:12px">🗑️ Motivo: ${o.motivoCancelacion}</span>` : ''}
+              <br><span style="font-size:12px;color:var(--text3)">${fmtHora(o.fechaCompletado||o.fechaCreacion)}${o.armador ? ` · 🔧 ${o.armador}` : ''}</span>
+            </div>
+          </div>
+          <div class="ocard-actions">
+            <span class="badge ${o.estado==='cancelada'?'badge-r':'badge-g'}">${o.estado==='cancelada'?'🗑️ Cancelada':'✅ '+o.armador}</span>
+          </div>
+        </div>`;
+      });
+    });
+    cont.innerHTML = html;
+    return;
+  }
+
   cont.innerHTML = lista.sort((a,b)=>{
-    // Ordenar: local primero, luego por prioridad, luego por fecha
     const prioVal = x => x.destino==='local' ? 0 : x.prioridad==='inmediato' ? 1 : x.prioridad ? 2 : 3;
     const pa = prioVal(a), pb = prioVal(b);
     if (pa !== pb) return pa - pb;
@@ -2323,7 +2489,6 @@ function renderOcards(contId, lista, tipo) {
       <div class="ocard-actions">
       ${tipo==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
         ${tipo==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
-        ${tipo==='completada' ? `<span class="badge badge-g">✅ ${o.armador}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -2482,24 +2647,36 @@ function checkCuadroDuplicado(cuadro) {
   const val = (cuadro || '').trim();
   const warn = document.getElementById('dup-warning');
   if (!val) { warn.style.display = 'none'; return; }
-  // Buscar si ese cuadro ya existe en órdenes completadas de salón
+
+  // Buscar en salón Y en órdenes de venta completadas
   const existeEnSalon = DB.ordenes.some(o =>
     o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada'
   );
-  warn.style.display = existeEnSalon ? 'block' : 'none';
-  // Auto-cambiar a retoque final si coincide cuadro
+  const existeEnVenta = DB.ordenes.some(o =>
+    !o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada' && o.id !== ordenCompletarId
+  );
+  const existeDup = existeEnSalon || existeEnVenta;
+
+  if (warn) {
+    if (existeDup) {
+      const donde = existeEnSalon && existeEnVenta ? 'en salón y en otra orden de venta' : existeEnSalon ? 'en el salón' : 'en otra orden de venta';
+      warn.innerHTML = `⚠️ <strong>¡N° de cuadro ya registrado ${donde}!</strong> No se sumará comisión a este armado.`;
+    }
+    warn.style.display = existeDup ? 'block' : 'none';
+  }
+
+  // Auto-cambiar a retoque final si coincide cuadro en salón
   if (existeEnSalon && ordenCompletarId !== null) {
     const o = DB.ordenes.find(x => x.id === ordenCompletarId);
     if (o && o.tipoArmado !== 'retoque') {
-      // Cambiar tipo en memoria y actualizar info mostrada
       o.tipoArmado = 'retoque';
       o.esRetoque = true;
+      o.comisionDuplicada = false;
       const arm2txt = (o.armador2) ? ` + ${o.armador2}` : '';
       document.getElementById('modal-comp-info').innerHTML =
         `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt} — <span style="color:var(--green);font-weight:700">✨ Retoque Final (sin comisión)</span>`;
     }
   } else if (!existeEnSalon && ordenCompletarId !== null) {
-    // Si borraron el cuadro duplicado, restaurar tipo original
     const o = DB.ordenes.find(x => x.id === ordenCompletarId);
     if (o && o._tipoArmadoOriginal && o.tipoArmado === 'retoque') {
       o.tipoArmado = o._tipoArmadoOriginal;
@@ -2509,6 +2686,14 @@ function checkCuadroDuplicado(cuadro) {
       document.getElementById('modal-comp-info').textContent =
         `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt} — ${tipoLabel}`;
     }
+  }
+  // Si cuadro duplicado en venta (pero no en salón), marcar comisionDuplicada
+  if (existeEnVenta && !existeEnSalon && ordenCompletarId !== null) {
+    const o = DB.ordenes.find(x => x.id === ordenCompletarId);
+    if (o) o.comisionDuplicada = true;
+  } else if (!existeDup && ordenCompletarId !== null) {
+    const o = DB.ordenes.find(x => x.id === ordenCompletarId);
+    if (o && o._tipoArmadoOriginal !== 'retoque') o.comisionDuplicada = false;
   }
 }
 
@@ -2693,15 +2878,29 @@ async function confirmarEdicion() {
   toast('✅ Orden modificada');
 }
 
-async function cancelarOrden() {
-  if (!confirm('¿Cancelar esta orden? Quedará registrada como cancelada en el historial.')) return;
-  
+function mostrarCancelMotivo() {
+  document.getElementById('cancel-motivo-wrap').style.display = 'block';
+  document.getElementById('editar-actions').style.display = 'none';
+  document.getElementById('cancel-motivo-input').value = '';
+  setTimeout(() => document.getElementById('cancel-motivo-input').focus(), 80);
+}
+function ocultarCancelMotivo() {
+  document.getElementById('cancel-motivo-wrap').style.display = 'none';
+  document.getElementById('editar-actions').style.display = 'flex';
+}
+async function confirmarCancelacion() {
+  const motivo = document.getElementById('cancel-motivo-input').value.trim();
+  if (!motivo) { toast('⚠️ El motivo de cancelación es obligatorio','var(--red)'); document.getElementById('cancel-motivo-input').focus(); return; }
   const o = DB.ordenes.find(x => x.id===ordenEditarId);
-  if (o) { o.estado = 'cancelada'; o.fechaCompletado = new Date().toISOString(); }
+  if (o) { o.estado = 'cancelada'; o.motivoCancelacion = motivo; o.fechaCompletado = new Date().toISOString(); }
   await saveKey('ordenes');
+  ocultarCancelMotivo();
   closeModal('modal-editar');
   tRenderAll(); vRenderOrdenes();
   toast('🗑️ Orden cancelada','var(--red)');
+}
+async function cancelarOrden() {
+  mostrarCancelMotivo();
 }
 function sFillModelos() {
   const marca = document.getElementById('s-marca').value;
@@ -4132,6 +4331,160 @@ function getDefaultUsuarios() {
     {rol:'vendedor',usuario:'vendedor',password:'venta123'},
     {rol:'taller',  usuario:'taller',  password:'taller123'},
   ];
+}
+
+// ════════════════════════════════════════════════════════════
+//  TABLERO DE ARMADORES
+// ════════════════════════════════════════════════════════════
+let tblPeriodo = 'hoy';
+
+function tblSetPeriodo(p) {
+  tblPeriodo = p;
+  document.querySelectorAll('.tbln-btn').forEach(b => b.classList.remove('tbln-on'));
+  const btn = document.getElementById('tbl-btn-'+p);
+  if (btn) btn.classList.add('tbln-on');
+  const rango = document.getElementById('tbl-rango-wrap');
+  if (rango) rango.style.display = p === 'rango' ? 'block' : 'none';
+  if (p !== 'rango') renderTableroCuadro();
+}
+
+function tblGetRango() {
+  const ahora = new Date();
+  if (tblPeriodo === 'hoy') {
+    const ini = new Date(ahora); ini.setHours(0,0,0,0);
+    return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
+  }
+  if (tblPeriodo === 'semana') {
+    const ini = new Date(ahora); ini.setDate(ahora.getDate() - ahora.getDay()); ini.setHours(0,0,0,0);
+    return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
+  }
+  if (tblPeriodo === 'mes') {
+    const ini = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
+  }
+  if (tblPeriodo === 'anio') {
+    const ini = new Date(ahora.getFullYear(), 0, 1);
+    return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
+  }
+  if (tblPeriodo === 'rango') {
+    const desdeVal = document.getElementById('tbl-desde')?.value;
+    const hastaVal = document.getElementById('tbl-hasta')?.value;
+    const desde = desdeVal ? new Date(desdeVal+'T00:00:00') : new Date(0);
+    const hasta = hastaVal ? new Date(hastaVal+'T23:59:59') : new Date();
+    return { desde, hasta };
+  }
+  return { desde: new Date(0), hasta: new Date() };
+}
+
+function renderTableroCuadro() {
+  const cont = document.getElementById('tablero-body');
+  if (!cont) return;
+
+  const { desde, hasta } = tblGetRango();
+
+  // Filtrar órdenes completadas en el período
+  const ordenes = DB.ordenes.filter(o =>
+    o.estado === 'completada' && o.armador &&
+    new Date(o.fechaCompletado || o.fechaCreacion) >= desde &&
+    new Date(o.fechaCompletado || o.fechaCreacion) <= hasta
+  );
+
+  if (!ordenes.length) {
+    cont.innerHTML = `<div class="empty"><div class="empty-icon">📊</div>Sin armados en este período</div>`;
+    return;
+  }
+
+  // Agrupar por armador
+  const byArmador = {};
+  ordenes.forEach(o => {
+    const arm = o.armador;
+    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, retoque: 0, detalle: {} };
+    const cantNum = parseInt(o.cantidad) || 1;
+    byArmador[arm].total++;
+    byArmador[arm].bicis += cantNum;
+    const tipo = o.esRetoque || o.tipoArmado === 'retoque' ? 'retoque' : o.tipoArmado === 'kit' ? 'kit' : 'prearmada';
+    byArmador[arm][tipo] += cantNum;
+    const key = `${o.marca} ${o.modelo}`;
+    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0, ret: 0 };
+    byArmador[arm].detalle[key].total += cantNum;
+    if (tipo === 'kit') byArmador[arm].detalle[key].kit += cantNum;
+    else if (tipo === 'prearmada') byArmador[arm].detalle[key].pre += cantNum;
+    else byArmador[arm].detalle[key].ret += cantNum;
+  });
+
+  // También sumar armador2 (kit en equipo)
+  ordenes.filter(o => o.armador2 && (o.tipoArmado === 'kit')).forEach(o => {
+    const arm = o.armador2;
+    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, retoque: 0, detalle: {} };
+    const cantNum = parseInt(o.cantidad) || 1;
+    byArmador[arm].total++;
+    byArmador[arm].bicis += cantNum;
+    byArmador[arm].kit += cantNum;
+    const key = `${o.marca} ${o.modelo}`;
+    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0, ret: 0 };
+    byArmador[arm].detalle[key].total += cantNum;
+    byArmador[arm].detalle[key].kit += cantNum;
+  });
+
+  const ranking = Object.entries(byArmador).sort((a,b) => b[1].bicis - a[1].bicis);
+  const maxBicis = ranking[0]?.[1].bicis || 1;
+
+  const medallas = ['🥇','🥈','🥉'];
+  const coloresPod = ['var(--yellow)','var(--text2)','#cd7f32'];
+
+  // Stats globales
+  const totalBicis = ranking.reduce((s,[,d])=>s+d.bicis,0);
+  const totalKit = ranking.reduce((s,[,d])=>s+d.kit,0);
+  const totalPre = ranking.reduce((s,[,d])=>s+d.prearmada,0);
+  const totalRet = ranking.reduce((s,[,d])=>s+d.retoque,0);
+
+  let html = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--green)">${totalBicis}</div><div class="tbl-stat-mini-lbl">Total bicis</div></div>
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--blue)">${totalKit}</div><div class="tbl-stat-mini-lbl">De kit</div></div>
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--purple)">${totalPre}</div><div class="tbl-stat-mini-lbl">Prearmadas</div></div>
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--text2)">${totalRet}</div><div class="tbl-stat-mini-lbl">Retoques</div></div>
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--orange)">${ranking.length}</div><div class="tbl-stat-mini-lbl">Armadores</div></div>
+    </div>`;
+
+  ranking.forEach(([nombre, datos], idx) => {
+    const pos = idx + 1;
+    const medalla = medallas[idx] || `#${pos}`;
+    const colorPos = coloresPod[idx] || 'var(--text3)';
+    const pct = Math.round((datos.bicis / maxBicis) * 100);
+    const detalleItems = Object.entries(datos.detalle)
+      .sort((a,b)=>b[1].total-a[1].total)
+      .map(([modelo, d]) => `
+        <span class="tbl-pill">
+          🚲 ${modelo} <strong style="color:var(--text);margin-left:3px">${d.total}</strong>
+          ${d.kit?`<span style="color:var(--blue);font-size:10px"> · ${d.kit}kit</span>`:''}
+          ${d.pre?`<span style="color:var(--purple);font-size:10px"> · ${d.pre}pre</span>`:''}
+          ${d.ret?`<span style="color:var(--text3);font-size:10px"> · ${d.ret}ret</span>`:''}
+        </span>`).join('');
+
+    html += `
+      <div class="tbl-rank-card" style="${idx===0?'border-color:var(--yellow);background:rgba(255,193,7,.05)':idx===1?'border-color:var(--text3)':idx===2?'border-color:#cd7f32':''}">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div class="tbl-rank-pos" style="color:${colorPos}">${medalla}</div>
+          <div style="flex:1;min-width:180px">
+            <div class="tbl-rank-name">${nombre}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              ${datos.kit?`<span style="font-size:11px;color:var(--blue);font-weight:700">📦 ${datos.kit} kit</span>`:''}
+              ${datos.prearmada?`<span style="font-size:11px;color:var(--purple);font-weight:700">🚲 ${datos.prearmada} pre</span>`:''}
+              ${datos.retoque?`<span style="font-size:11px;color:var(--text2);font-weight:700">✨ ${datos.retoque} ret</span>`:''}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="tbl-rank-total">${datos.bicis}</div>
+            <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)">bicicleta${datos.bicis!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="tbl-rank-bar"><div class="tbl-rank-bar-fill" style="width:${pct}%"></div></div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:2px">${detalleItems}</div>
+      </div>`;
+  });
+
+  cont.innerHTML = html;
 }
 
 // ════════════════════════════════════════════════════════════
