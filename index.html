@@ -1064,7 +1064,7 @@ input[type=file]{display:none;}
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th><input type="checkbox" id="h-check-all" onchange="historialToggleAll(this)" style="accent-color:var(--orange);width:15px;height:15px"></th><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
+            <thead><tr><th><input type="checkbox" id="h-check-all" onchange="historialToggleAll(this)" style="accent-color:var(--orange);width:15px;height:15px"></th><th>#</th><th>Fecha</th><th>Cliente</th><th>Marca/Modelo</th><th>Talle</th><th>Rodado</th><th>Color</th><th>Cant.</th><th>Armador 1</th><th>Armador 2</th><th>N° Cuadro</th><th>Tipo Arm.</th><th>⏱ Tiempo</th><th>Destino</th><th>Estado</th><th>Comisión</th></tr></thead>
             <tbody id="t-historial"></tbody>
           </table>
         </div>
@@ -1210,7 +1210,7 @@ input[type=file]{display:none;}
       ⚠️ <strong>¡N° de Cuadro ya registrado en la base de datos!</strong><br>
       Este cuadro ya tiene un armado previo para el salón. Se cambió automáticamente a <strong>✨ Retoque Final</strong> — no se sumará comisión a este armador.
     </div>
-    <!-- Observaciones para devolución (oculto por defecto, se muestra al hacer clic en Sin Stock) -->
+    <!-- Sin Stock (solo visible cuando se llega desde el botón Sin Stock) -->
     <div id="sinstock-obs-wrap" style="display:none;margin-top:14px;background:rgba(255,61,61,.07);border:1px solid rgba(255,61,61,.3);border-radius:4px;padding:14px">
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px">❌ DEVOLVER POR FALTA DE STOCK</div>
       <div class="fld">
@@ -1218,13 +1218,12 @@ input[type=file]{display:none;}
         <textarea id="sinstock-obs" rows="3" placeholder="Indicá el motivo: qué modelo/color/talle no hay en stock, qué alternativa hay, etc." style="resize:vertical;min-height:70px"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="cancelarSinStock()" style="flex:0 0 auto">Cancelar</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-completar')" style="flex:0 0 auto">Cerrar</button>
         <button class="btn btn-r" style="flex:1" onclick="confirmarDevolverSinStock()">❌ CONFIRMAR DEVOLUCIÓN</button>
       </div>
     </div>
     <div id="completar-actions" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-      <button class="btn btn-ghost" onclick="closeModal('modal-completar')">Cancelar</button>
-      <button class="btn btn-r btn-sm" onclick="mostrarSinStockForm()" style="padding:12px 14px">❌ Sin Stock</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-completar')">Cerrar</button>
       <button class="btn btn-g" style="flex:1" onclick="confirmarCompletado()">🎉 COMPLETADO</button>
     </div>
   </div>
@@ -1289,19 +1288,25 @@ input[type=file]{display:none;}
     <div style="background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.3);border-radius:3px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--yellow)">
       ⚠️ Si cambiás el modelo, la comisión del armador se recalcula automáticamente con el nuevo modelo.
     </div>
-    <!-- Motivo cancelación (se muestra al hacer click en Cancelar Orden) -->
-    <div id="cancel-motivo-wrap" style="display:none;background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:14px;margin-bottom:14px">
-      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:8px">⚠️ Motivo de cancelación <span style="color:var(--red)">★ obligatorio</span></div>
-      <input type="text" id="cancel-motivo-input" placeholder="Describí el motivo de la cancelación..." style="background:var(--bg3);border:1px solid var(--red);color:var(--text);padding:11px 13px;border-radius:3px;font-size:14px;width:100%;outline:none;font-family:Barlow,sans-serif">
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-ghost btn-sm" onclick="ocultarCancelMotivo()">← Volver</button>
-        <button class="btn btn-r" style="flex:1" onclick="confirmarCancelacion()">🗑️ CONFIRMAR CANCELACIÓN</button>
-      </div>
-    </div>
     <div id="editar-actions" style="display:flex;gap:10px">
       <button class="btn btn-ghost" onclick="closeModal('modal-editar')">Cerrar</button>
-      <button class="btn btn-r btn-sm" onclick="mostrarCancelMotivo()" style="padding:12px 18px">🗑️ Cancelar Orden</button>
       <button class="btn btn-o" style="flex:1" onclick="confirmarEdicion()">✅ GUARDAR CAMBIOS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANCELAR ORDEN -->
+<div id="modal-cancelar" class="modal-bg">
+  <div class="modal" style="max-width:420px">
+    <h3 style="color:var(--red)">🗑️ Cancelar Orden</h3>
+    <p id="modal-cancelar-info" style="color:var(--text2);font-size:13px;margin-bottom:16px"></p>
+    <div class="fld" style="margin-bottom:16px">
+      <label>Motivo de cancelación <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
+      <input type="text" id="cancel-motivo-input" placeholder="Describí el motivo de la cancelación..." style="background:var(--bg3);border:1px solid var(--red);color:var(--text);padding:13px;border-radius:3px;font-size:14px;width:100%;outline:none;font-family:Barlow,sans-serif;margin-top:6px">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cancelar')">Cerrar</button>
+      <button class="btn btn-r" style="flex:1" onclick="confirmarCancelacion()">🗑️ CONFIRMAR CANCELACIÓN</button>
     </div>
   </div>
 </div>
@@ -2503,8 +2508,9 @@ function renderOcards(contId, lista, tipo) {
 function renderLocales(locales) {
   const cont = document.getElementById('t-local-lista');
   if (!cont) return;
-  if (!locales.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">⭐</div>Sin clientes en el local</div>'; return; }
-  const sorted = locales.sort((a,b) => {
+  const activos = locales.filter(o => o.estado !== 'cancelada');
+  if (!activos.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">⭐</div>Sin clientes en el local</div>'; return; }
+  const sorted = activos.sort((a,b) => {
     const prio = o => o.prioridad==='inmediato' ? 0 : o.prioridad ? 1 : 2;
     return prio(a) - prio(b) || new Date(a.fechaCreacion) - new Date(b.fechaCreacion);
   });
@@ -2775,29 +2781,9 @@ function abrirCancelarDirecto(id) {
   ordenEditarId = id;
   const o = DB.ordenes.find(x => x.id===id);
   if (!o) return;
-  // Mostrar modal de editar pero directo en modo cancelación
-  document.getElementById('modal-editar-info').textContent = `Orden #${o.id} · ${o.marca} ${o.modelo}${o.cliente ? ' · ' + o.cliente : ''}`;
-  document.getElementById('cancel-motivo-wrap').style.display = 'block';
-  document.getElementById('editar-actions').style.display = 'none';
+  document.getElementById('modal-cancelar-info').textContent = `Orden #${o.id} · ${o.marca} ${o.modelo}${o.cliente ? ' · Cliente: ' + o.cliente : ''}`;
   document.getElementById('cancel-motivo-input').value = '';
-  // Rellenar selects mínimos para que confirmarEdicion no falle si el usuario cierra sin cancelar
-  fillMarcasSelect('e-marca');
-  document.getElementById('e-marca').value = o.marca;
-  fillModelosSelect('e-modelo', o.marca);
-  document.getElementById('e-modelo').value = o.modelo;
-  fillVariants('e-talle','e-rodado','e-color', o.marca, o.modelo);
-  document.getElementById('e-talle').value = o.talle || '';
-  document.getElementById('e-rodado').value = o.rodado || '';
-  document.getElementById('e-color').value = o.color || '';
-  document.getElementById('e-cantidad').value = o.cantidad;
-  document.getElementById('e-cliente').value = o.cliente || '';
-  document.getElementById('e-cuadro').value = o.cuadro || '';
-  document.getElementById('e-obs').value = o.obs || '';
-  const selA = document.getElementById('e-armador');
-  selA.innerHTML = '<option value="">— Sin asignar —</option>';
-  DB.armadores.forEach(a => selA.innerHTML += `<option value="${a}">${a}</option>`);
-  selA.value = o.armador || '';
-  document.getElementById('modal-editar').classList.add('on');
+  document.getElementById('modal-cancelar').classList.add('on');
   setTimeout(() => document.getElementById('cancel-motivo-input').focus(), 100);
 }
 
@@ -2947,7 +2933,7 @@ async function confirmarCancelacion() {
   const o = DB.ordenes.find(x => x.id===ordenEditarId);
   if (o) { o.estado = 'cancelada'; o.motivoCancelacion = motivo; o.fechaCompletado = new Date().toISOString(); }
   await saveKey('ordenes');
-  ocultarCancelMotivo();
+  closeModal('modal-cancelar');
   closeModal('modal-editar');
   tRenderAll(); vRenderOrdenes();
   toast('🗑️ Orden cancelada','var(--red)');
@@ -3602,18 +3588,20 @@ function getOrdenesDelPeriodo() {
 function renderReporte() {
   const cont = document.getElementById('reporte-body');
   const lbl  = document.getElementById('periodo-label');
-  const { ordenes: periodo, label } = getOrdenesDelPeriodo();
+  const { ordenes: periodoTodo, label } = getOrdenesDelPeriodo();
   if (lbl) lbl.textContent = label ? `Mostrando: ${label}` : '';
 
-  if (!periodo.length) {
+  // Para el reporte de comisiones solo contamos las que generan comisión
+  const periodo = periodoTodo.filter(o => !o.comisionDuplicada && !o.esRetoque && o.tipoArmado !== 'retoque');
+
+  if (!periodoTodo.length) {
     cont.innerHTML='<div class="empty"><div class="empty-icon">📊</div>Sin datos para el período seleccionado</div>';
     return;
   }
 
-  // stats globales
+  // stats globales (solo comisión)
   const totalBicis  = periodo.reduce((s,o)=>s+o.cantidad,0);
   const totalPago   = periodo.reduce((s,o)=>s+comisionOrden(o),0);
-  const ventasCount = periodo.filter(o=>!o.esSalon).reduce((s,o)=>s+o.cantidad,0);
   const salonCount  = periodo.filter(o=>o.esSalon).reduce((s,o)=>s+o.cantidad,0);
   const localCount2 = periodo.filter(o=>!o.esSalon && o.destino==='local').reduce((s,o)=>s+o.cantidad,0);
   const envioCount  = periodo.filter(o=>!o.esSalon && o.destino==='envio').reduce((s,o)=>s+o.cantidad,0);
@@ -3701,20 +3689,13 @@ function renderReporte() {
           <div class="rcard-head">
             <div>
               <div class="rcard-name">🔧 ${nombre}</div>
-              <div style="margin-top:4px;font-size:13px;color:var(--text2)">
-                <strong style="color:var(--text);font-size:15px">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)}</strong> bicis totales
-                <span style="color:var(--border2);margin:0 4px">·</span>
-                <span style="color:var(--purple)">🏪 ${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} exhibición</span>
-                <span style="color:var(--border2);margin:0 4px">·</span>
-                <span style="color:var(--orange)">⭐ ${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} en local</span>
-                <span style="color:var(--border2);margin:0 4px">·</span>
-                <span style="color:var(--yellow)">🚚 ${Number.isInteger(r.envio)?r.envio:r.envio.toFixed(1)} envíos</span>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-                <span class="badge badge-b">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis</span>
-                <span class="badge badge-g">${Number.isInteger(r.ventas)?r.ventas:r.ventas.toFixed(1)} ventas</span>
-                ${r.local>0?`<span class="badge badge-local">${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} local</span>`:''}
-                <span class="badge badge-p">${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} salón</span>
+              <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                <span style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text2)">
+                  <strong style="color:var(--text);font-size:14px">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)}</strong> bicis con comisión
+                </span>
+                ${r.salon>0?`<span style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text2)">🏪 <strong style="color:var(--text)">${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)}</strong> exhibición</span>`:''}
+                ${r.local>0?`<span style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text2)">⭐ <strong style="color:var(--text)">${Number.isInteger(r.local)?r.local:r.local.toFixed(1)}</strong> en local</span>`:''}
+                ${r.envio>0?`<span style="background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text2)">🚚 <strong style="color:var(--text)">${Number.isInteger(r.envio)?r.envio:r.envio.toFixed(1)}</strong> envíos</span>`:''}
               </div>
             </div>
             <div class="rcard-total">$${r.total.toLocaleString('es-AR')}</div>
@@ -3817,14 +3798,30 @@ function renderHistorial() {
   if (btnBorrar) btnBorrar.style.display = 'none';
 
   tbody.innerHTML = lista.map(o=>{
-    // tiempo armado (solo admin puede verlo — siempre se renderiza aquí)
+    const esCancelada = o.estado === 'cancelada';
     const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
-    const tipoStr = o.esRetoque ? '✨ Retoque' : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.') : '—';
-    const arm2Str = (o.tipoArmado==='kit' && o.armador2) ? `<br><span style="font-size:11px;color:var(--text2)">+${o.armador2}</span>` : '';
-    const destinoStr = o.esSalon ? '<span class="badge badge-p">Salón</span>' : (o.destino==='local'?'<span class="badge badge-local">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env">🚚 Envío</span>':'<span class="badge badge-sal">🏪 Salón</span>');
-    const comStr = o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>' : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
+    // Tipo armado: vacío si cancelada
+    const tipoStr = esCancelada ? '<span style="color:var(--text3)">—</span>'
+      : o.esRetoque ? '✨ Retoque'
+      : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.')
+      : '—';
+    // Armador 1 y Armador 2: si kit con mismo armador, arm2 vacío
+    const esKitDos = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+    const arm1Cell = o.armador || '<span style="color:var(--text3)">—</span>';
+    const arm2Cell = esKitDos ? `<strong>${o.armador2}</strong>` : '<span style="color:var(--text3)">—</span>';
+    // Destino: vacío si cancelada
+    let destinoStr = '<span style="color:var(--text3)">—</span>';
+    if (!esCancelada) {
+      if (o.esSalon) destinoStr = '<span class="badge badge-p">🏪 Salón</span>';
+      else if (o.destino==='local') destinoStr = '<span class="badge badge-local">⭐ Local</span>';
+      else if (o.destino==='envio') destinoStr = '<span class="badge badge-env">🚚 Envío</span>';
+      else destinoStr = '<span class="badge badge-sal">🏪 Salón</span>';
+    }
+    const comStr = esCancelada ? '<span style="color:var(--text3)">—</span>'
+      : o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>'
+      : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
     return `
-    <tr>
+    <tr${esCancelada?' style="opacity:.6"':''}>
       <td><input type="checkbox" class="h-row-check" data-id="${o.id}" onchange="historialCheckChange()" style="accent-color:var(--orange);width:15px;height:15px"></td>
       <td style="color:var(--text2)">#${o.id}</td>
       <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
@@ -3834,7 +3831,8 @@ function renderHistorial() {
       <td>${o.rodado||'<span style="color:var(--text3)">—</span>'}</td>
       <td>${o.color}</td>
       <td style="text-align:center"><strong>${o.cantidad}</strong></td>
-      <td>${o.armador||'<span style="color:var(--text3)">—</span>'}${arm2Str}</td>
+      <td>${arm1Cell}</td>
+      <td>${arm2Cell}</td>
       <td style="font-family:monospace;font-size:12px">${o.cuadro||'<span style="color:var(--text3)">—</span>'}</td>
       <td>${tipoStr}</td>
       <td style="color:var(--blue);font-size:12px">${tiempoStr}</td>
@@ -3874,29 +3872,32 @@ async function borrarOrdenesSeleccionadas() {
 }
 
 function exportarHistorial() {
-  const datos = [...DB.ordenes].sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).map(o=>({
-    'N° Orden': o.id,
-    Fecha: fmtFecha(o.fechaCreacion),
-    Hora: fmtHora(o.fechaCreacion),
-    Cliente: o.cliente||'-',
-    Marca: o.marca, Modelo: o.modelo,
-    Talle: o.talle||'-', Rodado: o.rodado||'-', Color: o.color,
-    Cantidad: o.cantidad,
-    Armador: o.armador||'-',
-    'N° Cuadro': o.cuadro||'-',
-    'Tipo Armado': o.tipoArmado||'-',
-    'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
-    Destino: o.destino||'salon',
-    Observaciones: o.obs||'-',
-    Tipo: o.esSalon?'Salón':'Venta',
-    Estado: o.estado,
-    'Fecha Completado': o.fechaCompletado ? fmtFecha(o.fechaCompletado) : '-',
-    'Com. Kit ($)': (DB.comisionesKit||{})[`${o.marca}|${o.modelo}`]||0,
-    'Com. Prearmada ($)': (DB.comisionesPre||{})[`${o.marca}|${o.modelo}`]||0,
-    Prioridad: o.prioridadLabel || '-',
-    'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
-    'Total Comisión ($)': comisionOrden(o),
-  }));
+  const datos = [...DB.ordenes].sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion)).map(o=>{
+    const esCancelada = o.estado === 'cancelada';
+    const esKitDos = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+    return {
+      'N° Orden': o.id,
+      Fecha: fmtFecha(o.fechaCreacion),
+      Hora: fmtHora(o.fechaCreacion),
+      Cliente: o.cliente||'-',
+      Marca: o.marca, Modelo: o.modelo,
+      Talle: o.talle||'-', Rodado: o.rodado||'-', Color: o.color,
+      Cantidad: o.cantidad,
+      'Armador 1': o.armador||'-',
+      'Armador 2': esKitDos ? o.armador2 : '-',
+      'N° Cuadro': o.cuadro||'-',
+      'Tipo Armado': esCancelada ? '-' : (o.tipoArmado||'-'),
+      'Tiempo Armado (min)': o.tiempoArmadoMin ?? '-',
+      Destino: esCancelada ? '-' : (o.esSalon ? 'Salón exhibición' : o.destino==='local' ? '⭐ Cliente en Local' : o.destino==='envio' ? '🚚 Envío' : '-'),
+      Observaciones: o.obs||'-',
+      Estado: o.estado,
+      'Motivo Cancelación': o.motivoCancelacion||'-',
+      'Fecha Completado': o.fechaCompletado ? fmtFecha(o.fechaCompletado) : '-',
+      Prioridad: o.prioridadLabel || '-',
+      'Comisión Duplicada': o.comisionDuplicada ? 'SÍ (no cobrar)' : 'No',
+      'Total Comisión ($)': esCancelada ? 0 : comisionOrden(o),
+    };
+  });
   exportXlsx([{name:'Historial Completo', data:datos}], 'historial_completo.xlsx');
   toast('⬇️ Historial exportado');
 }
