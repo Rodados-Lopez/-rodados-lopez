@@ -771,6 +771,10 @@ input[type=file]{display:none;}
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos de Bicicletas</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-ghost btn-sm" onclick="renderBD(&#39;t&#39;)">🔄 Actualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearBDFiltros(&#39;t&#39;)" style="color:var(--text3)">✕ Borrar Filtros</button>
+          </div>
         </div>
         <!-- FILTROS -->
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
@@ -819,7 +823,9 @@ input[type=file]{display:none;}
         <!-- Filtros período -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
           <div class="ptitle" style="margin:0;border:none;padding:0;color:var(--blue)">📊 Tablero de Armadores</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block"></span>EN VIVO</span>
+            <button class="btn btn-ghost btn-sm" onclick="renderTableroCuadro()">🔄 Actualizar</button>
             <button class="btn btn-sm tbln-btn tbln-on" id="tbl-btn-hoy"    onclick="tblSetPeriodo('hoy')">Hoy</button>
             <button class="btn btn-sm tbln-btn" id="tbl-btn-semana" onclick="tblSetPeriodo('semana')">Semana</button>
             <button class="btn btn-sm tbln-btn" id="tbl-btn-mes"    onclick="tblSetPeriodo('mes')">Mes</button>
@@ -994,7 +1000,8 @@ input[type=file]{display:none;}
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
           <div class="ptitle" style="margin:0;border:none;padding:0">📊 Reportes</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block"></span>EN VIVO</span>
             <button class="btn btn-ghost btn-sm" onclick="renderReporte()">🔄 Actualizar</button>
             <button class="btn btn-b btn-sm" onclick="exportarReporteSemanal()">⬇️ Exportar Excel</button>
             <button class="btn btn-r btn-sm" onclick="confirmarReset()">🗑️ Resetear Período</button>
@@ -1033,7 +1040,10 @@ input[type=file]{display:none;}
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">📁 Historial Completo</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block"></span>EN VIVO</span>
+            <button class="btn btn-ghost btn-sm" onclick="renderHistorial()">🔄 Actualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearHistorialFiltros()" style="color:var(--text3)">✕ Borrar Filtros</button>
             <button class="btn btn-b btn-sm" onclick="exportarHistorial()">⬇️ Exportar Todo</button>
             <button class="btn btn-r btn-sm" id="btn-borrar-seleccionados" onclick="borrarOrdenesSeleccionadas()" style="display:none">🗑️ Borrar Seleccionados</button>
           </div>
@@ -1104,7 +1114,12 @@ input[type=file]{display:none;}
       <div class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <div class="ptitle" style="margin:0;border:none;padding:0">🗄️ Base de Datos de Bicicletas</div>
-          <button class="btn btn-b btn-sm" onclick="exportarBD()">⬇️ Exportar Excel</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block"></span>EN VIVO</span>
+            <button class="btn btn-ghost btn-sm" onclick="renderBD('a')">🔄 Actualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearBDFiltros('a')" style="color:var(--text3)">✕ Borrar Filtros</button>
+            <button class="btn btn-b btn-sm" onclick="exportarBD()">⬇️ Exportar Excel</button>
+          </div>
         </div>
         <!-- FILTROS -->
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:16px">
@@ -1743,7 +1758,8 @@ function startPolling() {
     if (autoEntregaHecha) saveKey('ordenes');
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
-    if (isScreen('taller'))   { tRenderAll(); if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro(); }
+    if (isScreen('taller'))   { tRenderAll(); if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro(); if (document.getElementById('bd-tab-t')?.classList.contains('on')) renderBD('t'); }
+    if (isScreen('admin'))    { adminAutoRefresh(); }
   });
 
   // Escuchar sinStockAlertas en tiempo real
@@ -2402,8 +2418,8 @@ function tRenderAll() {
   const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
   const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
   const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
-  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada');
-  const localPend = locales.filter(o=>o.estado!=='completada' && o.estado!=='cancelada').length;
+  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada' && o.estado!=='sin-stock');
+  const localPend = locales.filter(o=>o.estado!=='completada' && o.estado!=='cancelada' && o.estado!=='sin-stock').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
 
@@ -2985,7 +3001,21 @@ function checkCuadroDuplicadoSalon(cuadro) {
   const warn = document.getElementById('dup-warning-salon');
   if (!warn) return;
   if (!val) { warn.style.display = 'none'; return; }
-  const existe = DB.ordenes.some(o => o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada');
+  // Cruzar contra salón (completadas o en cualquier estado con ese cuadro)
+  const existeEnSalon = DB.ordenes.some(o =>
+    o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada'
+  );
+  // Cruzar contra órdenes de venta completadas
+  const existeEnVenta = DB.ordenes.some(o =>
+    !o.esSalon && o.cuadro && o.cuadro.toLowerCase() === val.toLowerCase() && o.estado === 'completada'
+  );
+  const existe = existeEnSalon || existeEnVenta;
+  if (existe) {
+    const donde = existeEnSalon && existeEnVenta ? 'en salón y en una orden de venta'
+      : existeEnSalon ? 'en el salón' : 'en una orden de venta';
+    warn.innerHTML = `⚠️ <strong>¡N° de cuadro ya registrado ${donde}!</strong><br>
+      Si es un retoque final, seleccioná ese tipo de armado — no se sumará comisión.`;
+  }
   warn.style.display = existe ? 'block' : 'none';
 }
 
@@ -3799,9 +3829,11 @@ function renderHistorial() {
 
   tbody.innerHTML = lista.map(o=>{
     const esCancelada = o.estado === 'cancelada';
+    const esSinStock  = o.estado === 'sin-stock';
+    const sinTipoDestino = esCancelada || esSinStock;
     const tiempoStr = o.tiempoArmadoMin != null ? `${o.tiempoArmadoMin} min` : '—';
-    // Tipo armado: vacío si cancelada
-    const tipoStr = esCancelada ? '<span style="color:var(--text3)">—</span>'
+    // Tipo armado: vacío si cancelada o sin-stock
+    const tipoStr = sinTipoDestino ? '<span style="color:var(--text3)">—</span>'
       : o.esRetoque ? '✨ Retoque'
       : o.tipoArmado ? (o.tipoArmado==='kit'?'📦 Kit':'🚲 Prearm.')
       : '—';
@@ -3809,19 +3841,19 @@ function renderHistorial() {
     const esKitDos = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
     const arm1Cell = o.armador || '<span style="color:var(--text3)">—</span>';
     const arm2Cell = esKitDos ? `<strong>${o.armador2}</strong>` : '<span style="color:var(--text3)">—</span>';
-    // Destino: vacío si cancelada
+    // Destino: vacío si cancelada o sin-stock
     let destinoStr = '<span style="color:var(--text3)">—</span>';
-    if (!esCancelada) {
-      if (o.esSalon) destinoStr = '<span class="badge badge-p">🏪 Salón</span>';
+    if (!sinTipoDestino) {
+      if (o.esSalon) destinoStr = '<span class="badge badge-p">🏪 Exhibición</span>';
       else if (o.destino==='local') destinoStr = '<span class="badge badge-local">⭐ Local</span>';
       else if (o.destino==='envio') destinoStr = '<span class="badge badge-env">🚚 Envío</span>';
-      else destinoStr = '<span class="badge badge-sal">🏪 Salón</span>';
+      // si no coincide con ninguno, no mostrar nada para evitar "salon" falso
     }
-    const comStr = esCancelada ? '<span style="color:var(--text3)">—</span>'
+    const comStr = sinTipoDestino ? '<span style="color:var(--text3)">—</span>'
       : o.comisionDuplicada ? '<span style="color:var(--red);font-size:11px">⚠️ No aplica<br>(cuadro dup.)</span>'
       : `<strong style="color:var(--green)">$${comisionOrden(o).toLocaleString('es-AR')}</strong>`;
     return `
-    <tr${esCancelada?' style="opacity:.6"':''}>
+    <tr${sinTipoDestino?' style="opacity:.6"':''}>
       <td><input type="checkbox" class="h-row-check" data-id="${o.id}" onchange="historialCheckChange()" style="accent-color:var(--orange);width:15px;height:15px"></td>
       <td style="color:var(--text2)">#${o.id}</td>
       <td style="white-space:nowrap">${fmtFecha(o.fechaCreacion)}<br><span style="font-size:11px;color:var(--text3)">${fmtHora(o.fechaCreacion)}</span></td>
@@ -4344,6 +4376,30 @@ async function srvGuardar(datos, obs) {
 }
 
 // ── GARANTÍAS (admin) ──────────────────────────────────────
+function clearHistorialFiltros() {
+  document.getElementById('h-armador').value = '';
+  document.getElementById('h-marca').value = '';
+  document.getElementById('h-tipo').value = '';
+  document.getElementById('h-estado').value = '';
+  renderHistorial();
+}
+
+function clearBDFiltros(ctx) {
+  const f = (id) => { const el = document.getElementById(id); if (el) el.value = ''; };
+  f(`bd-${ctx}-f-cliente`); f(`bd-${ctx}-f-armador`); f(`bd-${ctx}-f-cuadro`); f(`bd-${ctx}-f-tipo`);
+  renderBD(ctx);
+}
+
+// Auto-refresh admin panels when Firebase pushes data
+function adminAutoRefresh() {
+  // Reportes
+  if (document.getElementById('a-reportes')?.classList.contains('on')) renderReporte();
+  // Historial
+  if (document.getElementById('a-historial')?.classList.contains('on')) renderHistorial();
+  // BD
+  if (document.getElementById('a-bd')?.classList.contains('on')) renderBD('a');
+}
+
 function initAdmin() {
   renderCatalogo(); renderComisiones(); renderArmadores(); renderUsuarios();
   fillHistorialFiltros(); renderHistorial();
