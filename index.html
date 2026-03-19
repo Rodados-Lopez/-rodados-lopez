@@ -1558,26 +1558,30 @@ let _enviandoOrden   = false;  // vendedor: evita doble envío
 let _registrandoBici = false;  // taller salón: evita doble registro
 let _completandoBici = false;  // taller: evita doble finalización
 
-// ════════════════════════════════════════════════════════════
-//  SISTEMA OFFLINE — localStorage como buffer
-// ════════════════════════════════════════════════════════════
-const OFFLINE_DB_KEY    = 'rl_offline_db_v2';
-const OFFLINE_QUEUE_KEY = 'rl_offline_queue_v2';
+// ── COLA OFFLINE ──────────────────────────────────────────
+const OFFLINE_QUEUE_KEY = 'rl_offline_queue';
+const OFFLINE_DB_KEY    = 'rl_offline_db';
 let   isOnline          = navigator.onLine;
 let   syncInProgress    = false;
 
-function _lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
-function _lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-
-function saveOfflineDB()  { _lsSet(OFFLINE_DB_KEY, DB); }
-function loadOfflineDB()  {
-  const saved = _lsGet(OFFLINE_DB_KEY);
-  if (!saved) return false;
-  Object.keys(saved).forEach(k => { if (saved[k] !== undefined) DB[k] = saved[k]; });
-  return true;
+function getOfflineQueue() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch { return []; }
 }
-function getOfflineQueue() { return _lsGet(OFFLINE_QUEUE_KEY) || []; }
-function setOfflineQueue(q) { _lsSet(OFFLINE_QUEUE_KEY, q); }
+function setOfflineQueue(q) {
+  try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch {}
+}
+function saveOfflineDB() {
+  try { localStorage.setItem(OFFLINE_DB_KEY, JSON.stringify(DB)); } catch {}
+}
+function loadOfflineDB() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_DB_KEY);
+    if (raw) { const saved = JSON.parse(raw); Object.assign(DB, saved); return true; }
+  } catch {}
+  return false;
+}
+
+// Encolar operación para sincronizar cuando vuelva internet
 function queueOfflineOp(key) {
   const q = getOfflineQueue();
   if (!q.includes(key)) q.push(key);
@@ -1585,90 +1589,91 @@ function queueOfflineOp(key) {
   saveOfflineDB();
 }
 
-// ── saveKey: único punto de escritura a Firebase ──
-async function saveKey(key) {
-  // Siempre actualizar copia local primero
-  saveOfflineDB();
-  if (!isOnline) {
-    queueOfflineOp(key);
-    updateConnectionBadge();
-    return; // OK — guardado localmente, se sincroniza cuando vuelva internet
-  }
+// saveKey con soporte offline
+const _originalSaveKey = async function(key) {
   try {
     await fbDB.ref(key).set(DB[key]);
-    // éxito: si había cola para esta key, limpiarla
-    const q = getOfflineQueue().filter(k => k !== key);
-    setOfflineQueue(q);
+    return true;
   } catch(e) {
-    console.warn('Firebase save error — guardando offline:', key, e);
+    console.warn('Firebase save error (offline?):', key, e);
+    return false;
+  }
+};
+
+async function saveKey(key) {
+  if (!isOnline) {
+    // Guardar localmente y encolar
     queueOfflineOp(key);
     updateConnectionBadge();
+    return;
+  }
+  const ok = await _originalSaveKey(key);
+  if (!ok) {
+    queueOfflineOp(key);
+    updateConnectionBadge();
+    toast('📶 Sin internet — guardado localmente','var(--yellow)');
+  } else {
+    saveOfflineDB(); // mantener copia local actualizada
   }
 }
 
-async function saveAll() {
-  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
-  for (const k of keys) await saveKey(k);
-}
-
-// ── Sincronizar cola cuando vuelve internet ──
+// Sincronizar cola pendiente cuando vuelve internet
 async function syncOfflineQueue() {
   if (syncInProgress) return;
   const q = getOfflineQueue();
-  if (!q.length) { updateConnectionBadge(); return; }
+  if (!q.length) return;
   syncInProgress = true;
   updateConnectionBadge();
-  toast('🔄 Sincronizando datos pendientes...', 'var(--blue)');
-  const pending = [...new Set(q)];
-  const failed = [];
-  for (const key of pending) {
-    try { await fbDB.ref(key).set(DB[key]); }
-    catch(e) { console.error('Sync failed:', key, e); failed.push(key); }
+  toast('🔄 Sincronizando datos pendientes...','var(--blue)');
+  let allOk = true;
+  const pendingKeys = [...new Set(q)]; // deduplicar
+  for (const key of pendingKeys) {
+    try {
+      await fbDB.ref(key).set(DB[key]);
+    } catch(e) {
+      console.error('Sync error for key:', key, e);
+      allOk = false;
+    }
   }
-  setOfflineQueue(failed);
+  if (allOk) {
+    setOfflineQueue([]);
+    toast('✅ Todo sincronizado con la nube','var(--green)');
+  } else {
+    toast('⚠️ Algunos datos no pudieron sincronizarse','var(--red)');
+  }
   syncInProgress = false;
   updateConnectionBadge();
-  if (!failed.length) toast('✅ Todo sincronizado con la nube', 'var(--green)');
-  else toast('⚠️ Algunos datos no pudieron sincronizarse', 'var(--red)');
 }
 
 function updateConnectionBadge() {
   const q = getOfflineQueue();
   const pending = q.length > 0;
-  const color = !isOnline ? 'var(--red)' : pending ? 'var(--yellow)' : 'var(--green)';
-  const label = !isOnline ? '📶 OFFLINE' : pending ? '🔄 SYNC...' : 'EN VIVO';
-  document.querySelectorAll('.sync-dot').forEach(d => {
-    d.style.background = color;
-    d.style.animation = (!isOnline || pending) ? 'blink .5s infinite' : 'blink 2s infinite';
+  // Actualizar todos los indicadores de conexión en la UI
+  document.querySelectorAll('.sync-dot').forEach(dot => {
+    dot.style.background = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
+    dot.style.animation = pending ? 'blink .5s infinite' : 'blink 2s infinite';
   });
-  document.querySelectorAll('.live-badge').forEach(b => {
-    b.style.color = color; b.style.borderColor = color;
-    // Preservar el ::before dot via CSS — solo cambiar el texto si es el live-badge de header
-    if (b.textContent.includes('EN VIVO') || b.textContent.includes('OFFLINE') || b.textContent.includes('SYNC')) {
-      b.textContent = label;
-    }
+  document.querySelectorAll('.live-badge').forEach(badge => {
+    badge.style.color = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
+    badge.style.borderColor = badge.style.color;
+    badge.textContent = !isOnline ? '📶 OFFLINE' : (pending ? '🔄 SYNC...' : 'EN VIVO');
+    badge.style.display = 'flex';
+    badge.style.alignItems = 'center';
+    badge.style.gap = '5px';
   });
 }
 
+// Listeners de conexión
 window.addEventListener('online', async () => {
   isOnline = true;
   updateConnectionBadge();
-  toast('✅ Conexión restaurada — sincronizando...', 'var(--green)');
-  // Recargar datos frescos de Firebase antes de sincronizar para evitar pisar datos nuevos
-  try {
-    await loadDB();
-    saveOfflineDB();
-  } catch(e) { /* si falla, igual intenta sincronizar con lo que hay */ }
+  toast('✅ Conexión restaurada — sincronizando...','var(--green)');
   await syncOfflineQueue();
-  // Refrescar UI
-  if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
-  if (isScreen('taller'))   tRenderAll();
-  if (isScreen('admin'))    adminAutoRefresh();
 });
 window.addEventListener('offline', () => {
   isOnline = false;
   updateConnectionBadge();
-  toast('📶 Sin internet — el sistema sigue funcionando offline', 'var(--yellow)');
+  toast('📶 Sin internet — el sistema sigue funcionando offline','var(--yellow)');
 });
 
 // ── INIT FIREBASE ──
@@ -1676,8 +1681,6 @@ function initFirebase() {
   try {
     fbApp = firebase.initializeApp(FIREBASE_CONFIG);
     fbDB  = firebase.database();
-    // Configurar Firebase para persistencia offline (IndexedDB local)
-    try { fbDB.ref('.info/connected'); } catch {}
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -1711,7 +1714,19 @@ async function loadDB() {
   if (!DB.armadores.length)               DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
   if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
   if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
-  if (!DB.services)                       DB.services   = [];
+  if (!DB.services)                       DB.services = [];
+}
+
+// ── SAVE: escritura de una clave ──
+async function saveKey(key) {
+  try {
+    await fbDB.ref(key).set(DB[key]);
+  } catch(e) { console.error('Firebase save error:', key, e); toast('⚠️ Error guardando datos','var(--red)'); }
+}
+
+async function saveAll() {
+  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  await Promise.all(keys.map(k => saveKey(k)));
 }
 
 // ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
@@ -4660,12 +4675,13 @@ function renderTableroCuadro() {
 
   const ok = initFirebase();
   if (!ok) {
+    // Intentar cargar desde caché local
     if (loadOfflineDB()) {
       document.getElementById('loader').style.display = 'none';
       document.getElementById('screen-inicio').style.display = 'flex';
       isOnline = false;
       updateConnectionBadge();
-      toast('📶 Firebase no disponible — trabajando con datos locales', 'var(--yellow)');
+      toast('📶 Firebase no disponible — trabajando con datos locales','var(--yellow)');
       startPolling();
     } else {
       document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Error al conectar con Firebase. Verificá la configuración.</p>';
@@ -4673,45 +4689,22 @@ function renderTableroCuadro() {
     return;
   }
 
-  // Detectar conectividad intentando leer de Firebase directamente
-  let hayInternet = navigator.onLine;
-  if (hayInternet) {
-    // Verificar con un read real con timeout de 6 segundos
-    hayInternet = await Promise.race([
-      fbDB.ref('counter').once('value').then(() => true).catch(() => false),
-      new Promise(resolve => setTimeout(() => resolve(false), 6000))
-    ]);
-  }
-
-  if (!hayInternet) {
-    // Sin internet: cargar desde caché local
-    isOnline = false;
+  // Verificar conectividad real antes de cargar
+  try {
+    await loadDB();
+    saveOfflineDB(); // guardar copia local tras carga exitosa
+  } catch(e) {
+    // Sin internet: usar caché local si existe
     if (loadOfflineDB()) {
-      document.getElementById('loader').style.display = 'none';
-      document.getElementById('screen-inicio').style.display = 'flex';
-      updateConnectionBadge();
-      toast('📶 Sin internet — trabajando con datos guardados localmente', 'var(--yellow)');
-      startPolling();
+      toast('📶 Sin internet — cargando datos locales guardados','var(--yellow)');
+      isOnline = false;
     } else {
-      document.getElementById('loader').innerHTML = `
-        <div style="text-align:center;padding:24px;max-width:400px">
-          <div style="font-size:48px;margin-bottom:16px">📶</div>
-          <div style="font-family:Barlow Condensed,sans-serif;font-size:28px;font-weight:800;margin-bottom:8px">Sin conexión</div>
-          <p style="color:var(--text2);font-size:14px;line-height:1.6">No hay internet y no hay datos guardados localmente.<br>Conectate a internet y recargá la página.</p>
-        </div>`;
+      document.getElementById('loader').innerHTML = '<p style="color:var(--red)">❌ Sin conexión y sin datos guardados localmente.</p>';
+      return;
     }
-    return;
   }
-
-  // Con internet: cargar desde Firebase y guardar copia local
-  isOnline = true;
-  await loadDB();
-  saveOfflineDB();
-  // Si había cola pendiente de una sesión anterior offline, sincronizar
-  await syncOfflineQueue();
   document.getElementById('loader').style.display = 'none';
   document.getElementById('screen-inicio').style.display = 'flex';
-  updateConnectionBadge();
   startPolling();
 })();</script>
 </body>
