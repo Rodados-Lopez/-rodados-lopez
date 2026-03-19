@@ -857,7 +857,6 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('a','a-usuarios')">🔐 Usuarios</button>
       <button class="tab" onclick="switchTab('a','a-reportes')">📊 Reportes</button>
       <button class="tab" onclick="switchTab('a','a-historial')">📁 Historial</button>
-      <button class="tab" onclick="switchTab('a','a-garantias')">🛡️ Garantías</button>
       <button class="tab" onclick="switchTab('a','a-bd');renderBD('a')">🗄️ Base de Datos</button>
     </div>
 
@@ -1739,7 +1738,7 @@ function startPolling() {
     if (autoEntregaHecha) saveKey('ordenes');
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
-    if (isScreen('taller'))   tRenderAll();
+    if (isScreen('taller'))   { tRenderAll(); if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro(); }
   });
 
   // Escuchar sinStockAlertas en tiempo real
@@ -2002,9 +2001,11 @@ function switchTab(prefix, id) {
   parent.querySelectorAll('.tab-body').forEach(t => t.classList.remove('on'));
   parent.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  const bodies = parent.querySelectorAll('.tab-body');
-  const tabs = parent.querySelectorAll('.tab');
-  bodies.forEach((b,i) => { if(b.id === id) tabs[i].classList.add('on'); });
+  // Activar el botón tab que corresponde a este id buscando por onclick
+  parent.querySelectorAll('.tab').forEach(t => {
+    const oc = t.getAttribute('onclick') || '';
+    if (oc.includes(`'${id}'`) || oc.includes(`"${id}"`)) t.classList.add('on');
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2397,7 +2398,7 @@ function tRenderAll() {
   const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
   const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
   const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada');
-  const localPend = locales.filter(o=>o.estado!=='completada').length;
+  const localPend = locales.filter(o=>o.estado!=='completada' && o.estado!=='cancelada').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
 
@@ -2488,7 +2489,12 @@ function renderOcards(contId, lista, tipo) {
       </div>
       <div class="ocard-actions">
       ${tipo==='pendiente' ? `<button class="btn btn-g btn-sm" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
-        ${tipo==='en-proceso' ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button><button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>` : ''}
+        ${tipo==='en-proceso' ? `
+          <button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button>
+          <button class="btn btn-r btn-sm" onclick="abrirSinStockDirecto(${o.id})">❌ Sin Stock</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})">✏️ Editar</button>
+          <button class="btn btn-sm" style="background:rgba(255,61,61,.12);color:var(--red);border:1px solid rgba(255,61,61,.35)" onclick="abrirCancelarDirecto(${o.id})">🗑️ Cancelar</button>
+        ` : ''}
       </div>
     </div>
   `).join('');
@@ -2748,6 +2754,53 @@ async function confirmarCompletado() {
 }
 
 // DEVOLVER SIN STOCK — mostrar formulario con obs obligatorio
+function abrirSinStockDirecto(id) {
+  ordenCompletarId = id;
+  const o = DB.ordenes.find(x => x.id===id);
+  if (!o) return;
+  o._tipoArmadoOriginal = o.tipoArmado || 'prearmada';
+  const arm2txt = (o.tipoArmado==='kit' && o.armador2) ? ` + ${o.armador2}` : '';
+  document.getElementById('modal-comp-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — Armador: ${o.armador}${arm2txt}`;
+  document.getElementById('modal-comp-cuadro').value = o.cuadro || '';
+  document.getElementById('dup-warning').style.display = 'none';
+  // Mostrar directamente el formulario sin stock
+  document.getElementById('completar-actions').style.display = 'none';
+  document.getElementById('sinstock-obs-wrap').style.display = 'block';
+  document.getElementById('sinstock-obs').value = '';
+  document.getElementById('modal-completar').classList.add('on');
+  setTimeout(() => document.getElementById('sinstock-obs').focus(), 100);
+}
+
+function abrirCancelarDirecto(id) {
+  ordenEditarId = id;
+  const o = DB.ordenes.find(x => x.id===id);
+  if (!o) return;
+  // Mostrar modal de editar pero directo en modo cancelación
+  document.getElementById('modal-editar-info').textContent = `Orden #${o.id} · ${o.marca} ${o.modelo}${o.cliente ? ' · ' + o.cliente : ''}`;
+  document.getElementById('cancel-motivo-wrap').style.display = 'block';
+  document.getElementById('editar-actions').style.display = 'none';
+  document.getElementById('cancel-motivo-input').value = '';
+  // Rellenar selects mínimos para que confirmarEdicion no falle si el usuario cierra sin cancelar
+  fillMarcasSelect('e-marca');
+  document.getElementById('e-marca').value = o.marca;
+  fillModelosSelect('e-modelo', o.marca);
+  document.getElementById('e-modelo').value = o.modelo;
+  fillVariants('e-talle','e-rodado','e-color', o.marca, o.modelo);
+  document.getElementById('e-talle').value = o.talle || '';
+  document.getElementById('e-rodado').value = o.rodado || '';
+  document.getElementById('e-color').value = o.color || '';
+  document.getElementById('e-cantidad').value = o.cantidad;
+  document.getElementById('e-cliente').value = o.cliente || '';
+  document.getElementById('e-cuadro').value = o.cuadro || '';
+  document.getElementById('e-obs').value = o.obs || '';
+  const selA = document.getElementById('e-armador');
+  selA.innerHTML = '<option value="">— Sin asignar —</option>';
+  DB.armadores.forEach(a => selA.innerHTML += `<option value="${a}">${a}</option>`);
+  selA.value = o.armador || '';
+  document.getElementById('modal-editar').classList.add('on');
+  setTimeout(() => document.getElementById('cancel-motivo-input').focus(), 100);
+}
+
 function mostrarSinStockForm() {
   document.getElementById('sinstock-obs-wrap').style.display = 'block';
   document.getElementById('completar-actions').style.display = 'none';
@@ -3567,7 +3620,7 @@ function renderReporte() {
 
   // por armador
   const porArmador = {};
-  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,local:0,detalle:{}});
+  DB.armadores.forEach(a => porArmador[a]={bicis:0,total:0,ventas:0,salon:0,local:0,envio:0,detalle:{}});
   periodo.forEach(o => {
     const esKitDosArmadores = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
     const esKitMismoArmador = o.tipoArmado === 'kit' && o.armador2 && o.armador2 === o.armador;
@@ -3575,7 +3628,7 @@ function renderReporte() {
     const armadoresUnicos = esKitDosArmadores ? [o.armador, o.armador2] : [o.armador];
     armadoresUnicos.forEach(armNombre => {
       if (!armNombre) return;
-      if (!porArmador[armNombre]) porArmador[armNombre]={bicis:0,total:0,ventas:0,salon:0,detalle:{}};
+      if (!porArmador[armNombre]) porArmador[armNombre]={bicis:0,total:0,ventas:0,salon:0,local:0,envio:0,detalle:{}}; 
       const com = comisionOrden(o, armNombre);
       // Fracción de bici que le corresponde a este armador:
       // - Kit mismo armador (arm1 == arm2): cuenta 1 bici completa y comisión completa
@@ -3584,7 +3637,7 @@ function renderReporte() {
       const fracBici = esKitDosArmadores ? o.cantidad * 0.5 : o.cantidad;
       porArmador[armNombre].bicis += fracBici;
       if (o.esSalon) porArmador[armNombre].salon += fracBici;
-      else { porArmador[armNombre].ventas += fracBici; if (o.destino==='local') porArmador[armNombre].local += fracBici; }
+      else { porArmador[armNombre].ventas += fracBici; if (o.destino==='local') porArmador[armNombre].local += fracBici; if (o.destino==='envio') porArmador[armNombre].envio += fracBici; }
       porArmador[armNombre].total += com;
       const dk = `${o.marca}|${o.modelo}`;
       const tipo = o.tipoArmado || 'prearmada';
@@ -3648,7 +3701,16 @@ function renderReporte() {
           <div class="rcard-head">
             <div>
               <div class="rcard-name">🔧 ${nombre}</div>
-              <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+              <div style="margin-top:4px;font-size:13px;color:var(--text2)">
+                <strong style="color:var(--text);font-size:15px">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)}</strong> bicis totales
+                <span style="color:var(--border2);margin:0 4px">·</span>
+                <span style="color:var(--purple)">🏪 ${Number.isInteger(r.salon)?r.salon:r.salon.toFixed(1)} exhibición</span>
+                <span style="color:var(--border2);margin:0 4px">·</span>
+                <span style="color:var(--orange)">⭐ ${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} en local</span>
+                <span style="color:var(--border2);margin:0 4px">·</span>
+                <span style="color:var(--yellow)">🚚 ${Number.isInteger(r.envio)?r.envio:r.envio.toFixed(1)} envíos</span>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
                 <span class="badge badge-b">${Number.isInteger(r.bicis)?r.bicis:r.bicis.toFixed(1)} bicis</span>
                 <span class="badge badge-g">${Number.isInteger(r.ventas)?r.ventas:r.ventas.toFixed(1)} ventas</span>
                 ${r.local>0?`<span class="badge badge-local">${Number.isInteger(r.local)?r.local:r.local.toFixed(1)} local</span>`:''}
@@ -3740,7 +3802,7 @@ function renderHistorial() {
   const fE = document.getElementById('h-estado').value;
 
   let lista = [...DB.ordenes]
-    .filter(o => !fA || o.armador===fA)
+    .filter(o => !fA || o.armador===fA || o.armador2===fA)
     .filter(o => !fM || o.marca===fM)
     .filter(o => !fT || (fT==='salon'?o.esSalon:!o.esSalon))
     .filter(o => !fE || o.estado===fE)
@@ -3928,19 +3990,58 @@ function renderBD(ctx) {
     // Tipo badge
     let tipoBadge = '';
     if (o.esSalon) {
-      const t = o.esRetoque ? '✨ Retoque' : o.tipoArmado === 'kit' ? '📦 Kit' : '🚲 Prearm.';
+      const t = o.esRetoque ? '✨ Retoque Final' : o.tipoArmado === 'kit' ? '📦 Kit' : '🚲 Prearm.';
       const col = o.esRetoque ? 'var(--green)' : o.tipoArmado === 'kit' ? 'var(--blue)' : 'var(--purple)';
       tipoBadge = `<span class="badge" style="background:transparent;border:1px solid ${col};color:${col};font-size:10px">${t} · Salón</span>`;
     } else if (o.entregada) {
-      tipoBadge = `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>`;
+      tipoBadge = `<span class="badge badge-g" style="font-size:10px">📦 Entregada al cliente</span>`;
     } else if (o.destino === 'envio') {
       tipoBadge = `<span class="badge badge-env" style="font-size:10px">🚚 Envío</span>`;
     } else {
-      tipoBadge = `<span class="badge badge-sal" style="font-size:10px">🏪 Venta Salón</span>`;
+      tipoBadge = `<span class="badge badge-sal" style="font-size:10px">🏪 Venta</span>`;
     }
 
     const arm2 = o.armador2 ? ` <span style="font-size:12px;color:var(--text2)">+ ${o.armador2}</span>` : '';
     const fechaComp = o.fechaCompletado || o.fechaCreacion;
+
+    // Para bicis de salón: buscar si hubo un retoque posterior con mismo cuadro
+    let retoqueInfo = '';
+    if (o.esSalon && !o.esRetoque && o.cuadro) {
+      const retoque = DB.ordenes.find(r =>
+        r.esSalon && r.esRetoque && r.cuadro &&
+        r.cuadro.toLowerCase() === o.cuadro.toLowerCase() &&
+        r.id !== o.id
+      );
+      if (retoque) {
+        retoqueInfo = `
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:4px">✨ RETOQUE FINAL — ENTREGADA A CLIENTE</div>
+            <div style="font-size:13px;color:var(--text2)">
+              🔧 <strong style="color:var(--text)">${retoque.armador||'—'}</strong>${retoque.armador2?` + ${retoque.armador2}`:''} · 
+              ${fmtFecha(retoque.fechaCompletado||retoque.fechaCreacion)} ${fmtHora(retoque.fechaCompletado||retoque.fechaCreacion)}
+            </div>
+          </div>`;
+      }
+    }
+    // Para retoques de salón: mostrar referencia al armado original
+    let originalInfo = '';
+    if (o.esSalon && o.esRetoque && o.cuadro) {
+      const original = DB.ordenes.find(r =>
+        r.esSalon && !r.esRetoque && r.cuadro &&
+        r.cuadro.toLowerCase() === o.cuadro.toLowerCase() &&
+        r.id !== o.id
+      );
+      if (original) {
+        originalInfo = `
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:4px">🏪 ARMADO ORIGINAL PARA EXHIBICIÓN</div>
+            <div style="font-size:13px;color:var(--text2)">
+              🔧 <strong style="color:var(--text)">${original.armador||'—'}</strong>${original.armador2?` + ${original.armador2}`:''} · 
+              ${fmtFecha(original.fechaCompletado||original.fechaCreacion)} ${fmtHora(original.fechaCompletado||original.fechaCreacion)}
+            </div>
+          </div>`;
+      }
+    }
 
     return `
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;animation:fadeUp .2s ease">
@@ -3956,13 +4057,14 @@ function renderBD(ctx) {
           ${o.cuadro ? `<br>🔢 <strong style="color:var(--text);font-size:14px;font-family:monospace">${o.cuadro}</strong>` : '<br><span style="color:var(--text3);font-size:12px">Sin N° de cuadro</span>'}
           ${o.obs ? `<br>📝 <em style="color:var(--text3)">${o.obs}</em>` : ''}
         </div>
+        ${retoqueInfo}${originalInfo}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;min-width:160px;text-align:right">
         <div style="font-size:13px;font-weight:700;color:var(--text)">🔧 ${o.armador||'—'}${arm2}</div>
         <div style="font-size:12px;color:var(--text2)">${fmtFecha(fechaComp)}<br>${fmtHora(fechaComp)}</div>
         ${o.comisionDuplicada ? '<div style="font-size:11px;color:var(--red)">⚠️ Sin comisión (dup.)</div>' : ''}
       </div>
-    </div>`;
+    </div>`; 
   }).join('');
 }
 
@@ -4382,9 +4484,10 @@ function renderTableroCuadro() {
 
   const { desde, hasta } = tblGetRango();
 
-  // Filtrar órdenes completadas en el período
+  // Filtrar órdenes completadas en el período que GENERAN COMISIÓN
   const ordenes = DB.ordenes.filter(o =>
     o.estado === 'completada' && o.armador &&
+    !o.comisionDuplicada && !o.esRetoque && o.tipoArmado !== 'retoque' &&
     new Date(o.fechaCompletado || o.fechaCreacion) >= desde &&
     new Date(o.fechaCompletado || o.fechaCreacion) <= hasta
   );
