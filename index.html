@@ -1694,7 +1694,19 @@ async function loadDB() {
   const promises = keys.map(key =>
     fbDB.ref(key).once('value').then(snap => {
       const val = snap.val();
-      if (val !== null) DB[key] = val;
+      if (val !== null) {
+        // FIX: para arrays, normalizar filtrando nulls que Firebase puede insertar
+        if (Array.isArray(val)) {
+          DB[key] = val.filter(item => item !== null && item !== undefined);
+        } else if (typeof val === 'object' && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre') {
+          // Si Firebase devolvió un objeto en vez de array, convertir y filtrar
+          const asArr = Object.values(val).filter(item => item !== null && item !== undefined);
+          // Solo convertir a array si parece que debería serlo (tiene propiedad 'id' o es lista)
+          DB[key] = (asArr.length && asArr[0] && typeof asArr[0] === 'object' && 'id' in asArr[0]) ? asArr : val;
+        } else {
+          DB[key] = val;
+        }
+      }
     }).catch(()=>{})
   );
   await Promise.all(promises);
@@ -1736,11 +1748,15 @@ function startPolling() {
   fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
     const fresh = snap.val();
     if (fresh === null) return;
-    const freshArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
+    // FIX: Firebase puede devolver objetos con claves numéricas o arrays con nulls.
+    // Normalizamos filtrando nulls/undefined para evitar órdenes fantasma.
+    const rawArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
+    const freshArr = rawArr.filter(o => o !== null && o !== undefined && o.id !== undefined);
 
-    // alerta taller: nuevas órdenes de venta
-    if (isScreen('taller') && freshArr.length > DB.ordenes.length) {
-      const nuevas = freshArr.filter(o => !DB.ordenes.find(x => x.id === o.id));
+    // alerta taller: nuevas órdenes de venta (comparar por ID, no por longitud)
+    if (isScreen('taller')) {
+      const idsActuales = new Set(DB.ordenes.map(x => x.id));
+      const nuevas = freshArr.filter(o => !idsActuales.has(o.id));
       nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
     }
     DB.ordenes = freshArr;
@@ -1766,7 +1782,9 @@ function startPolling() {
   if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
   fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
     const fresh = snap.val();
-    const nuevasAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+    const rawAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+    // FIX: filtrar nulls que Firebase puede insertar en arrays
+    const nuevasAlertas = rawAlertas.filter(a => a !== null && a !== undefined);
     if (isScreen('vendedor')) {
       // detectar alertas nuevas no vistas antes de actualizar DB
       const noVistasAntes = new Set((DB.sinStockAlertas||[]).filter(a=>a.vista||a.resuelta).map(a=>a.id));
@@ -2116,9 +2134,11 @@ async function vEnviarOrden() {
     comisionDuplicada: false, // true si el cuadro ya existía en salón
   };
 
+  // FIX: guardar counter ANTES de agregar la orden para evitar IDs duplicados
+  // si múltiples dispositivos envían órdenes al mismo tiempo
+  await saveKey('counter');
   DB.ordenes.push(orden);
   await saveKey('ordenes');
-  await saveKey('counter');
 
   // limpiar
   ['v-cliente','v-obs'].forEach(id => document.getElementById(id).value = '');
@@ -3039,7 +3059,8 @@ async function sRegistrar() {
   const tieneKit = biciCat ? biciCat.tieneKitPre === true : false;
   const wrapTipo = document.getElementById('s-tipo-armado-wrap');
   let tipoArmado = 'prearmada';
-  if (tieneKit && wrapTipo && wrapTipo.style.display !== 'none') {
+  // FIX: siempre leer el select de tipo armado si está visible (no solo cuando tieneKit)
+  if (wrapTipo && wrapTipo.style.display !== 'none') {
     tipoArmado = document.getElementById('s-tipo-armado').value;
     if (!tipoArmado) { toast('⚠️ Seleccioná el tipo de armado','var(--red)'); return; }
   }
