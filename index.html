@@ -243,6 +243,13 @@ input[type=file]{display:none;}
 .login-back{text-align:center;margin-top:14px;font-size:12px;color:var(--text3);cursor:pointer;transition:color .15s;}
 .login-back:hover{color:var(--text2);}
 
+/* ── BADGE SALÓN PULSANTE ── */
+@keyframes salonPulse {
+  0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.5);}
+  50%{box-shadow:0 0 0 5px rgba(168,85,247,0);}
+}
+.salon-badge-pulse{animation:salonPulse 1.5s ease infinite;}
+
 /* ── BADGE CANCELADA ── */
 .badge-r{background:rgba(255,61,61,.12);color:var(--red);border:1px solid var(--red);}
 .ocard.cancelada{border-left:4px solid var(--red);border:1px solid rgba(255,61,61,.45);opacity:.78;}
@@ -563,9 +570,11 @@ input[type=file]{display:none;}
       <div class="fg fg2" style="margin-bottom:12px">
         <div class="fld">
           <label>Destino del pedido <span style="color:var(--red);font-size:10px">★ requerido</span></label>
-          <select id="v-destino">
+          <select id="v-destino" onchange="vOnDestinoChange()">
             <option value="local">⭐ Cliente en el Local</option>
             <option value="envio">🚚 Envío a Domicilio</option>
+            <option value="exhibicion">🏪 Exhibición (armar para salón)</option>
+            <option value="via-cargo">📦 Vía Cargo (caja cerrada)</option>
           </select>
         </div>
         <div class="fld">
@@ -590,6 +599,13 @@ input[type=file]{display:none;}
           <label>Hora de entrega</label>
           <input type="time" id="v-hora-especifica" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:11px 13px;border-radius:3px;font-size:14px;width:100%">
         </div>
+      </div>
+      <!-- Aviso exhibicion/via-cargo -->
+      <div id="v-aviso-exhibicion" style="display:none;background:rgba(168,85,247,.08);border:1px solid var(--purple);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--purple)">
+        🏪 <strong>Exhibición:</strong> El pedido irá a la bandeja de Salón del taller. No interrumpe la cola de clientes.
+      </div>
+      <div id="v-aviso-via-cargo" style="display:none;background:rgba(255,193,7,.08);border:1px solid var(--yellow);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--yellow)">
+        📦 <strong>Vía Cargo:</strong> El taller preparará la caja cerrada para despacho. No requiere armado.
       </div>
       <button class="btn btn-o btn-full" onclick="vEnviarOrden()">🚀 ENVIAR ORDEN AL TALLER</button>
     </div>
@@ -632,7 +648,8 @@ input[type=file]{display:none;}
       <button class="tab on" onclick="switchTab('t','ordenes-tab')">📋 Órdenes</button>
       <button class="tab" onclick="switchTab('t','local-tab')">⭐ Local <span id="t-local-count" style="display:none;background:var(--orange);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','envios-tab')">🚚 Envíos <span id="t-envios-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
-      <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Para el Salón</button>
+      <button class="tab" onclick="switchTab('t','salon-tab')">🏪 Salón <span id="t-salon-count" style="display:none;background:var(--purple);color:#fff;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
+      <button class="tab" onclick="switchTab('t','via-cargo-tab')">📦 Vía Cargo <span id="t-via-cargo-count" style="display:none;background:var(--yellow);color:#000;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:4px">0</span></button>
       <button class="tab" onclick="switchTab('t','tablero-tab');renderTableroCuadro()">📊 Tablero</button>
     </div>
 
@@ -672,6 +689,16 @@ input[type=file]{display:none;}
 
     <!-- SALÓN TAB -->
     <div id="salon-tab" class="tab-body">
+      <!-- PEDIDOS DE EXHIBICIÓN DEL VENDEDOR -->
+      <div class="panel" id="panel-pedidos-exhibicion">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple)">
+            🏪 Pedidos de Exhibición
+          </div>
+          <span style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase">Enviados por el vendedor — completar cuando haya tiempo</span>
+        </div>
+        <div id="t-exhibicion-lista"><div class="empty"><div class="empty-icon">🏪</div>Sin pedidos de exhibición pendientes</div></div>
+      </div>
       <div class="panel">
         <div class="ptitle ptitle-g">🏪 Registrar Armado para Exposición</div>
         <div class="fg fg2" style="margin-bottom:12px">
@@ -729,7 +756,7 @@ input[type=file]{display:none;}
         </div>
         <div class="fld" style="margin-bottom:12px">
           <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
-          <input type="text" id="s-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicadoSalon(this.value)">
+          <input type="text" id="s-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicadoSalon(this.value)" style="text-transform:uppercase">
         </div>
         <div id="dup-warning-salon" style="display:none;background:rgba(255,61,61,.08);border:1px solid var(--red);border-radius:4px;padding:12px 16px;margin-top:-8px;margin-bottom:10px;font-size:13px;color:var(--red)">
           ⚠️ <strong>¡Este cuadro ya fue armado para el salón!</strong> Si es un retoque final, está bien. De lo contrario, no se sumará comisión para evitar duplicación.
@@ -739,6 +766,15 @@ input[type=file]{display:none;}
       <div class="panel">
         <div class="ptitle ptitle-g">📋 Historial Salón</div>
         <div id="s-lista"><div class="empty"><div class="empty-icon">🚲</div>Sin registros</div></div>
+      </div>
+    </div>
+
+    <!-- VÍA CARGO TAB -->
+    <div id="via-cargo-tab" class="tab-body">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--yellow)">📦 Pedidos Vía Cargo — Caja Cerrada</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px">Estas bicis no requieren armado. Preparar la caja cerrada para despacho por envío de carga.</p>
+        <div id="t-via-cargo-lista"><div class="empty"><div class="empty-icon">📦</div>Sin pedidos vía cargo</div></div>
       </div>
     </div>
 
@@ -864,6 +900,8 @@ input[type=file]{display:none;}
       <button class="tab" onclick="switchTab('a','a-reportes')">📊 Reportes</button>
       <button class="tab" onclick="switchTab('a','a-historial')">📁 Historial</button>
       <button class="tab" onclick="switchTab('a','a-bd');renderBD('a')">🗄️ Base de Datos</button>
+      <button class="tab" onclick="switchTab('a','a-vendedor-com');renderVendedorCom()">🛒 Vendedor</button>
+      <button class="tab" onclick="switchTab('a','a-saldos');renderSaldos()">💵 Saldos</button>
     </div>
 
     <!-- CATÁLOGO -->
@@ -1162,6 +1200,108 @@ input[type=file]{display:none;}
       </div>
     </div>
 
+    <!-- COMISIÓN VENDEDOR -->
+    <div id="a-vendedor-com" class="tab-body">
+      <div class="panel">
+        <div class="ptitle" style="color:var(--blue)">🛒 Comisión por Venta — Configuración</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:18px">Definí un monto fijo en $ que se suma automáticamente como comisión del vendedor por cada venta (orden completada). Podés modificarlo en cualquier momento.</p>
+        <div class="fg fg2" style="align-items:flex-end">
+          <div class="fld">
+            <label>Comisión por venta ($ fijo)</label>
+            <input type="number" id="vc-monto" placeholder="ej: 500" min="0" style="font-size:20px;font-weight:700;color:var(--text)">
+          </div>
+          <div>
+            <button class="btn btn-o" onclick="guardarComisionVendedor()">💾 GUARDAR</button>
+          </div>
+        </div>
+        <div id="vc-actual" style="margin-top:12px;font-size:13px;color:var(--text2)"></div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="ptitle" style="margin:0;border:none;padding:0;color:var(--blue)">📊 Comisiones acumuladas por vendedor</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm tbln-btn tbln-on" id="vc-btn-semana" onclick="vcSetPeriodo('semana')">Semana</button>
+            <button class="btn btn-sm tbln-btn" id="vc-btn-mes" onclick="vcSetPeriodo('mes')">Mes</button>
+            <button class="btn btn-sm tbln-btn" id="vc-btn-total" onclick="vcSetPeriodo('total')">Total</button>
+          </div>
+        </div>
+        <div id="vc-tabla"></div>
+      </div>
+    </div>
+
+    <!-- SALDOS -->
+    <div id="a-saldos" class="tab-body">
+      <!-- Resumen rápido arriba -->
+      <div id="saldos-resumen" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px"></div>
+
+      <!-- Panel Vendedor -->
+      <div class="panel">
+        <div class="ptitle" style="color:var(--blue)">🛒 Saldo Vendedor</div>
+        <div id="saldos-vendedor-detalle"></div>
+        <hr class="separator">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Registrar pago o adelanto</div>
+        <div class="fg fg3" style="align-items:flex-end">
+          <div class="fld">
+            <label>Vendedor</label>
+            <select id="sv-vendedor"></select>
+          </div>
+          <div class="fld">
+            <label>Tipo</label>
+            <select id="sv-tipo">
+              <option value="pago">✅ Pago sueldo</option>
+              <option value="adelanto">🔄 Adelanto</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Importe $</label>
+            <input type="number" id="sv-importe" placeholder="0" min="1">
+          </div>
+          <div class="fld">
+            <label>Nota <span class="opt-label">(opcional)</span></label>
+            <input type="text" id="sv-nota" placeholder="ej: Pago semana 20/4">
+          </div>
+          <div>
+            <button class="btn btn-g" onclick="registrarPagoVendedor()">➕ REGISTRAR</button>
+          </div>
+        </div>
+        <div id="sv-historial" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Panel Armadores -->
+      <div class="panel">
+        <div class="ptitle" style="color:var(--green)">🔧 Saldos Armadores</div>
+        <div id="saldos-armadores-detalle"></div>
+        <hr class="separator">
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Registrar pago o adelanto</div>
+        <div class="fg fg3" style="align-items:flex-end">
+          <div class="fld">
+            <label>Armador</label>
+            <select id="sa-armador"></select>
+          </div>
+          <div class="fld">
+            <label>Tipo</label>
+            <select id="sa-tipo">
+              <option value="pago">✅ Pago sueldo</option>
+              <option value="adelanto">🔄 Adelanto</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Importe $</label>
+            <input type="number" id="sa-importe" placeholder="0" min="1">
+          </div>
+          <div class="fld">
+            <label>Nota <span class="opt-label">(opcional)</span></label>
+            <input type="text" id="sa-nota" placeholder="ej: Adelanto viernes">
+          </div>
+          <div>
+            <button class="btn btn-g" onclick="registrarPagoArmador()">➕ REGISTRAR</button>
+          </div>
+        </div>
+        <div id="sa-historial" style="margin-top:16px"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="modal-asignar" class="modal-bg">
@@ -1199,7 +1339,7 @@ input[type=file]{display:none;}
         ✨ <strong>Retoque Final:</strong> Se registra el armado pero <strong>no se asigna comisión</strong>. Solo cuenta como bici armada.
       </div>
       <div class="fld"><label>N° de Cuadro <span class="opt-label">(opcional al tomar — requerido al completar)</span></label>
-        <input type="text" id="modal-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicadoAsignar(this.value)">
+        <input type="text" id="modal-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicadoAsignar(this.value)" style="text-transform:uppercase">
       </div>
       <div class="dup-warning" id="dup-warning-asignar" style="display:none">
         ⚠️ <strong>¡Atención!</strong> Este N° de cuadro ya tiene un armado para el salón. Si es un retoque final, eso es correcto. De lo contrario, verificá el número.
@@ -1219,7 +1359,7 @@ input[type=file]{display:none;}
     <p id="modal-comp-info"></p>
     <div class="fld">
       <label>N° de Cuadro <span style="color:var(--red);font-size:10px">★ obligatorio</span></label>
-      <input type="text" id="modal-comp-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicado(this.value)">
+      <input type="text" id="modal-comp-cuadro" placeholder="ej: A123456" oninput="checkCuadroDuplicado(this.value)" style="text-transform:uppercase">
     </div>
     <div class="dup-warning" id="dup-warning" style="background:rgba(255,193,7,.1);border:2px solid var(--yellow);border-radius:5px;padding:14px 16px;margin-top:10px;font-size:13px;color:var(--yellow);display:none">
       ⚠️ <strong>¡N° de Cuadro ya registrado en la base de datos!</strong><br>
@@ -1326,6 +1466,101 @@ input[type=file]{display:none;}
   </div>
 </div>
 
+<!-- MODAL CLIENTE CAMBIÓ DE OPINIÓN (antes de marcar entregado) -->
+<div id="modal-cambio-cliente" class="modal-bg">
+  <div class="modal" style="max-width:500px">
+    <h3 style="color:var(--yellow)">↩️ El Cliente Cambió de Opinión</h3>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:4px">La bici ya armada se va a <strong style="color:var(--green)">pasar al salón como stock disponible</strong> y se va a crear una nueva solicitud al taller con los datos modificados.</p>
+    <div id="modal-cambio-info" style="background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.3);border-radius:4px;padding:12px 14px;margin:12px 0;font-size:13px;line-height:1.8"></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:12px">✏️ NUEVA SOLICITUD DEL CLIENTE</div>
+      <div class="fg fg2" style="margin-bottom:10px">
+        <div class="fld"><label>Marca</label>
+          <select id="cc-marca" onchange="ccFillModelos()"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Modelo</label>
+          <select id="cc-modelo" onchange="ccFillVariants()"><option value="">— Seleccioná —</option></select>
+        </div>
+      </div>
+      <div class="fg fg3" style="margin-bottom:10px">
+        <div class="fld"><label>Talle</label>
+          <select id="cc-talle"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Rodado</label>
+          <select id="cc-rodado"><option value="">— Seleccioná —</option></select>
+        </div>
+        <div class="fld"><label>Color</label>
+          <select id="cc-color"><option value="">— Seleccioná —</option></select>
+        </div>
+      </div>
+      <div class="fg fg2">
+        <div class="fld"><label>Destino</label>
+          <select id="cc-destino">
+            <option value="salon">🏪 Retiro en Local</option>
+            <option value="envio">🚚 Envío a Domicilio</option>
+          </select>
+        </div>
+        <div class="fld"><label>Observaciones <span class="opt-label">(opcional)</span></label>
+          <input type="text" id="cc-obs" placeholder="Accesorios, urgente, etc.">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cambio-cliente')">Cancelar</button>
+      <button class="btn btn-o" style="flex:1" onclick="confirmarCambioCliente()">🔄 PASAR AL SALÓN Y CREAR NUEVA ORDEN</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR ORDEN YA ENTREGADA (corrección retroactiva) -->
+<div id="modal-editar-entregada" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <h3 style="color:var(--blue)">✏️ Corregir Orden Entregada</h3>
+    <div style="background:rgba(61,139,255,.08);border:1px solid rgba(61,139,255,.3);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--blue)">
+      ℹ️ Esta corrección solo modifica los datos de la orden en la base de datos. Si la bici física ya fue entregada pero el cliente se arrepintió, usá "↩️ Cliente cambió" <em>antes</em> de marcar como entregada la próxima vez.
+    </div>
+    <p id="modal-ee-info" style="color:var(--text2);font-size:13px;margin-bottom:16px"></p>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Marca</label>
+        <select id="ee-marca" onchange="eeFillModelos()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Modelo</label>
+        <select id="ee-modelo" onchange="eeFillVariants()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Talle</label>
+        <select id="ee-talle"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Rodado</label>
+        <select id="ee-rodado"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Color</label>
+        <select id="ee-color"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Cliente</label>
+        <input type="text" id="ee-cliente" placeholder="Nombre del cliente">
+      </div>
+      <div class="fld"><label>N° de Cuadro</label>
+        <input type="text" id="ee-cuadro" placeholder="ej: A123456">
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:10px"><label>Estado real de la bici</label>
+      <select id="ee-estado-real">
+        <option value="entregada_cliente">📦 Entregada al cliente (correcto)</option>
+        <option value="quedo_salon">🏪 Quedó en el salón (cliente no la llevó)</option>
+      </select>
+    </div>
+    <div class="fld" style="margin-bottom:14px"><label>Observaciones <span style="color:var(--text3);font-size:10px">(opcional)</span></label>
+      <input type="text" id="ee-obs" placeholder="Accesorios, motivo, etc.">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar-entregada')">Cancelar</button>
+      <button class="btn btn-b" style="flex:1" onclick="confirmarEdicionEntregada()">💾 GUARDAR CORRECCIÓN</button>
+    </div>
+  </div>
+</div>
+
 <!-- ALERTA TALLER -->
 <div id="alerta-taller">
   <div class="alerta-box">
@@ -1394,6 +1629,68 @@ input[type=file]{display:none;}
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" onclick="descartarAlertaVendedor()" style="flex:0 0 auto">Descartar</button>
       <button class="btn btn-o" style="flex:1;font-size:16px" onclick="reenviarDesdeAlerta()">🚀 REENVIAR AL TALLER</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR REGISTRO BD (taller/admin) -->
+<div id="modal-editar-bd" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <h3 style="color:var(--orange)">✏️ Editar Registro</h3>
+    <p id="modal-bd-info" style="color:var(--text2);font-size:13px;margin-bottom:14px"></p>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Marca</label>
+        <select id="bd-e-marca" onchange="bdeFillModelos()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Modelo</label>
+        <select id="bd-e-modelo" onchange="bdeFillVariants()"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Talle</label>
+        <select id="bd-e-talle"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Rodado</label>
+        <select id="bd-e-rodado"><option value="">— Seleccioná —</option></select>
+      </div>
+      <div class="fld"><label>Color</label>
+        <select id="bd-e-color"><option value="">— Seleccioná —</option></select>
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Cliente</label>
+        <input type="text" id="bd-e-cliente" placeholder="Nombre del cliente">
+      </div>
+      <div class="fld"><label>N° de Cuadro</label>
+        <input type="text" id="bd-e-cuadro" placeholder="ej: A123456">
+      </div>
+    </div>
+    <div class="fg fg2" style="margin-bottom:12px">
+      <div class="fld"><label>Armador</label>
+        <select id="bd-e-armador"><option value="">— Sin asignar —</option></select>
+      </div>
+      <div class="fld"><label>Estado</label>
+        <select id="bd-e-estado">
+          <option value="completada">✅ Completada (armada)</option>
+          <option value="cancelada">🗑️ Cancelada</option>
+        </select>
+      </div>
+    </div>
+    <div class="fld" style="margin-bottom:12px"><label>Observaciones</label>
+      <input type="text" id="bd-e-obs" placeholder="Notas, accesorios, etc.">
+    </div>
+    <div id="bd-e-entregada-wrap" style="margin-bottom:14px">
+      <div class="fld"><label>¿Entregada al cliente?</label>
+        <select id="bd-e-entregada">
+          <option value="si">Sí — entregada al cliente</option>
+          <option value="no">No — quedó en el local/salón</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:rgba(255,98,0,.07);border:1px solid rgba(255,98,0,.2);border-radius:3px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+      ⚠️ Esta edición modifica el registro directamente en la base de datos. Usá con cuidado.
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar-bd')">Cancelar</button>
+      <button class="btn btn-o" style="flex:1" onclick="confirmarEditarBD()">💾 GUARDAR CAMBIOS</button>
     </div>
   </div>
 </div>
@@ -1544,6 +1841,9 @@ let DB = {
   usuarios: [],
   sinStockAlertas: [],
   services: [],       // registros de service/garantía
+  comisionVendedorConfig: { monto: 0 }, // monto fijo por venta para el vendedor
+  pagosArmadores: [],  // registros de pagos y adelantos a armadores
+  pagosVendedor: [],   // registros de pagos y adelantos al vendedor
 };
 
 let ordenAsignarId  = null;
@@ -1690,7 +1990,7 @@ function initFirebase() {
 
 // ── LOAD: lectura única al inicio ──
 async function loadDB() {
-  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
   const promises = keys.map(key =>
     fbDB.ref(key).once('value').then(snap => {
       const val = snap.val();
@@ -1698,7 +1998,7 @@ async function loadDB() {
         // FIX: para arrays, normalizar filtrando nulls que Firebase puede insertar
         if (Array.isArray(val)) {
           DB[key] = val.filter(item => item !== null && item !== undefined);
-        } else if (typeof val === 'object' && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre') {
+        } else if (typeof val === 'object' && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre' && key !== 'comisionVendedorConfig') {
           // Si Firebase devolvió un objeto en vez de array, convertir y filtrar
           const asArr = Object.values(val).filter(item => item !== null && item !== undefined);
           // Solo convertir a array si parece que debería serlo (tiene propiedad 'id' o es lista)
@@ -1727,6 +2027,9 @@ async function loadDB() {
   if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
   if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
   if (!DB.services)                       DB.services = [];
+  if (!DB.comisionVendedorConfig)         DB.comisionVendedorConfig = { monto: 0 };
+  if (!DB.pagosArmadores)                 DB.pagosArmadores = [];
+  if (!DB.pagosVendedor)                  DB.pagosVendedor = [];
 }
 
 // ── SAVE: escritura de una clave ──
@@ -1737,7 +2040,7 @@ async function saveKey(key) {
 }
 
 async function saveAll() {
-  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services'];
+  const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
   await Promise.all(keys.map(k => saveKey(k)));
 }
 
@@ -1757,7 +2060,7 @@ function startPolling() {
     if (isScreen('taller')) {
       const idsActuales = new Set(DB.ordenes.map(x => x.id));
       const nuevas = freshArr.filter(o => !idsActuales.has(o.id));
-      nuevas.forEach(o => { if (!o.esSalon) mostrarAlerta(o); });
+      nuevas.forEach(o => { if (!o.esSalon && !o.esSalonPedido && !o.esViaCargo) mostrarAlerta(o); });
     }
     DB.ordenes = freshArr;
     saveOfflineDB(); // mantener caché local actualizado
@@ -2090,6 +2393,16 @@ function vGetPrioridadLabel(prioridad, horaEspecifica) {
   return null;
 }
 
+function vOnDestinoChange() {
+  const destino = document.getElementById('v-destino').value;
+  document.getElementById('v-aviso-exhibicion').style.display = destino === 'exhibicion' ? 'block' : 'none';
+  document.getElementById('v-aviso-via-cargo').style.display = destino === 'via-cargo' ? 'block' : 'none';
+  // Ocultar prioridad para exhibicion y via-cargo
+  const priWrap = document.getElementById('v-hora-especifica-wrap')?.parentElement?.parentElement;
+  const priGrp = document.querySelector('#v-nueva-tab .fg.fg2:has(#v-prioridad)');
+  if (priGrp) priGrp.style.display = (destino === 'exhibicion' || destino === 'via-cargo') ? 'none' : '';
+}
+
 async function vEnviarOrden() {
   if (_enviandoOrden) { toast('⏳ Ya se está enviando la orden, esperá...','var(--yellow)'); return; }
   _enviandoOrden = true;
@@ -2105,9 +2418,9 @@ async function vEnviarOrden() {
   const color = document.getElementById('v-color').value;
   const cantidad = parseInt(document.getElementById('v-cantidad').value);
   const obs = document.getElementById('v-obs').value.trim();
-  const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'salon'
-  const prioridad = document.getElementById('v-prioridad')?.value || '';
-  const horaEspecifica = document.getElementById('v-hora-especifica')?.value || '';
+  const destino = document.getElementById('v-destino').value; // 'local' | 'envio' | 'exhibicion' | 'via-cargo'
+  const prioridad = (destino === 'exhibicion' || destino === 'via-cargo') ? '' : (document.getElementById('v-prioridad')?.value || '');
+  const horaEspecifica = (destino === 'exhibicion' || destino === 'via-cargo') ? '' : (document.getElementById('v-hora-especifica')?.value || '');
 
   if (!marca || !modelo || (!talle && !rodado) || !color) {
     toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)');
@@ -2123,15 +2436,17 @@ async function vEnviarOrden() {
     cliente, marca, modelo, talle, rodado, color, cantidad, obs,
     estado: 'pendiente', armador: null, cuadro: null,
     esSalon: false,
-    destino: destino, // 'local' | 'envio' | 'salon'
+    esSalonPedido: destino === 'exhibicion', // pedido de exhibición del vendedor
+    esViaCargo: destino === 'via-cargo',      // pedido vía cargo (caja cerrada)
+    destino: destino,
     prioridad: prioridad || null,
     prioridadLabel: prioridadLabel,
     vendedor: sesionActual ? sesionActual.usuario : 'desconocido',
     fechaCreacion: new Date().toISOString(),
     fechaAsignado: null,
     fechaCompletado: null,
-    tipoArmado: null, // 'kit' | 'prearmada' — se define al asignar
-    comisionDuplicada: false, // true si el cuadro ya existía en salón
+    tipoArmado: null,
+    comisionDuplicada: false,
   };
 
   // FIX: guardar counter ANTES de agregar la orden para evitar IDs duplicados
@@ -2152,7 +2467,7 @@ async function vEnviarOrden() {
   if (document.getElementById('v-hora-especifica-wrap')) document.getElementById('v-hora-especifica-wrap').style.display = 'none';
 
   vRenderOrdenes();
-  const destinoMsg = destino==='local' ? ' ⭐ (Cliente en el Local)' : destino==='envio' ? ' 🚚 (Envío a domicilio)' : ' 🏪 (Para salón)';
+  const destinoMsg = destino==='local' ? ' ⭐ (Cliente en el Local)' : destino==='envio' ? ' 🚚 (Envío a domicilio)' : destino==='exhibicion' ? ' 🏪 (Exhibición → bandeja Salón)' : ' 📦 (Vía Cargo)';
   const priorMsg = prioridadLabel ? ` · ${prioridadLabel}` : '';
   toast(`✅ Orden enviada al taller${destinoMsg}${priorMsg}`);
   } finally {
@@ -2227,7 +2542,7 @@ function vRenderOrdenes() {
       <div class="ocard ${o.estado}${o.destino==='envio'?' envio':''}${o.destino==='local'?' local-dest':''}">
         <div style="flex:1">
           <div class="ocard-title"><span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
-            ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':''}
+            ${o.destino==='local'?'<span class="badge badge-local" style="font-size:11px">⭐ Local</span>':o.destino==='envio'?'<span class="badge badge-env" style="font-size:11px">🚚 Envío</span>':o.esSalonPedido?'<span class="badge" style="background:rgba(168,85,247,.12);color:var(--purple);border:1px solid var(--purple);font-size:11px">🏪 Exhibición</span>':o.esViaCargo?'<span class="badge badge-env" style="font-size:11px">📦 Vía Cargo</span>':''}
           </div>
           <div class="ocard-sub">
             ${o.cliente ? `<span style="font-size:16px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
@@ -2243,7 +2558,9 @@ function vRenderOrdenes() {
           ${estadoBadge(o)}
           ${(o.estado==='pendiente'||o.estado==='en-proceso') ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${o.id})" style="font-size:12px;padding:5px 10px">✏️ Modificar</button>` : ''}
           ${esCompletada && !o.entregada ? `<button class="btn btn-g btn-sm" onclick="marcarEntregada(${o.id})" style="font-size:12px;padding:5px 10px">✅ Entregado</button>` : ''}
+          ${esCompletada && !o.entregada ? `<button class="btn btn-sm" onclick="abrirModalCambioCliente(${o.id})" style="font-size:11px;padding:5px 10px;background:rgba(255,193,7,.15);color:var(--yellow);border:1px solid var(--yellow)">↩️ Cliente cambió</button>` : ''}
           ${esCompletada && o.entregada ? `<span class="badge badge-g" style="font-size:10px">📦 Entregada</span>` : ''}
+          ${(esCompletada && o.entregada) ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalEditarEntregada(${o.id})" style="font-size:11px;padding:4px 8px;color:var(--text3)">✏️ Corregir</button>` : ''}
         </div>
       </div>`;
     });
@@ -2287,6 +2604,194 @@ async function marcarEntregada(id) {
   await saveKey('ordenes');
   vRenderOrdenes();
   toast('✅ Bicicleta marcada como entregada');
+}
+
+// ── CAMBIO DE OPINIÓN DEL CLIENTE (antes de marcar entregado) ──
+let _cambioClienteId = null;
+
+function abrirModalCambioCliente(id) {
+  _cambioClienteId = id;
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('modal-cambio-info').innerHTML =
+    `<strong>Orden #${o.id}</strong> · ${o.marca} ${o.modelo}${o.talle?' · Talle: '+o.talle:''}${o.rodado?' · Rodado: '+o.rodado:''} · Color: <strong>${o.color}</strong>${o.cliente?'<br>👤 Cliente: <strong>'+o.cliente+'</strong>':''}${o.cuadro?'<br>N°Cuadro: <strong style="color:var(--green)">'+o.cuadro+'</strong> → irá al salón':''}`;
+  fillMarcasSelect('cc-marca');
+  document.getElementById('cc-marca').value = o.marca;
+  ccFillModelos();
+  setTimeout(() => {
+    document.getElementById('cc-modelo').value = o.modelo;
+    ccFillVariants();
+    setTimeout(() => {
+      document.getElementById('cc-talle').value = o.talle || '';
+      document.getElementById('cc-rodado').value = o.rodado || '';
+      document.getElementById('cc-color').value = o.color || '';
+    }, 80);
+  }, 40);
+  document.getElementById('cc-destino').value = o.destino || 'salon';
+  document.getElementById('cc-obs').value = o.obs || '';
+  document.getElementById('modal-cambio-cliente').classList.add('on');
+}
+
+function ccFillModelos() {
+  const marca = document.getElementById('cc-marca').value;
+  fillModelosSelect('cc-modelo', marca);
+  ['cc-talle','cc-rodado','cc-color'].forEach(id => { document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>'; });
+}
+function ccFillVariants() {
+  fillVariants('cc-talle','cc-rodado','cc-color', document.getElementById('cc-marca').value, document.getElementById('cc-modelo').value);
+}
+
+async function confirmarCambioCliente() {
+  const o = DB.ordenes.find(x => x.id === _cambioClienteId);
+  if (!o) return;
+  const marca  = document.getElementById('cc-marca').value;
+  const modelo = document.getElementById('cc-modelo').value;
+  const talle  = document.getElementById('cc-talle').value;
+  const rodado = document.getElementById('cc-rodado').value;
+  const color  = document.getElementById('cc-color').value;
+  const destino = document.getElementById('cc-destino').value;
+  const obs    = document.getElementById('cc-obs').value.trim();
+  if (!marca || !modelo || (!talle && !rodado) || !color) {
+    toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color para la nueva solicitud','var(--red)'); return;
+  }
+
+  // 1. La bici armada pasa al salón como stock disponible
+  if (o.cuadro) {
+    // Buscar si ya hay una entrada de salón con ese cuadro; si no, crear una nueva
+    const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
+    if (!yaEnSalon) {
+      DB.ordenes.push({
+        id: DB.counter++,
+        cliente: '', marca: o.marca, modelo: o.modelo,
+        talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
+        cantidad: o.cantidad, obs: `Bici que quedó del pedido #${o.id} — cliente cambió de opinión`,
+        armador: o.armador || '', armador2: o.armador2 || null,
+        tipoArmado: o.tipoArmado || 'prearmada', esRetoque: false, comisionDuplicada: true,
+        cuadro: o.cuadro,
+        estado: 'completada', esSalon: true,
+        fechaCreacion: new Date().toISOString(),
+        fechaCompletado: new Date().toISOString(),
+        notaSalon: `Vuelta del pedido #${o.id} — cliente arrepentido`,
+      });
+    }
+  }
+
+  // 2. La orden original se marca como cancelada con motivo
+  o.estado = 'cancelada';
+  o.motivoCancelacion = 'Cliente cambió de opinión — bici derivada al salón';
+  o.fechaCompletado = new Date().toISOString();
+
+  // 3. Crear nueva orden con los datos modificados
+  const nuevaOrden = {
+    id: DB.counter++,
+    cliente: o.cliente || '', marca, modelo, talle, rodado, color,
+    cantidad: o.cantidad, obs,
+    estado: 'pendiente', armador: null, cuadro: null,
+    esSalon: false, destino,
+    prioridad: o.prioridad || null, prioridadLabel: o.prioridadLabel || null,
+    vendedor: o.vendedor || (sesionActual ? sesionActual.usuario : 'vendedor'),
+    fechaCreacion: new Date().toISOString(),
+    fechaAsignado: null, fechaCompletado: null,
+    tipoArmado: null, comisionDuplicada: false,
+    notaOrigen: `Reemplazo de orden #${o.id} por cambio de opinión del cliente`,
+  };
+  DB.ordenes.push(nuevaOrden);
+  await saveKey('counter');
+  await saveKey('ordenes');
+  closeModal('modal-cambio-cliente');
+  vRenderOrdenes();
+  tRenderAll();
+  toast(`↩️ Bici pasada al salón · Nueva orden #${nuevaOrden.id} enviada al taller`, 'var(--green)');
+}
+
+// ── EDITAR ORDEN YA ENTREGADA (corrección retroactiva) ──
+let _editarEntregadaId = null;
+
+function abrirModalEditarEntregada(id) {
+  _editarEntregadaId = id;
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('modal-ee-info').textContent =
+    `Orden #${o.id} · ${fmtHora(o.fechaEntregada || o.fechaCompletado)}${o.cliente ? ' · Cliente: ' + o.cliente : ''}`;
+  fillMarcasSelect('ee-marca');
+  document.getElementById('ee-marca').value = o.marca;
+  fillModelosSelect('ee-modelo', o.marca);
+  document.getElementById('ee-modelo').value = o.modelo;
+  fillVariants('ee-talle','ee-rodado','ee-color', o.marca, o.modelo);
+  document.getElementById('ee-talle').value = o.talle || '';
+  document.getElementById('ee-rodado').value = o.rodado || '';
+  document.getElementById('ee-color').value = o.color || '';
+  document.getElementById('ee-cliente').value = o.cliente || '';
+  document.getElementById('ee-cuadro').value = o.cuadro || '';
+  document.getElementById('ee-obs').value = o.obs || '';
+  document.getElementById('ee-estado-real').value = 'entregada_cliente';
+  document.getElementById('modal-editar-entregada').classList.add('on');
+}
+
+function eeFillModelos() {
+  const marca = document.getElementById('ee-marca').value;
+  fillModelosSelect('ee-modelo', marca);
+  ['ee-talle','ee-rodado','ee-color'].forEach(id => { document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>'; });
+}
+function eeFillVariants() {
+  fillVariants('ee-talle','ee-rodado','ee-color', document.getElementById('ee-marca').value, document.getElementById('ee-modelo').value);
+}
+
+async function confirmarEdicionEntregada() {
+  const o = DB.ordenes.find(x => x.id === _editarEntregadaId);
+  if (!o) return;
+  const marca   = document.getElementById('ee-marca').value;
+  const modelo  = document.getElementById('ee-modelo').value;
+  const talle   = document.getElementById('ee-talle').value;
+  const rodado  = document.getElementById('ee-rodado').value;
+  const color   = document.getElementById('ee-color').value;
+  const cliente = document.getElementById('ee-cliente').value.trim();
+  const cuadro  = document.getElementById('ee-cuadro').value.trim().toUpperCase();
+  const obs     = document.getElementById('ee-obs').value.trim();
+  const estadoReal = document.getElementById('ee-estado-real').value;
+
+  if (!marca || !modelo) { toast('⚠️ Completá Marca y Modelo','var(--red)'); return; }
+
+  o.marca = marca; o.modelo = modelo; o.talle = talle; o.rodado = rodado; o.color = color;
+  o.cliente = cliente; if (cuadro) o.cuadro = cuadro; o.obs = obs;
+  o.ultimaEdicion = new Date().toISOString();
+  o.editadoPor = sesionActual ? sesionActual.usuario : 'vendedor';
+
+  if (estadoReal === 'quedo_salon') {
+    // Si en realidad quedó en el salón, pasar la orden a cancelada y crear entrada de salón
+    o.estado = 'cancelada';
+    o.entregada = false;
+    o.motivoCancelacion = 'Corrección: bici no entregada — derivada al salón';
+    o.fechaCompletado = new Date().toISOString();
+    // Registrar en salón si tiene cuadro y no existe ya
+    if (o.cuadro) {
+      const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
+      if (!yaEnSalon) {
+        DB.ordenes.push({
+          id: DB.counter++,
+          cliente: '', marca: o.marca, modelo: o.modelo,
+          talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
+          cantidad: o.cantidad, obs: `Corrección de orden #${o.id} — bici en salón`,
+          armador: o.armador || '', armador2: o.armador2 || null,
+          tipoArmado: o.tipoArmado || 'prearmada', esRetoque: false, comisionDuplicada: true,
+          cuadro: o.cuadro,
+          estado: 'completada', esSalon: true,
+          fechaCreacion: new Date().toISOString(),
+          fechaCompletado: new Date().toISOString(),
+          notaSalon: `Corrección retroactiva de orden #${o.id}`,
+        });
+        await saveKey('counter');
+      }
+    }
+    toast('🔄 Orden corregida: bici movida al salón','var(--blue)');
+  } else {
+    toast('✅ Corrección guardada en la base de datos','var(--green)');
+  }
+
+  await saveKey('ordenes');
+  closeModal('modal-editar-entregada');
+  vRenderOrdenes();
+  if (isScreen('taller')) tRenderAll();
 }
 
 async function vDismissAlerta(idx) {
@@ -2434,11 +2939,12 @@ function initTaller() {
 }
 
 function tRenderAll() {
-  const pendientes = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon);
-  const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon);
-  const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon);
-  const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && o.estado!=='cancelada');
-  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && o.estado!=='cancelada' && o.estado!=='sin-stock');
+  // Bandeja principal: solo órdenes que NO son exhibición, NO son via-cargo, y no son esSalon
+  const pendientes = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada');
+  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada' && o.estado!=='sin-stock');
   const localPend = locales.filter(o=>o.estado!=='completada' && o.estado!=='cancelada' && o.estado!=='sin-stock').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
@@ -2447,8 +2953,10 @@ function tRenderAll() {
   renderOcards('t-en-proceso', enProceso, 'en-proceso');
   renderOcards('t-completadas', completadas, 'completada');
   renderSalon();
+  renderExhibicion();
   renderEnvios(envios);
   renderLocales(locales);
+  renderViaCargo();
 }
 
 function renderOcards(contId, lista, tipo) {
@@ -2648,7 +3156,7 @@ function checkCuadroDuplicadoAsignar(cuadro) {
 
 async function confirmarAsignacion() {
   const armador = document.getElementById('modal-armador').value;
-  const cuadro  = document.getElementById('modal-cuadro').value.trim();
+  const cuadro  = document.getElementById('modal-cuadro').value.trim().toUpperCase();
   const tipoArmado = document.getElementById('modal-tipo-armado').value;
   const armador2 = document.getElementById('modal-armador2').value;
   if (!armador) { toast('⚠️ Elegí un armador','var(--red)'); return; }
@@ -2751,7 +3259,7 @@ async function confirmarCompletado() {
   const btnComp = document.querySelector('[onclick="confirmarCompletado()"]');
   if (btnComp) { btnComp.disabled = true; btnComp.style.opacity = '0.5'; }
   try {
-  const cuadro = document.getElementById('modal-comp-cuadro').value.trim();
+  const cuadro = document.getElementById('modal-comp-cuadro').value.trim().toUpperCase();
   if (!cuadro) {
     toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)');
     _completandoBici = false;
@@ -2929,7 +3437,7 @@ async function confirmarEdicion() {
   const cantidad = parseInt(document.getElementById('e-cantidad').value);
   const armador  = document.getElementById('e-armador').value;
   const cliente  = document.getElementById('e-cliente').value.trim();
-  const cuadro   = document.getElementById('e-cuadro').value.trim();
+  const cuadro   = document.getElementById('e-cuadro').value.trim().toUpperCase();
   const obs      = document.getElementById('e-obs').value.trim();
 
   if (!marca||!modelo||(!talle&&!rodado)||!color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
@@ -3052,7 +3560,7 @@ async function sRegistrar() {
   const rodado   = document.getElementById('s-rodado').value;
   const color    = document.getElementById('s-color').value;
   const cantidad = parseInt(document.getElementById('s-cantidad').value);
-  const cuadro   = document.getElementById('s-cuadro').value.trim();
+  const cuadro   = document.getElementById('s-cuadro').value.trim().toUpperCase();
 
   // Tipo de armado
   const biciCat = DB.catalogo.find(b => b.marca===marca && b.modelo===modelo);
@@ -3126,6 +3634,117 @@ function renderSalon() {
       <span class="badge badge-p">🔧 ${o.armador}${arm2}</span>
     </div>
   `}).join('');
+}
+
+function renderExhibicion() {
+  const cont = document.getElementById('t-exhibicion-lista');
+  if (!cont) return;
+  const pedidos = DB.ordenes.filter(o => o.esSalonPedido && !o.esSalon && o.estado !== 'cancelada')
+    .sort((a,b) => new Date(a.fechaCreacion) - new Date(b.fechaCreacion));
+
+  // Badge en tab
+  const countEl = document.getElementById('t-salon-count');
+  const pendExhib = pedidos.filter(o => o.estado !== 'completada').length;
+  if (countEl) {
+    countEl.textContent = pendExhib;
+    countEl.style.display = pendExhib ? 'inline-block' : 'none';
+    if (pendExhib) countEl.classList.add('salon-badge-pulse');
+    else countEl.classList.remove('salon-badge-pulse');
+  }
+
+  if (!pedidos.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🏪</div>Sin pedidos de exhibición pendientes</div>'; return; }
+
+  cont.innerHTML = pedidos.map(o => {
+    const isPend = o.estado === 'pendiente';
+    const isEnProceso = o.estado === 'en-proceso';
+    const isComp = o.estado === 'completada';
+    const borderColor = isComp ? 'var(--green)' : isPend ? 'var(--purple)' : 'var(--blue)';
+    return `
+    <div class="ocard ${o.estado}" style="border-left:3px solid ${borderColor};border:1px solid rgba(168,85,247,.3)">
+      <div style="flex:1">
+        <div class="ocard-title">
+          <span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+          <span class="badge" style="background:rgba(168,85,247,.12);color:var(--purple);border:1px solid var(--purple);font-size:10px">🏪 Exhibición</span>
+        </div>
+        <div class="ocard-sub">
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>
+          ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}
+          <br><span style="font-size:12px;color:var(--text3)">Pedido por: <strong>${o.vendedor||'vendedor'}</strong> · ${fmtHora(o.fechaCreacion)}</span>
+          ${o.armador ? `<br>🔧 Armador: <strong>${o.armador}</strong>` : ''}
+          ${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+        </div>
+      </div>
+      <div class="ocard-actions">
+        ${isPend ? `<button class="btn btn-sm" style="background:rgba(168,85,247,.2);color:var(--purple);border:1px solid var(--purple)" onclick="abrirModalAsignar(${o.id})">🙋 Tomar</button>` : ''}
+        ${isEnProceso ? `<button class="btn btn-g btn-sm" onclick="abrirModalCompletar(${o.id})">✅ Completado</button>` : ''}
+        ${isComp ? `<span class="badge" style="background:rgba(0,200,83,.12);color:var(--green);border:1px solid var(--green)">✅ ${o.armador}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderViaCargo() {
+  const cont = document.getElementById('t-via-cargo-lista');
+  if (!cont) return;
+  const pedidos = DB.ordenes.filter(o => o.esViaCargo && !o.esSalon && o.estado !== 'cancelada')
+    .sort((a,b) => new Date(a.fechaCreacion) - new Date(b.fechaCreacion));
+
+  // Badge en tab
+  const countEl = document.getElementById('t-via-cargo-count');
+  const pendCargo = pedidos.filter(o => o.estado !== 'completada').length;
+  if (countEl) { countEl.textContent = pendCargo; countEl.style.display = pendCargo ? 'inline-block' : 'none'; }
+
+  if (!pedidos.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">📦</div>Sin pedidos vía cargo</div>'; return; }
+
+  cont.innerHTML = pedidos.map(o => {
+    const isPend = o.estado === 'pendiente';
+    const isEnProceso = o.estado === 'en-proceso';
+    const isComp = o.estado === 'completada';
+    return `
+    <div class="ocard ${o.estado}" style="border-left:3px solid var(--yellow);border:1px solid rgba(255,193,7,.3)">
+      <div style="flex:1">
+        <div class="ocard-title">
+          <span class="qty">${o.cantidad}</span>${o.marca} ${o.modelo}
+          <span class="badge badge-env" style="font-size:10px">📦 Vía Cargo</span>
+        </div>
+        <div class="ocard-sub">
+          ${o.cliente ? `<span style="font-size:15px;font-weight:700;color:var(--text)">👤 ${o.cliente}</span><br>` : ''}
+          ${o.talle ? `Talle: <strong>${o.talle}</strong> · ` : ''}${o.rodado ? `Rodado: <strong>${o.rodado}</strong> · ` : ''}Color: <strong>${o.color}</strong>
+          ${o.obs ? `<br><em style="color:var(--text3)">${o.obs}</em>` : ''}
+          <br><span style="font-size:12px;color:var(--text3)">Pedido por: <strong>${o.vendedor||'vendedor'}</strong> · ${fmtHora(o.fechaCreacion)}</span>
+          ${o.cuadro ? `<br>N°Cuadro: <strong>${o.cuadro}</strong>` : ''}
+        </div>
+      </div>
+      <div class="ocard-actions">
+        ${isPend ? `<button class="btn btn-sm" style="background:rgba(255,193,7,.15);color:var(--yellow);border:1px solid var(--yellow)" onclick="marcarViaCargoProceso(${o.id})">🔄 Preparando</button>` : ''}
+        ${isEnProceso ? `<button class="btn btn-g btn-sm" onclick="marcarViaCargoCerrado(${o.id})">✅ Caja Lista</button>` : ''}
+        ${isComp ? `<span class="badge badge-g">✅ Caja lista · ${o.armador||'taller'}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function marcarViaCargoProceso(id) {
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  o.estado = 'en-proceso';
+  o.fechaAsignado = new Date().toISOString();
+  o.armador = sesionActual ? sesionActual.usuario : 'taller';
+  await saveKey('ordenes');
+  renderViaCargo();
+  toast('📦 Marcado como en preparación');
+}
+
+async function marcarViaCargoCerrado(id) {
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  o.estado = 'completada';
+  o.fechaCompletado = new Date().toISOString();
+  o.armador = o.armador || (sesionActual ? sesionActual.usuario : 'taller');
+  await saveKey('ordenes');
+  renderViaCargo();
+  tRenderAll();
+  toast('✅ Caja lista para despacho');
 }
 
 // ALERTA
@@ -4117,9 +4736,107 @@ function renderBD(ctx) {
         <div style="font-size:13px;font-weight:700;color:var(--text)">🔧 ${o.armador||'—'}${arm2}</div>
         <div style="font-size:12px;color:var(--text2)">${fmtFecha(fechaComp)}<br>${fmtHora(fechaComp)}</div>
         ${o.comisionDuplicada ? '<div style="font-size:11px;color:var(--red)">⚠️ Sin comisión (dup.)</div>' : ''}
+        <button class="btn btn-ghost btn-sm" onclick="abrirEditarBD(${o.id})" style="font-size:11px;padding:4px 10px;margin-top:4px;color:var(--text3)">✏️ Editar</button>
       </div>
     </div>`; 
   }).join('');
+}
+
+// ── EDITAR REGISTRO EN BD (taller y admin) ──
+let _editarBDId = null;
+let _editarBDCtx = 't';
+
+function abrirEditarBD(id, ctx) {
+  _editarBDId = id;
+  _editarBDCtx = ctx || (isScreen('admin') ? 'a' : 't');
+  const o = DB.ordenes.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('modal-bd-info').innerHTML =
+    `<strong>Orden #${o.id}</strong>${o.esSalon?' · <span style="color:var(--purple)">🏪 Salón</span>':''}${o.entregada?' · <span style="color:var(--green)">📦 Entregada</span>':''} · ${fmtFecha(o.fechaCompletado||o.fechaCreacion)}`;
+
+  fillMarcasSelect('bd-e-marca');
+  document.getElementById('bd-e-marca').value = o.marca;
+  bdeFillModelos();
+  setTimeout(() => {
+    document.getElementById('bd-e-modelo').value = o.modelo;
+    bdeFillVariants();
+    setTimeout(() => {
+      document.getElementById('bd-e-talle').value = o.talle || '';
+      document.getElementById('bd-e-rodado').value = o.rodado || '';
+      document.getElementById('bd-e-color').value = o.color || '';
+    }, 80);
+  }, 40);
+  document.getElementById('bd-e-cliente').value = o.cliente || '';
+  document.getElementById('bd-e-cuadro').value = o.cuadro || '';
+  document.getElementById('bd-e-obs').value = o.obs || '';
+  document.getElementById('bd-e-estado').value = o.estado === 'cancelada' ? 'cancelada' : 'completada';
+
+  const selArm = document.getElementById('bd-e-armador');
+  selArm.innerHTML = '<option value="">— Sin asignar —</option>';
+  DB.armadores.forEach(a => selArm.innerHTML += `<option value="${a}">${a}</option>`);
+  selArm.value = o.armador || '';
+
+  // Mostrar/ocultar "entregada" solo para órdenes de venta
+  const entWrap = document.getElementById('bd-e-entregada-wrap');
+  if (o.esSalon) {
+    entWrap.style.display = 'none';
+  } else {
+    entWrap.style.display = 'block';
+    document.getElementById('bd-e-entregada').value = o.entregada ? 'si' : 'no';
+  }
+
+  document.getElementById('modal-editar-bd').classList.add('on');
+}
+
+function bdeFillModelos() {
+  const marca = document.getElementById('bd-e-marca').value;
+  fillModelosSelect('bd-e-modelo', marca);
+  ['bd-e-talle','bd-e-rodado','bd-e-color'].forEach(id => {
+    document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>';
+  });
+}
+function bdeFillVariants() {
+  fillVariants('bd-e-talle','bd-e-rodado','bd-e-color',
+    document.getElementById('bd-e-marca').value,
+    document.getElementById('bd-e-modelo').value);
+}
+
+async function confirmarEditarBD() {
+  const o = DB.ordenes.find(x => x.id === _editarBDId);
+  if (!o) return;
+  const marca   = document.getElementById('bd-e-marca').value;
+  const modelo  = document.getElementById('bd-e-modelo').value;
+  const talle   = document.getElementById('bd-e-talle').value;
+  const rodado  = document.getElementById('bd-e-rodado').value;
+  const color   = document.getElementById('bd-e-color').value;
+  const cliente = document.getElementById('bd-e-cliente').value.trim();
+  const cuadro  = document.getElementById('bd-e-cuadro').value.trim();
+  const obs     = document.getElementById('bd-e-obs').value.trim();
+  const armador = document.getElementById('bd-e-armador').value;
+  const estado  = document.getElementById('bd-e-estado').value;
+
+  if (!marca || !modelo) { toast('⚠️ Completá Marca y Modelo','var(--red)'); return; }
+
+  o.marca = marca; o.modelo = modelo; o.talle = talle; o.rodado = rodado; o.color = color;
+  o.cliente = cliente; o.obs = obs;
+  if (cuadro) o.cuadro = cuadro;
+  if (armador) o.armador = armador;
+  o.estado = estado;
+  o.ultimaEdicion = new Date().toISOString();
+  o.editadoPor = sesionActual ? sesionActual.usuario : 'sistema';
+
+  if (!o.esSalon) {
+    const entVal = document.getElementById('bd-e-entregada').value;
+    o.entregada = (entVal === 'si');
+    if (o.entregada && !o.fechaEntregada) o.fechaEntregada = new Date().toISOString();
+  }
+
+  await saveKey('ordenes');
+  closeModal('modal-editar-bd');
+  renderBD(_editarBDCtx);
+  if (isScreen('vendedor')) vRenderOrdenes();
+  if (isScreen('taller')) tRenderAll();
+  toast('✅ Registro actualizado en la base de datos','var(--green)');
 }
 
 function exportarBD() {
@@ -4419,6 +5136,10 @@ function adminAutoRefresh() {
   if (document.getElementById('a-historial')?.classList.contains('on')) renderHistorial();
   // BD
   if (document.getElementById('a-bd')?.classList.contains('on')) renderBD('a');
+  // Vendedor comisiones
+  if (document.getElementById('a-vendedor-com')?.classList.contains('on')) renderVendedorCom();
+  // Saldos
+  if (document.getElementById('a-saldos')?.classList.contains('on')) renderSaldos();
 }
 
 function initAdmin() {
@@ -4666,6 +5387,329 @@ function renderTableroCuadro() {
   });
 
   cont.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+//  COMISIÓN VENDEDOR
+// ════════════════════════════════════════════════════════════
+let vcPeriodo = 'semana';
+
+function vcSetPeriodo(p) {
+  vcPeriodo = p;
+  ['semana','mes','total'].forEach(k => {
+    const btn = document.getElementById('vc-btn-'+k);
+    if (!btn) return;
+    if (k === p) { btn.classList.add('tbln-on'); }
+    else { btn.classList.remove('tbln-on'); }
+  });
+  renderVendedorCom();
+}
+
+function renderVendedorCom() {
+  const montoEl = document.getElementById('vc-monto');
+  const actualEl = document.getElementById('vc-actual');
+  if (!montoEl) return;
+
+  const montoActual = (DB.comisionVendedorConfig || {}).monto || 0;
+  montoEl.value = montoActual;
+  if (actualEl) actualEl.innerHTML = montoActual > 0
+    ? `<span style="color:var(--green)">✅ Configurado: <strong>$${montoActual.toLocaleString('es-AR')}</strong> por venta completada.</span>`
+    : `<span style="color:var(--text3)">⚠️ Sin monto configurado aún — ingresá un importe y guardá.</span>`;
+
+  // tabla de comisiones acumuladas por vendedor en el período
+  const tabla = document.getElementById('vc-tabla');
+  if (!tabla) return;
+
+  const ahora = new Date();
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  let desde, hasta;
+  if (vcPeriodo === 'semana') {
+    const dow = ahora.getDay();
+    const lunes = new Date(hoy.getTime() - ((dow === 0 ? 6 : dow - 1) * 86400000));
+    desde = lunes; hasta = new Date(lunes.getTime() + 7 * 86400000 - 1);
+  } else if (vcPeriodo === 'mes') {
+    desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    hasta = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+  } else {
+    desde = new Date(0); hasta = new Date(9999, 11, 31);
+  }
+
+  const ventas = DB.ordenes.filter(o => {
+    if (o.estado !== 'completada' || o.esSalon || !o.vendedor) return false;
+    const f = new Date(o.fechaCompletado || o.fechaCreacion);
+    return f >= desde && f <= hasta;
+  });
+
+  if (!ventas.length) {
+    tabla.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Sin ventas en este período</div>';
+    return;
+  }
+
+  // agrupar por vendedor
+  const byVend = {};
+  ventas.forEach(o => {
+    const v = o.vendedor || 'desconocido';
+    if (!byVend[v]) byVend[v] = { ventas: 0, comision: 0 };
+    byVend[v].ventas++;
+    byVend[v].comision += montoActual;
+  });
+
+  // Ya descontados los pagos del período
+  let html = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Vendedor</th><th>Ventas</th><th>Comisión total</th><th>Ya pagado (período)</th><th>Saldo</th></tr></thead>
+    <tbody>`;
+  Object.entries(byVend).sort((a,b)=>b[1].comision-a[1].comision).forEach(([v, d]) => {
+    const pagado = (DB.pagosVendedor||[])
+      .filter(p => p.vendedor === v && (new Date(p.fecha)) >= desde && (new Date(p.fecha)) <= hasta)
+      .reduce((s,p) => s + (p.importe||0), 0);
+    const saldo = d.comision - pagado;
+    html += `<tr>
+      <td><strong>${v}</strong></td>
+      <td style="text-align:center"><strong style="color:var(--blue)">${d.ventas}</strong></td>
+      <td><strong style="color:var(--green)">$${d.comision.toLocaleString('es-AR')}</strong></td>
+      <td style="color:var(--text2)">$${pagado.toLocaleString('es-AR')}</td>
+      <td><strong style="color:${saldo>0?'var(--orange)':'var(--text3)'}">${saldo>0?'$'+saldo.toLocaleString('es-AR'):'✅ Al día'}</strong></td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  tabla.innerHTML = html;
+}
+
+async function guardarComisionVendedor() {
+  const monto = parseInt(document.getElementById('vc-monto').value) || 0;
+  if (!DB.comisionVendedorConfig) DB.comisionVendedorConfig = {};
+  DB.comisionVendedorConfig.monto = monto;
+  await saveKey('comisionVendedorConfig');
+  renderVendedorCom();
+  toast(`✅ Comisión por venta: $${monto.toLocaleString('es-AR')}`);
+}
+
+// ════════════════════════════════════════════════════════════
+//  SALDOS — Vendedor y Armadores
+// ════════════════════════════════════════════════════════════
+function renderSaldos() {
+  renderSaldosResumen();
+  renderSaldosVendedor();
+  renderSaldosArmadores();
+  // Poblar selects
+  const selV = document.getElementById('sv-vendedor');
+  if (selV) {
+    const vendedores = [...new Set(DB.ordenes.filter(o=>o.vendedor).map(o=>o.vendedor))].sort();
+    selV.innerHTML = vendedores.length
+      ? vendedores.map(v=>`<option value="${v}">${v}</option>`).join('')
+      : '<option value="">Sin vendedores</option>';
+  }
+  const selA = document.getElementById('sa-armador');
+  if (selA) {
+    selA.innerHTML = DB.armadores.map(a=>`<option value="${a}">${a}</option>`).join('');
+  }
+}
+
+function calcComisionVendedorAcum(vendedor) {
+  // Total comisiones generadas (todas las ventas completadas)
+  const monto = (DB.comisionVendedorConfig||{}).monto || 0;
+  const totalVentas = DB.ordenes.filter(o => o.estado==='completada' && !o.esSalon && o.vendedor===vendedor).length;
+  const totalComision = totalVentas * monto;
+  const totalPagado = (DB.pagosVendedor||[]).filter(p=>p.vendedor===vendedor).reduce((s,p)=>s+(p.importe||0),0);
+  return { totalComision, totalPagado, saldo: totalComision - totalPagado, totalVentas };
+}
+
+function calcSaldoArmador(nombre) {
+  // Usa el reporte global (todas las órdenes completadas)
+  const ordenes = DB.ordenes.filter(o => o.estado==='completada' && !o.comisionDuplicada && !o.esRetoque && o.tipoArmado !== 'retoque');
+  let totalComision = 0;
+  ordenes.forEach(o => {
+    const esKitDos = o.tipoArmado === 'kit' && o.armador2 && o.armador2 !== o.armador;
+    if (o.armador === nombre || (esKitDos && o.armador2 === nombre)) {
+      totalComision += comisionOrden(o, nombre);
+    }
+  });
+  const totalPagado = (DB.pagosArmadores||[]).filter(p=>p.armador===nombre).reduce((s,p)=>s+(p.importe||0),0);
+  return { totalComision, totalPagado, saldo: totalComision - totalPagado };
+}
+
+function renderSaldosResumen() {
+  const cont = document.getElementById('saldos-resumen');
+  if (!cont) return;
+  const monto = (DB.comisionVendedorConfig||{}).monto || 0;
+  // Vendedores
+  const vendedores = [...new Set(DB.ordenes.filter(o=>o.vendedor).map(o=>o.vendedor))];
+  let totalSaldoVend = 0;
+  vendedores.forEach(v => { totalSaldoVend += calcComisionVendedorAcum(v).saldo; });
+  // Armadores
+  let totalSaldoArm = 0;
+  DB.armadores.forEach(a => { totalSaldoArm += Math.max(0, calcSaldoArmador(a).saldo); });
+
+  cont.innerHTML = `
+    <div style="background:var(--bg2);border:2px solid var(--blue);border-radius:8px;padding:18px 20px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--blue)">💵 SALDO VENDEDOR(ES)</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:${totalSaldoVend>0?'var(--blue)':'var(--text3)'}">$${Math.max(0,totalSaldoVend).toLocaleString('es-AR')}</div>
+      <div style="font-size:11px;color:var(--text3)">${monto>0?'$'+monto.toLocaleString('es-AR')+' por venta':'Sin monto configurado'}</div>
+    </div>
+    <div style="background:var(--bg2);border:2px solid var(--green);border-radius:8px;padding:18px 20px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--green)">🔧 SALDO ARMADORES</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:${totalSaldoArm>0?'var(--green)':'var(--text3)'}">$${totalSaldoArm.toLocaleString('es-AR')}</div>
+      <div style="font-size:11px;color:var(--text3)">${DB.armadores.length} armador${DB.armadores.length!==1?'es':''} activo${DB.armadores.length!==1?'s':''}</div>
+    </div>
+    <div style="background:var(--bg2);border:2px solid var(--orange);border-radius:8px;padding:18px 20px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--orange)">📊 TOTAL A PAGAR</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;color:var(--orange)">$${(Math.max(0,totalSaldoVend)+totalSaldoArm).toLocaleString('es-AR')}</div>
+      <div style="font-size:11px;color:var(--text3)">Vendedores + Armadores</div>
+    </div>
+  `;
+}
+
+function renderSaldosVendedor() {
+  const cont = document.getElementById('saldos-vendedor-detalle');
+  if (!cont) return;
+  const vendedores = [...new Set(DB.ordenes.filter(o=>o.vendedor).map(o=>o.vendedor))].sort();
+  if (!vendedores.length) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div>Sin vendedores registrados todavía</div>';
+    return;
+  }
+  const monto = (DB.comisionVendedorConfig||{}).monto || 0;
+  let html = '';
+  vendedores.forEach(v => {
+    const { totalComision, totalPagado, saldo, totalVentas } = calcComisionVendedorAcum(v);
+    const pct = totalComision > 0 ? Math.min(100, Math.round((totalPagado/totalComision)*100)) : 100;
+    html += `
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:16px 20px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800">🛒 ${v}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px">${totalVentas} venta${totalVentas!==1?'s':''} · $${monto.toLocaleString('es-AR')} c/u</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:${saldo>0?'var(--blue)':'var(--text3)'}">${saldo>0?'$'+saldo.toLocaleString('es-AR'):'✅ Al día'}</div>
+          <div style="font-size:11px;color:var(--text2)">de $${totalComision.toLocaleString('es-AR')} total</div>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${pct}%;background:${pct===100?'var(--green)':'var(--blue)'};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3)">${pct}% cobrado · Pagado: $${totalPagado.toLocaleString('es-AR')}</div>
+    </div>`;
+  });
+  cont.innerHTML = html;
+
+  // Historial pagos vendedor
+  const hist = document.getElementById('sv-historial');
+  if (!hist) return;
+  const pagos = [...(DB.pagosVendedor||[])].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,15);
+  if (!pagos.length) { hist.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin movimientos registrados</div>'; return; }
+  hist.innerHTML = `<div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Últimos movimientos</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Vendedor</th><th>Tipo</th><th>Importe</th><th>Nota</th><th></th></tr></thead>
+    <tbody>
+    ${pagos.map(p=>`<tr>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${fmtFecha(p.fecha)}</td>
+      <td><strong>${p.vendedor}</strong></td>
+      <td>${p.tipo==='adelanto'?'<span class="badge badge-y">🔄 Adelanto</span>':'<span class="badge badge-g">✅ Pago</span>'}</td>
+      <td><strong style="color:var(--green)">$${(p.importe||0).toLocaleString('es-AR')}</strong></td>
+      <td style="color:var(--text2);font-size:12px">${p.nota||'—'}</td>
+      <td><button class="btn btn-r btn-sm" style="padding:4px 8px;font-size:11px" onclick="eliminarPagoVendedor('${p.id}')">✕</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function renderSaldosArmadores() {
+  const cont = document.getElementById('saldos-armadores-detalle');
+  if (!cont) return;
+  if (!DB.armadores.length) { cont.innerHTML = '<div class="empty"><div class="empty-icon">🔧</div>Sin armadores configurados</div>'; return; }
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:14px">';
+  DB.armadores.forEach(nombre => {
+    const { totalComision, totalPagado, saldo } = calcSaldoArmador(nombre);
+    const pct = totalComision > 0 ? Math.min(100, Math.round((totalPagado/totalComision)*100)) : 100;
+    const color = saldo > 0 ? 'var(--green)' : 'var(--text3)';
+    html += `
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:14px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800">🔧 ${nombre}</div>
+        <div style="text-align:right">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:${color}">${saldo>0?'$'+saldo.toLocaleString('es-AR'):'✅ Al día'}</div>
+        </div>
+      </div>
+      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:5px">
+        <div style="height:100%;width:${pct}%;background:${pct===100?'var(--green)':'var(--orange)'};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)">
+        <span>Total comisión: $${totalComision.toLocaleString('es-AR')}</span>
+        <span>Pagado: $${totalPagado.toLocaleString('es-AR')}</span>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  cont.innerHTML = html;
+
+  // Historial pagos armadores
+  const hist = document.getElementById('sa-historial');
+  if (!hist) return;
+  const pagos = [...(DB.pagosArmadores||[])].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,20);
+  if (!pagos.length) { hist.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin movimientos registrados</div>'; return; }
+  hist.innerHTML = `<div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Últimos movimientos</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Armador</th><th>Tipo</th><th>Importe</th><th>Nota</th><th></th></tr></thead>
+    <tbody>
+    ${pagos.map(p=>`<tr>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${fmtFecha(p.fecha)}</td>
+      <td><strong>${p.armador}</strong></td>
+      <td>${p.tipo==='adelanto'?'<span class="badge badge-y">🔄 Adelanto</span>':'<span class="badge badge-g">✅ Pago</span>'}</td>
+      <td><strong style="color:var(--green)">$${(p.importe||0).toLocaleString('es-AR')}</strong></td>
+      <td style="color:var(--text2);font-size:12px">${p.nota||'—'}</td>
+      <td><button class="btn btn-r btn-sm" style="padding:4px 8px;font-size:11px" onclick="eliminarPagoArmador('${p.id}')">✕</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+async function registrarPagoVendedor() {
+  const vendedor = document.getElementById('sv-vendedor').value;
+  const tipo = document.getElementById('sv-tipo').value;
+  const importe = parseInt(document.getElementById('sv-importe').value) || 0;
+  const nota = document.getElementById('sv-nota').value.trim();
+  if (!vendedor) { toast('⚠️ Seleccioná un vendedor','var(--red)'); return; }
+  if (importe <= 0) { toast('⚠️ Ingresá un importe válido','var(--red)'); return; }
+  if (!DB.pagosVendedor) DB.pagosVendedor = [];
+  DB.pagosVendedor.push({ id: Date.now().toString(), vendedor, tipo, importe, nota, fecha: new Date().toISOString() });
+  await saveKey('pagosVendedor');
+  document.getElementById('sv-importe').value = '';
+  document.getElementById('sv-nota').value = '';
+  renderSaldos();
+  toast(`✅ ${tipo==='adelanto'?'Adelanto':'Pago'} de $${importe.toLocaleString('es-AR')} registrado`);
+}
+
+async function registrarPagoArmador() {
+  const armador = document.getElementById('sa-armador').value;
+  const tipo = document.getElementById('sa-tipo').value;
+  const importe = parseInt(document.getElementById('sa-importe').value) || 0;
+  const nota = document.getElementById('sa-nota').value.trim();
+  if (!armador) { toast('⚠️ Seleccioná un armador','var(--red)'); return; }
+  if (importe <= 0) { toast('⚠️ Ingresá un importe válido','var(--red)'); return; }
+  if (!DB.pagosArmadores) DB.pagosArmadores = [];
+  DB.pagosArmadores.push({ id: Date.now().toString(), armador, tipo, importe, nota, fecha: new Date().toISOString() });
+  await saveKey('pagosArmadores');
+  document.getElementById('sa-importe').value = '';
+  document.getElementById('sa-nota').value = '';
+  renderSaldos();
+  toast(`✅ ${tipo==='adelanto'?'Adelanto':'Pago'} de $${importe.toLocaleString('es-AR')} registrado`);
+}
+
+async function eliminarPagoVendedor(id) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  DB.pagosVendedor = (DB.pagosVendedor||[]).filter(p => p.id !== id);
+  await saveKey('pagosVendedor');
+  renderSaldos();
+  toast('🗑️ Movimiento eliminado','var(--red)');
+}
+
+async function eliminarPagoArmador(id) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  DB.pagosArmadores = (DB.pagosArmadores||[]).filter(p => p.id !== id);
+  await saveKey('pagosArmadores');
+  renderSaldos();
+  toast('🗑️ Movimiento eliminado','var(--red)');
 }
 
 // ════════════════════════════════════════════════════════════
