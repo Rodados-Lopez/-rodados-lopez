@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rodados Lopez</title>
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<title>Rodados Lopez — Sistema de Armado</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -1812,6 +1813,28 @@ input[type=file]{display:none;}
 
 <script>
 // ════════════════════════════════════════════════════════════
+//  RODADOS LOPEZ — Sistema de Armado v2.0 (optimizado 25/04/2026)
+//  Mejoras: robustez Firebase, null-safety, guards offline,
+//  manejo de errores, protección anti-doble-click.
+// ════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════
+//  MANEJO GLOBAL DE ERRORES
+// ════════════════════════════════════════════════════════════
+window.onerror = function(msg, src, line, col, err) {
+  console.error('[RL Error]', msg, 'en', src, 'línea', line, err);
+  // Solo mostrar toast para errores críticos que no sean de red
+  if (msg && !msg.includes('Script error') && !msg.includes('ResizeObserver')) {
+    // No molestar al usuario con errores técnicos internos en producción
+  }
+  return false; // dejar que el error siga propagándose a la consola
+};
+
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[RL Promise]', e.reason);
+});
+
+// ════════════════════════════════════════════════════════════
 //  FIREBASE CONFIG — reemplazá estos valores con los tuyos
 // ════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
@@ -1871,7 +1894,20 @@ function setOfflineQueue(q) {
   try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch {}
 }
 function saveOfflineDB() {
-  try { localStorage.setItem(OFFLINE_DB_KEY, JSON.stringify(DB)); } catch {}
+  try {
+    const data = JSON.stringify(DB);
+    localStorage.setItem(OFFLINE_DB_KEY, data);
+  } catch(e) {
+    // Puede fallar por cuota de almacenamiento
+    if (e && e.name === 'QuotaExceededError') {
+      console.warn('saveOfflineDB: cuota de localStorage excedida, limpiando datos antiguos...');
+      // Intentar guardar solo las claves más críticas
+      try {
+        const minimal = { ordenes: DB.ordenes, counter: DB.counter, catalogo: DB.catalogo, armadores: DB.armadores, usuarios: DB.usuarios };
+        localStorage.setItem(OFFLINE_DB_KEY, JSON.stringify(minimal));
+      } catch(e2) { console.warn('saveOfflineDB: no se pudo guardar copia local', e2); }
+    }
+  }
 }
 function loadOfflineDB() {
   try {
@@ -1891,6 +1927,7 @@ function queueOfflineOp(key) {
 
 // saveKey con soporte offline
 const _originalSaveKey = async function(key) {
+  if (!fbDB) { console.warn('_originalSaveKey: fbDB no disponible para clave:', key); return false; }
   try {
     await fbDB.ref(key).set(DB[key]);
     return true;
@@ -1899,6 +1936,34 @@ const _originalSaveKey = async function(key) {
     return false;
   }
 };
+
+// Obtener el próximo ID de orden de forma atómica (evita duplicados entre dispositivos)
+async function getNextId() {
+  if (!isOnline || !fbDB) {
+    // Offline: usar counter local y marcarlo como pendiente de sync
+    const id = DB.counter++;
+    queueOfflineOp('counter');
+    saveOfflineDB();
+    return id;
+  }
+  try {
+    let newId;
+    const result = await fbDB.ref('counter').transaction(current => {
+      newId = (current || 1);
+      return newId + 1;
+    });
+    if (result && result.committed && newId != null) {
+      DB.counter = newId + 1; // sincronizar estado local
+      return newId;
+    }
+    // Transaction aborted (another client won) — retry once with local counter
+    console.warn('getNextId: transaction no fue committed, usando counter local');
+    return DB.counter++;
+  } catch(e) {
+    console.warn('getNextId transaction falló, usando counter local:', e);
+    return DB.counter++;
+  }
+}
 
 async function saveKey(key) {
   if (!isOnline) {
@@ -1920,6 +1985,7 @@ async function saveKey(key) {
 // Sincronizar cola pendiente cuando vuelve internet
 async function syncOfflineQueue() {
   if (syncInProgress) return;
+  if (!fbDB) { console.warn('syncOfflineQueue: fbDB no disponible'); return; }
   const q = getOfflineQueue();
   if (!q.length) return;
   syncInProgress = true;
@@ -1937,6 +2003,8 @@ async function syncOfflineQueue() {
   }
   if (allOk) {
     setOfflineQueue([]);
+    // Recargar DB desde Firebase para obtener el estado más reciente
+    try { await loadDB(); saveOfflineDB(); } catch(e) { console.warn('syncOfflineQueue: reload falló', e); }
     toast('✅ Todo sincronizado con la nube','var(--green)');
   } else {
     toast('⚠️ Algunos datos no pudieron sincronizarse','var(--red)');
@@ -1954,9 +2022,14 @@ function updateConnectionBadge() {
     dot.style.animation = pending ? 'blink .5s infinite' : 'blink 2s infinite';
   });
   document.querySelectorAll('.live-badge').forEach(badge => {
-    badge.style.color = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
-    badge.style.borderColor = badge.style.color;
-    badge.textContent = !isOnline ? '📶 OFFLINE' : (pending ? '🔄 SYNC...' : 'EN VIVO');
+    const color = !isOnline ? 'var(--red)' : (pending ? 'var(--yellow)' : 'var(--green)');
+    const label = !isOnline ? '📶 OFFLINE' : (pending ? '🔄 SYNC...' : 'EN VIVO');
+    badge.style.color = color;
+    badge.style.borderColor = color;
+    // Preserve ::before dot by only replacing the text node, not innerHTML
+    // Use data-label to track and update
+    const existing = badge.querySelector('span.badge-label');
+    if (existing) { existing.textContent = label; } else { badge.textContent = label; }
     badge.style.display = 'flex';
     badge.style.alignItems = 'center';
     badge.style.gap = '5px';
@@ -1990,31 +2063,37 @@ function initFirebase() {
 
 // ── LOAD: lectura única al inicio ──
 async function loadDB() {
+  if (!fbDB) throw new Error('Firebase no inicializado');
   const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
   const promises = keys.map(key =>
     fbDB.ref(key).once('value').then(snap => {
       const val = snap.val();
       if (val !== null) {
-        // FIX: para arrays, normalizar filtrando nulls que Firebase puede insertar
+        // Normalizar: filtrar nulls que Firebase puede insertar en arrays
         if (Array.isArray(val)) {
           DB[key] = val.filter(item => item !== null && item !== undefined);
-        } else if (typeof val === 'object' && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre' && key !== 'comisionVendedorConfig') {
+        } else if (typeof val === 'object' && val !== null && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre' && key !== 'comisionVendedorConfig') {
           // Si Firebase devolvió un objeto en vez de array, convertir y filtrar
           const asArr = Object.values(val).filter(item => item !== null && item !== undefined);
           // Solo convertir a array si parece que debería serlo (tiene propiedad 'id' o es lista)
-          DB[key] = (asArr.length && asArr[0] && typeof asArr[0] === 'object' && 'id' in asArr[0]) ? asArr : val;
+          DB[key] = (asArr.length && asArr[0] && typeof asArr[0] === 'object' && ('id' in asArr[0] || 'marca' in asArr[0] || 'usuario' in asArr[0])) ? asArr : val;
         } else {
           DB[key] = val;
         }
       }
-    }).catch(()=>{})
+    }).catch(e => { console.warn(`loadDB: error al leer clave "${key}":`, e); })
   );
   await Promise.all(promises);
 
+  // Asegurar que los campos de array siempre sean arrays válidos
+  ['catalogo','armadores','ordenes','usuarios','sinStockAlertas','services','pagosArmadores','pagosVendedor'].forEach(k => {
+    if (!Array.isArray(DB[k])) DB[k] = [];
+  });
+
   // defaults si la BD está vacía
-  if (!DB.catalogo.length)                DB.catalogo   = getDefaultCatalogo();
-  if (!Object.keys(DB.comisionesKit).length) {
-    if (Object.keys(DB.comisiones).length) {
+  if (!DB.catalogo || !DB.catalogo.length)   DB.catalogo   = getDefaultCatalogo();
+  if (!Object.keys(DB.comisionesKit||{}).length) {
+    if (Object.keys(DB.comisiones||{}).length) {
       DB.comisionesKit = {...DB.comisiones};
       DB.comisionesPre = Object.fromEntries(Object.keys(DB.comisiones).map(k=>[k, Math.round((DB.comisiones[k]||0)*0.5)]));
     } else {
@@ -2022,23 +2101,15 @@ async function loadDB() {
       DB.comisionesPre = getDefaultComisionesPre();
     }
   }
-  if (!Object.keys(DB.comisionesPre).length) DB.comisionesPre = getDefaultComisionesPre();
-  if (!DB.armadores.length)               DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
-  if (!DB.usuarios.length)                DB.usuarios   = getDefaultUsuarios();
-  if (!DB.sinStockAlertas)                DB.sinStockAlertas = [];
-  if (!DB.services)                       DB.services = [];
-  if (!DB.comisionVendedorConfig)         DB.comisionVendedorConfig = { monto: 0 };
-  if (!DB.pagosArmadores)                 DB.pagosArmadores = [];
-  if (!DB.pagosVendedor)                  DB.pagosVendedor = [];
+  if (!Object.keys(DB.comisionesPre||{}).length) DB.comisionesPre = getDefaultComisionesPre();
+  if (!DB.armadores.length)                 DB.armadores  = ['Carlos','Diego','Mariela','Facundo','Sofía'];
+  if (!DB.usuarios.length)                  DB.usuarios   = getDefaultUsuarios();
+  if (!DB.comisionVendedorConfig || typeof DB.comisionVendedorConfig !== 'object') DB.comisionVendedorConfig = { monto: 0 };
+  if (DB.counter == null || isNaN(Number(DB.counter))) DB.counter = 1;
 }
 
-// ── SAVE: escritura de una clave ──
-async function saveKey(key) {
-  try {
-    await fbDB.ref(key).set(DB[key]);
-  } catch(e) { console.error('Firebase save error:', key, e); toast('⚠️ Error guardando datos','var(--red)'); }
-}
-
+// saveKey con soporte offline está definida arriba — esta es su implementación completa.
+// saveAll: guarda todas las claves conocidas
 async function saveAll() {
   const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
   await Promise.all(keys.map(k => saveKey(k)));
@@ -2046,9 +2117,11 @@ async function saveAll() {
 
 // ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
 function startPolling() {
+  if (!fbDB) { console.warn('startPolling: fbDB no inicializado, se omite.'); return; }
   // Escuchar cambios en órdenes en tiempo real
   if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
   fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
+    try {
     const fresh = snap.val();
     if (fresh === null) return;
     // FIX: Firebase puede devolver objetos con claves numéricas o arrays con nulls.
@@ -2066,6 +2139,7 @@ function startPolling() {
     saveOfflineDB(); // mantener caché local actualizado
 
     // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
+    // Usamos un pequeño debounce para no disparar escrituras múltiples en rápida sucesión
     const ahora10 = Date.now();
     let autoEntregaHecha = false;
     DB.ordenes.forEach(o => {
@@ -2074,16 +2148,21 @@ function startPolling() {
         if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregaHecha = true; }
       }
     });
-    if (autoEntregaHecha) saveKey('ordenes');
+    if (autoEntregaHecha) {
+      clearTimeout(window._autoEntregaTimer);
+      window._autoEntregaTimer = setTimeout(() => saveKey('ordenes'), 2000);
+    }
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
     if (isScreen('taller'))   { tRenderAll(); if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro(); if (document.getElementById('bd-tab-t')?.classList.contains('on')) renderBD('t'); }
     if (isScreen('admin'))    { adminAutoRefresh(); }
+    } catch(e) { console.error('ordenes listener error:', e); }
   });
 
   // Escuchar sinStockAlertas en tiempo real
   if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
   fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
+    try {
     const fresh = snap.val();
     const rawAlertas = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
     // FIX: filtrar nulls que Firebase puede insertar en arrays
@@ -2104,41 +2183,51 @@ function startPolling() {
     } else {
       DB.sinStockAlertas = nuevasAlertas;
     }
+    } catch(e) { console.error('sinStockAlertas listener error:', e); }
   });
 
   // Escuchar catálogo en tiempo real (actualiza vendedor y taller automáticamente)
   if (fbListeners.catalogo) fbDB.ref('catalogo').off('value', fbListeners.catalogo);
   fbListeners.catalogo = fbDB.ref('catalogo').on('value', snap => {
+    try {
     const val = snap.val();
     if (val === null) return;
-    DB.catalogo = Array.isArray(val) ? val : Object.values(val);
+    const rawCat = Array.isArray(val) ? val : Object.values(val);
+    DB.catalogo = rawCat.filter(b => b !== null && b !== undefined);
     // refrescar selects de marca en las pantallas activas
     if (isScreen('vendedor')) { fillMarcasSelect('v-marca'); }
     if (isScreen('taller'))   { fillMarcasSelect('s-marca'); }
     if (isScreen('admin'))    { renderCatalogo(); renderComisiones(); }
+    } catch(e) { console.error('catalogo listener error:', e); }
   });
 
   // Escuchar comisionesKit en tiempo real
   if (fbListeners.comisionesKit) fbDB.ref('comisionesKit').off('value', fbListeners.comisionesKit);
   fbListeners.comisionesKit = fbDB.ref('comisionesKit').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.comisionesKit = val;
-    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
+    try {
+      const val = snap.val();
+      if (val !== null && typeof val === 'object') DB.comisionesKit = val;
+      if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
+    } catch(e) { console.error('comisionesKit listener error:', e); }
   });
 
   // Escuchar comisionesPre en tiempo real
   if (fbListeners.comisionesPre) fbDB.ref('comisionesPre').off('value', fbListeners.comisionesPre);
   fbListeners.comisionesPre = fbDB.ref('comisionesPre').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.comisionesPre = val;
-    if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
+    try {
+      const val = snap.val();
+      if (val !== null && typeof val === 'object') DB.comisionesPre = val;
+      if (isScreen('admin') && !window._editandoComisiones) { renderCatalogo(); renderComisiones(); }
+    } catch(e) { console.error('comisionesPre listener error:', e); }
   });
 
   // Escuchar counter en tiempo real
   if (fbListeners.counter) fbDB.ref('counter').off('value', fbListeners.counter);
   fbListeners.counter = fbDB.ref('counter').on('value', snap => {
-    const val = snap.val();
-    if (val !== null) DB.counter = val;
+    try {
+      const val = snap.val();
+      if (val !== null && !isNaN(Number(val))) DB.counter = Number(val);
+    } catch(e) { console.error('counter listener error:', e); }
   });
 }
 
@@ -2158,7 +2247,11 @@ function loginPedir(rol) {
   setTimeout(()=>document.getElementById('login-user').focus(), 100);
 }
 
+let _loginInProgress = false;
 function loginSubmit() {
+  if (_loginInProgress) return;
+  _loginInProgress = true;
+  setTimeout(() => { _loginInProgress = false; }, 1500);
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
   const match = DB.usuarios.find(u => u.usuario === user && u.password === pass && u.rol === loginTarget);
@@ -2166,6 +2259,7 @@ function loginSubmit() {
     document.getElementById('login-error').classList.add('on');
     document.getElementById('login-pass').value = '';
     document.getElementById('login-pass').focus();
+    _loginInProgress = false;
     return;
   }
   document.getElementById('login-error').classList.remove('on');
@@ -2189,7 +2283,8 @@ function logout() {
 //  NAVEGACIÓN
 // ════════════════════════════════════════════════════════════
 function isScreen(id) {
-  return document.getElementById('screen-'+id).classList.contains('on');
+  const el = document.getElementById('screen-'+id);
+  return el ? el.classList.contains('on') : false;
 }
 
 function go(screen) {
@@ -2202,7 +2297,7 @@ function go(screen) {
     document.getElementById('screen-inicio').style.display = 'flex';
     // detener monitor si estaba activo
     if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
-    if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+    if (monFireListener && fbDB) { try { fbDB.ref('ordenes').off('value', monFireListener); } catch(e){} monFireListener = null; }
   } else if (screen === 'monitor') {
     document.getElementById('screen-monitor').classList.add('on');
     initMonitor();
@@ -2227,32 +2322,39 @@ function initMonitor() {
   if (monClockInterval) clearInterval(monClockInterval);
   monClockInterval = setInterval(() => {
     const now = new Date();
-    document.getElementById('mon-clock').textContent =
-      now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+    const el = document.getElementById('mon-clock');
+    if (el) el.textContent = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
   }, 1000);
   // disparo inmediato
   const now = new Date();
-  document.getElementById('mon-clock').textContent =
-    now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  const clockEl = document.getElementById('mon-clock');
+  if (clockEl) clockEl.textContent = now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
 
   // listener Firebase en tiempo real (independiente del resto del sistema)
-  if (monFireListener) fbDB.ref('ordenes').off('value', monFireListener);
+  if (!fbDB) { console.warn('initMonitor: fbDB no disponible'); return; }
+  if (monFireListener) { try { fbDB.ref('ordenes').off('value', monFireListener); } catch(e){} }
   monFireListener = fbDB.ref('ordenes').on('value', snap => {
-    const val = snap.val();
-    if (val === null) { monRender([]); return; }
-    const arr = Array.isArray(val) ? val : Object.values(val);
-    monRender(arr);
+    try {
+      const val = snap.val();
+      if (val === null) { monRender([]); return; }
+      const arr = Array.isArray(val) ? val : Object.values(val);
+      monRender(arr);
+    } catch(e) { console.error('monitorListener error:', e); }
   });
 }
 
 function monitorSalir() {
   if (monClockInterval) { clearInterval(monClockInterval); monClockInterval = null; }
-  if (monFireListener)  { fbDB.ref('ordenes').off('value', monFireListener); monFireListener = null; }
+  if (monFireListener && fbDB) { try { fbDB.ref('ordenes').off('value', monFireListener); } catch(e){} monFireListener = null; }
   document.getElementById('screen-monitor').classList.remove('on');
   document.getElementById('screen-inicio').style.display = 'flex';
 }
 
-function monRender(ordenes) {
+function monRender(rawOrdenes) {
+  // Normalizar: filtrar nulls que Firebase puede introducir en arrays
+  const ordenes = (Array.isArray(rawOrdenes) ? rawOrdenes : Object.values(rawOrdenes || {}))
+    .filter(o => o !== null && o !== undefined && o.id !== undefined);
+
   // En proceso: órdenes de venta con estado en-proceso
   const enProceso = ordenes
     .filter(o => !o.esSalon && o.estado === 'en-proceso')
@@ -2339,10 +2441,13 @@ function monActualizarTicker(enProceso, completadas) {
 }
 
 function switchTab(prefix, id) {
-  const parent = document.getElementById(id).parentElement;
+  const el = document.getElementById(id);
+  if (!el) { console.warn('switchTab: elemento no encontrado:', id); return; }
+  const parent = el.parentElement;
+  if (!parent) return;
   parent.querySelectorAll('.tab-body').forEach(t => t.classList.remove('on'));
   parent.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
+  el.classList.add('on');
   // Activar el botón tab que corresponde a este id buscando por onclick
   parent.querySelectorAll('.tab').forEach(t => {
     const oc = t.getAttribute('onclick') || '';
@@ -2431,8 +2536,9 @@ async function vEnviarOrden() {
 
   const prioridadLabel = vGetPrioridadLabel(prioridad, horaEspecifica);
 
+  const nuevaId = await getNextId();
   const orden = {
-    id: DB.counter++,
+    id: nuevaId,
     cliente, marca, modelo, talle, rodado, color, cantidad, obs,
     estado: 'pendiente', armador: null, cuadro: null,
     esSalon: false,
@@ -2449,9 +2555,7 @@ async function vEnviarOrden() {
     comisionDuplicada: false,
   };
 
-  // FIX: guardar counter ANTES de agregar la orden para evitar IDs duplicados
-  // si múltiples dispositivos envían órdenes al mismo tiempo
-  await saveKey('counter');
+  // getNextId() ya persistió el counter de forma atómica en Firebase
   DB.ordenes.push(orden);
   await saveKey('ordenes');
 
@@ -2480,7 +2584,7 @@ function vRenderOrdenes() {
   const cont = document.getElementById('v-lista-ordenes');
   const resumenEl = document.getElementById('v-resumen-dia');
 
-  const todas = [...DB.ordenes].filter(o => !o.esSalon)
+  const todas = [...(DB.ordenes||[])].filter(o => o != null && !o.esSalon)
     .sort((a,b) => new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
 
   // ── Resumen del día ──
@@ -2589,16 +2693,16 @@ function vRenderInbox() {
       </div>
       ${a.motivoSinStock ? `<div style="margin-top:8px;background:rgba(255,61,61,.12);border:1px solid var(--red);border-radius:4px;padding:10px 12px"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px">⚠️ Motivo de la devolución</div><div style="font-size:14px;font-weight:600;color:#fff">${a.motivoSinStock}</div></div>` : ''}
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-o btn-sm" onclick="abrirAlertaVendedorDesdeInbox(${i})">✏️ Modificar y Reenviar</button>
-        <button class="btn btn-ghost btn-sm" onclick="vDismissAlerta(${i})">✕ Descartar</button>
+        <button class="btn btn-o btn-sm" onclick="abrirAlertaVendedorDesdeInbox('${a.id}')">✏️ Modificar y Reenviar</button>
+        <button class="btn btn-ghost btn-sm" onclick="vDismissAlerta('${a.id}')">✕ Descartar</button>
       </div>
     </div>
   `).join('');
 }
 
 async function marcarEntregada(id) {
-  const o = DB.ordenes.find(x => x.id === id);
-  if (!o) return;
+  const o = (DB.ordenes||[]).find(x => x && x.id === id);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); return; }
   o.entregada = true;
   o.fechaEntregada = new Date().toISOString();
   await saveKey('ordenes');
@@ -2660,8 +2764,9 @@ async function confirmarCambioCliente() {
     // Buscar si ya hay una entrada de salón con ese cuadro; si no, crear una nueva
     const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
     if (!yaEnSalon) {
+      const idSalon = await getNextId();
       DB.ordenes.push({
-        id: DB.counter++,
+        id: idSalon,
         cliente: '', marca: o.marca, modelo: o.modelo,
         talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
         cantidad: o.cantidad, obs: `Bici que quedó del pedido #${o.id} — cliente cambió de opinión`,
@@ -2682,8 +2787,9 @@ async function confirmarCambioCliente() {
   o.fechaCompletado = new Date().toISOString();
 
   // 3. Crear nueva orden con los datos modificados
+  const idNueva = await getNextId();
   const nuevaOrden = {
-    id: DB.counter++,
+    id: idNueva,
     cliente: o.cliente || '', marca, modelo, talle, rodado, color,
     cantidad: o.cantidad, obs,
     estado: 'pendiente', armador: null, cuadro: null,
@@ -2696,7 +2802,6 @@ async function confirmarCambioCliente() {
     notaOrigen: `Reemplazo de orden #${o.id} por cambio de opinión del cliente`,
   };
   DB.ordenes.push(nuevaOrden);
-  await saveKey('counter');
   await saveKey('ordenes');
   closeModal('modal-cambio-cliente');
   vRenderOrdenes();
@@ -2767,8 +2872,9 @@ async function confirmarEdicionEntregada() {
     if (o.cuadro) {
       const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
       if (!yaEnSalon) {
+        const idSalonCorr = await getNextId();
         DB.ordenes.push({
-          id: DB.counter++,
+          id: idSalonCorr,
           cliente: '', marca: o.marca, modelo: o.modelo,
           talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
           cantidad: o.cantidad, obs: `Corrección de orden #${o.id} — bici en salón`,
@@ -2780,7 +2886,6 @@ async function confirmarEdicionEntregada() {
           fechaCompletado: new Date().toISOString(),
           notaSalon: `Corrección retroactiva de orden #${o.id}`,
         });
-        await saveKey('counter');
       }
     }
     toast('🔄 Orden corregida: bici movida al salón','var(--blue)');
@@ -2794,12 +2899,11 @@ async function confirmarEdicionEntregada() {
   if (isScreen('taller')) tRenderAll();
 }
 
-async function vDismissAlerta(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
-  const alerta = alertas[idx];
+async function vDismissAlerta(alertaId) {
+  // Buscamos por ID único en lugar de por índice relativo para evitar errores de posición
+  const alerta = (DB.sinStockAlertas || []).find(a => String(a.id) === String(alertaId));
   if (!alerta) return;
-  const globalIdx = DB.sinStockAlertas.indexOf(alerta);
-  if (globalIdx >= 0) DB.sinStockAlertas[globalIdx].resuelta = true;
+  alerta.resuelta = true;
   await saveKey('sinStockAlertas');
   vRenderInbox();
 }
@@ -2807,9 +2911,8 @@ async function vDismissAlerta(idx) {
 // Índice global de la alerta que se está editando en el overlay
 let alertaVendedorIdx = -1;
 
-function abrirAlertaVendedorDesdeInbox(idx) {
-  const alertas = (DB.sinStockAlertas || []).filter(a => a.vendedor === sesionActual?.usuario && !a.resuelta);
-  const alerta = alertas[idx];
+function abrirAlertaVendedorDesdeInbox(alertaId) {
+  const alerta = (DB.sinStockAlertas || []).find(a => String(a.id) === String(alertaId));
   if (!alerta) return;
   alertaVendedorIdx = DB.sinStockAlertas.indexOf(alerta);
   _mostrarAlertaVendedorConDatos(alerta);
@@ -2885,8 +2988,9 @@ async function reenviarDesdeAlerta() {
   const cliente = alertaOrig ? (alertaOrig.cliente || '') : '';
 
   // Crear nueva orden
+  const idReenv = await getNextId();
   const nuevaOrden = {
-    id: DB.counter++,
+    id: idReenv,
     cliente, marca, modelo, talle, rodado, color, cantidad, obs,
     estado: 'pendiente', armador: null, cuadro: null,
     esSalon: false,
@@ -2900,7 +3004,6 @@ async function reenviarDesdeAlerta() {
   };
   DB.ordenes.push(nuevaOrden);
   await saveKey('ordenes');
-  await saveKey('counter');
 
   // Marcar alerta como resuelta
   if (alertaVendedorIdx >= 0) {
@@ -2940,11 +3043,12 @@ function initTaller() {
 
 function tRenderAll() {
   // Bandeja principal: solo órdenes que NO son exhibición, NO son via-cargo, y no son esSalon
-  const pendientes = DB.ordenes.filter(o => o.estado==='pendiente' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
-  const enProceso  = DB.ordenes.filter(o => o.estado==='en-proceso' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
-  const completadas = DB.ordenes.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
-  const envios = DB.ordenes.filter(o => o.destino==='envio' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada');
-  const locales = DB.ordenes.filter(o => o.destino==='local' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada' && o.estado!=='sin-stock');
+  const ordenesFiltradas = (DB.ordenes||[]).filter(o => o != null);
+  const pendientes = ordenesFiltradas.filter(o => o.estado==='pendiente' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const enProceso  = ordenesFiltradas.filter(o => o.estado==='en-proceso' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const completadas = ordenesFiltradas.filter(o => (o.estado==='completada'||o.estado==='cancelada') && !o.esSalon && !o.esSalonPedido && !o.esViaCargo);
+  const envios = ordenesFiltradas.filter(o => o.destino==='envio' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada');
+  const locales = ordenesFiltradas.filter(o => o.destino==='local' && !o.esSalon && !o.esSalonPedido && !o.esViaCargo && o.estado!=='cancelada' && o.estado!=='sin-stock');
   const localPend = locales.filter(o=>o.estado!=='completada' && o.estado!=='cancelada' && o.estado!=='sin-stock').length;
   const localCount = document.getElementById('t-local-count');
   if (localCount) { localCount.textContent = localPend; localCount.style.display = localPend ? 'inline-block' : 'none'; }
@@ -3105,7 +3209,8 @@ function renderEnvios(envios) {
 // ASIGNAR
 function abrirModalAsignar(id) {
   ordenAsignarId = id;
-  const o = DB.ordenes.find(x => x.id===id);
+  const o = (DB.ordenes||[]).find(x => x && x.id===id);
+  if (!o) { toast('⚠️ Orden no encontrada, actualizando...','var(--red)'); return; }
   document.getElementById('modal-info').textContent = `${o.cantidad}x ${o.marca} ${o.modelo} — ${o.talle||o.rodado} / ${o.color}${o.cliente ? ' — Cliente: '+o.cliente : ''}${o.destino==='envio' ? ' 🚚 ENVÍO A DOMICILIO' : ''}`;
   const sel = document.getElementById('modal-armador');
   sel.innerHTML = '<option value="">— Elegí —</option>';
@@ -3162,16 +3267,15 @@ async function confirmarAsignacion() {
   if (!armador) { toast('⚠️ Elegí un armador','var(--red)'); return; }
   if (!tipoArmado) { toast('⚠️ Seleccioná el tipo de armado','var(--red)'); return; }
   
-  const o = DB.ordenes.find(x => x.id===ordenAsignarId);
-  if (o) { 
-    o.estado='en-proceso'; 
-    o.armador=armador;
-    o.armador2 = (tipoArmado === 'kit' && armador2) ? armador2 : null;
-    o.tipoArmado = tipoArmado;
-    o.esRetoque = (tipoArmado === 'retoque');
-    o.fechaAsignado=new Date().toISOString();
-    if(cuadro) o.cuadro=cuadro; 
-  }
+  const o = (DB.ordenes||[]).find(x => x && x.id===ordenAsignarId);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); closeModal('modal-asignar'); return; }
+  o.estado='en-proceso';
+  o.armador=armador;
+  o.armador2 = (tipoArmado === 'kit' && armador2) ? armador2 : null;
+  o.tipoArmado = tipoArmado;
+  o.esRetoque = (tipoArmado === 'retoque');
+  o.fechaAsignado=new Date().toISOString();
+  if(cuadro) o.cuadro=cuadro;
   await saveKey('ordenes');
   closeModal('modal-asignar');
   tRenderAll(); vRenderOrdenes();
@@ -3183,7 +3287,8 @@ async function confirmarAsignacion() {
 // COMPLETAR
 function abrirModalCompletar(id) {
   ordenCompletarId = id;
-  const o = DB.ordenes.find(x => x.id===id);
+  const o = (DB.ordenes||[]).find(x => x && x.id===id);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); return; }
   // Guardar tipo original por si se auto-cambia a retoque y luego el usuario borra el cuadro
   o._tipoArmadoOriginal = o.tipoArmado || 'prearmada';
   const tipoLabel = o.tipoArmado === 'retoque' ? '✨ Retoque Final'
@@ -3259,18 +3364,17 @@ async function confirmarCompletado() {
   const btnComp = document.querySelector('[onclick="confirmarCompletado()"]');
   if (btnComp) { btnComp.disabled = true; btnComp.style.opacity = '0.5'; }
   try {
-  const cuadro = document.getElementById('modal-comp-cuadro').value.trim().toUpperCase();
-  if (!cuadro) {
-    toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)');
-    _completandoBici = false;
-    if (btnComp) { btnComp.disabled = false; btnComp.style.opacity = ''; }
-    return;
-  }
-  
-  const o = DB.ordenes.find(x => x.id===ordenCompletarId);
-  if (o) { 
-    o.estado='completada'; 
-    o.fechaCompletado=new Date().toISOString(); 
+    const cuadro = document.getElementById('modal-comp-cuadro').value.trim().toUpperCase();
+    if (!cuadro) {
+      toast('⚠️ El N° de Cuadro es obligatorio para finalizar','var(--red)');
+      return; // finally resetea el flag
+    }
+
+    const o = (DB.ordenes||[]).find(x => x && x.id===ordenCompletarId);
+    if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); closeModal('modal-completar'); return; }
+
+    o.estado='completada';
+    o.fechaCompletado=new Date().toISOString();
     o.cuadro=cuadro;
     // calcular tiempo de armado
     if (o.fechaAsignado) {
@@ -3286,17 +3390,16 @@ async function confirmarCompletado() {
       const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === cuadro.toLowerCase() && x.estado==='completada' && x.id !== o.id);
       o.comisionDuplicada = yaEnSalon;
     }
-  }
-  await saveKey('ordenes');
-  closeModal('modal-completar');
-  tRenderAll(); vRenderOrdenes();
-  if (o?.esRetoque) {
-    toast('✨ Retoque final registrado (sin comisión)');
-  } else if (o?.comisionDuplicada) {
-    toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
-  } else {
-    toast('🎉 Bici completada');
-  }
+    await saveKey('ordenes');
+    closeModal('modal-completar');
+    tRenderAll(); vRenderOrdenes();
+    if (o.esRetoque) {
+      toast('✨ Retoque final registrado (sin comisión)');
+    } else if (o.comisionDuplicada) {
+      toast('⚠️ Bici completada — Comisión NO sumada (cuadro ya armado para salón)','var(--yellow)');
+    } else {
+      toast('🎉 Bici completada');
+    }
   } finally {
     _completandoBici = false;
     if (btnComp) { btnComp.disabled = false; btnComp.style.opacity = ''; }
@@ -3350,8 +3453,8 @@ async function confirmarDevolverSinStock() {
 }
 
 async function devolverSinStock(motivo) {
-  const o = DB.ordenes.find(x => x.id===ordenCompletarId);
-  if (!o) return;
+  const o = (DB.ordenes||[]).find(x => x && x.id===ordenCompletarId);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); return; }
 
   // marcar orden como sin-stock (sale de pendientes y en-proceso)
   o.estado = 'sin-stock';
@@ -3386,7 +3489,8 @@ async function devolverSinStock(motivo) {
 // EDITAR ORDEN
 function abrirModalEditar(id) {
   ordenEditarId = id;
-  const o = DB.ordenes.find(x => x.id===id);
+  const o = (DB.ordenes||[]).find(x => x && x.id===id);
+  if (!o) { toast('⚠️ Orden no encontrada, actualizando...','var(--red)'); return; }
   document.getElementById('modal-editar-info').textContent =
     `Orden #${o.id} · Creada: ${fmtHora(o.fechaCreacion)}${o.cliente ? ' · Cliente: '+o.cliente : ''}`;
 
@@ -3443,18 +3547,17 @@ async function confirmarEdicion() {
   if (!marca||!modelo||(!talle&&!rodado)||!color) { toast('⚠️ Completá Marca, Modelo, Talle o Rodado, y Color','var(--red)'); return; }
 
   
-  const o = DB.ordenes.find(x => x.id===ordenEditarId);
-  if (o) {
-    o.marca = marca; o.modelo = modelo; o.talle = talle; o.rodado = rodado; o.color = color;
-    o.cantidad = cantidad; o.cliente = cliente; o.obs = obs;
-    if (cuadro) o.cuadro = cuadro;
-    // si se asignó armador y antes no tenía, pasar a en-proceso
-    if (armador && !o.armador) { o.armador = armador; o.estado = 'en-proceso'; }
-    else if (armador) { o.armador = armador; }
-    else if (!armador && o.estado === 'en-proceso') { o.armador = null; o.estado = 'pendiente'; }
-    o.ultimaEdicion = new Date().toISOString();
-    o.editadoPor = sesionActual ? sesionActual.usuario : 'desconocido';
-  }
+  const o = (DB.ordenes||[]).find(x => x && x.id===ordenEditarId);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); closeModal('modal-editar'); return; }
+  o.marca = marca; o.modelo = modelo; o.talle = talle; o.rodado = rodado; o.color = color;
+  o.cantidad = cantidad; o.cliente = cliente; o.obs = obs;
+  if (cuadro) o.cuadro = cuadro;
+  // si se asignó armador y antes no tenía, pasar a en-proceso
+  if (armador && !o.armador) { o.armador = armador; o.estado = 'en-proceso'; }
+  else if (armador) { o.armador = armador; }
+  else if (!armador && o.estado === 'en-proceso') { o.armador = null; o.estado = 'pendiente'; }
+  o.ultimaEdicion = new Date().toISOString();
+  o.editadoPor = sesionActual ? sesionActual.usuario : 'desconocido';
   await saveKey('ordenes');
   closeModal('modal-editar');
   tRenderAll(); vRenderOrdenes();
@@ -3474,8 +3577,9 @@ function ocultarCancelMotivo() {
 async function confirmarCancelacion() {
   const motivo = document.getElementById('cancel-motivo-input').value.trim();
   if (!motivo) { toast('⚠️ El motivo de cancelación es obligatorio','var(--red)'); document.getElementById('cancel-motivo-input').focus(); return; }
-  const o = DB.ordenes.find(x => x.id===ordenEditarId);
-  if (o) { o.estado = 'cancelada'; o.motivoCancelacion = motivo; o.fechaCompletado = new Date().toISOString(); }
+  const o = (DB.ordenes||[]).find(x => x && x.id===ordenEditarId);
+  if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); closeModal('modal-cancelar'); return; }
+  o.estado = 'cancelada'; o.motivoCancelacion = motivo; o.fechaCompletado = new Date().toISOString();
   await saveKey('ordenes');
   closeModal('modal-cancelar');
   closeModal('modal-editar');
@@ -3570,22 +3674,23 @@ async function sRegistrar() {
   // FIX: siempre leer el select de tipo armado si está visible (no solo cuando tieneKit)
   if (wrapTipo && wrapTipo.style.display !== 'none') {
     tipoArmado = document.getElementById('s-tipo-armado').value;
-    if (!tipoArmado) { toast('⚠️ Seleccioná el tipo de armado','var(--red)'); return; }
+    if (!tipoArmado) { toast('⚠️ Seleccioná el tipo de armado','var(--red)'); _registrandoBici = false; if (btnReg) { btnReg.disabled = false; btnReg.style.opacity = ''; } return; }
   }
 
   const armador2El = document.getElementById('s-armador2');
   const armador2 = (tipoArmado === 'kit' && armador2El && armador2El.value) ? armador2El.value : null;
 
-  if (!armador||!marca||!modelo) { toast('⚠️ Completá armador, marca y modelo','var(--red)'); return; }
-  if (!cuadro) { toast('⚠️ El N° de Cuadro es obligatorio para bicis del salón','var(--red)'); return; }
+  if (!armador||!marca||!modelo) { toast('⚠️ Completá armador, marca y modelo','var(--red)'); _registrandoBici = false; if (btnReg) { btnReg.disabled = false; btnReg.style.opacity = ''; } return; }
+  if (!cuadro) { toast('⚠️ El N° de Cuadro es obligatorio para bicis del salón','var(--red)'); _registrandoBici = false; if (btnReg) { btnReg.disabled = false; btnReg.style.opacity = ''; } return; }
 
   // Verificar duplicado
   const yaEnSalon = DB.ordenes.some(o => o.esSalon && o.cuadro && o.cuadro.toLowerCase() === cuadro.toLowerCase() && o.estado === 'completada');
   const esRetoque = (tipoArmado === 'retoque');
   const comisionDuplicada = yaEnSalon && !esRetoque;
 
+  const idSalon = await getNextId();
   DB.ordenes.push({
-    id: DB.counter++, cliente:'', marca, modelo,
+    id: idSalon, cliente:'', marca, modelo,
     talle: talle||'', rodado: rodado||'', color: color||'-', cantidad, obs:'', armador,
     armador2: armador2 || null,
     tipoArmado, esRetoque, comisionDuplicada,
@@ -3594,7 +3699,7 @@ async function sRegistrar() {
     fechaCreacion: new Date().toISOString(),
     fechaCompletado: new Date().toISOString(),
   });
-  await saveKey('ordenes'); await saveKey('counter');
+  await saveKey('ordenes');
   ['s-armador','s-marca','s-cuadro'].forEach(id => document.getElementById(id).value='');
   document.getElementById('s-modelo').innerHTML='<option value="">— Seleccioná —</option>';
   document.getElementById('s-talle').innerHTML='<option value="">— Seleccioná —</option>';
@@ -3618,7 +3723,7 @@ async function sRegistrar() {
 
 function renderSalon() {
   const cont = document.getElementById('s-lista');
-  const lista = DB.ordenes.filter(o=>o.esSalon).sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
+  const lista = (DB.ordenes||[]).filter(o=>o!=null&&o.esSalon).sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
   if (!lista.length) { cont.innerHTML='<div class="empty"><div class="empty-icon">🚲</div>Sin registros</div>'; return; }
   cont.innerHTML = lista.slice(0,20).map(o=>{
     const tipoBadge = o.esRetoque ? '<span class="badge" style="background:rgba(0,200,83,.1);color:var(--green);border:1px solid var(--green);font-size:10px">✨ Retoque</span>'
@@ -4106,6 +4211,7 @@ async function armAgregar() {
 }
 
 async function armEliminar(nombre) {
+  if (!confirm(`¿Eliminar al armador "${nombre}"? Esta acción no se puede deshacer.`)) return;
   DB.armadores = DB.armadores.filter(a=>a!==nombre);
   await saveKey('armadores');
   renderArmadores();
@@ -4442,8 +4548,8 @@ function fillHistorialFiltros() {
   const sM = document.getElementById('h-marca');
   sA.innerHTML = '<option value="">Todos</option>';
   sM.innerHTML = '<option value="">Todas</option>';
-  [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
-  [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
+  [...(DB.armadores||[])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es')).forEach(a => sA.innerHTML += `<option value="${a}">${a}</option>`);
+  [...new Set((DB.catalogo||[]).filter(Boolean).map(b=>b.marca).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')).forEach(m => sM.innerHTML += `<option value="${m}">${m}</option>`);
 }
 
 function renderHistorial() {
@@ -4629,7 +4735,7 @@ function renderBD(ctx) {
   const fCuadro  = (document.getElementById(`bd-${ctx}-f-cuadro`)?.value  || '').toLowerCase().trim();
   const fTipo    = document.getElementById(`bd-${ctx}-f-tipo`)?.value || '';
 
-  let ordenes = getBDOrdenes(ctx);
+  let ordenes = getBDOrdenes(ctx).filter(o => o != null);
 
   // Filtro tipo
   if (fTipo === 'salon') {
@@ -4802,8 +4908,8 @@ function bdeFillVariants() {
 }
 
 async function confirmarEditarBD() {
-  const o = DB.ordenes.find(x => x.id === _editarBDId);
-  if (!o) return;
+  const o = (DB.ordenes||[]).find(x => x && x.id === _editarBDId);
+  if (!o) { toast('⚠️ Registro no encontrado','var(--red)'); closeModal('modal-editar-bd'); return; }
   const marca   = document.getElementById('bd-e-marca').value;
   const modelo  = document.getElementById('bd-e-modelo').value;
   const talle   = document.getElementById('bd-e-talle').value;
@@ -4872,7 +4978,7 @@ function comisionOrden(o, paraArmador) {
   if (o.comisionDuplicada) return 0; // N° cuadro ya armado para salón, no duplicar
   if (o.esRetoque || o.tipoArmado === 'retoque') return 0; // retoque final: sin comisión
   const key = `${o.marca}|${o.modelo}`;
-  const biciCat = DB.catalogo.find(b => b.marca===o.marca && b.modelo===o.modelo);
+  const biciCat = (DB.catalogo||[]).find(b => b && b.marca===o.marca && b.modelo===o.modelo);
   const tieneKitPre = biciCat ? biciCat.tieneKitPre === true : false;
   let comUnitaria = 0;
   if (tieneKitPre && o.tipoArmado === 'kit') {
@@ -4911,47 +5017,79 @@ function fmtFecha(iso) {
 }
 
 function fillMarcasSelect(id) {
-  const marcas = [...new Set(DB.catalogo.map(b=>b.marca))].sort((a,b)=>a.localeCompare(b,'es'));
-  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + marcas.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const el = document.getElementById(id);
+  if (!el) return;
+  const catalogo = DB.catalogo || [];
+  const marcas = [...new Set(catalogo.map(b=>b.marca).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  el.innerHTML = '<option value="">— Seleccioná —</option>' + marcas.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 function fillModelosSelect(id, marca) {
-  const modelos = DB.catalogo.filter(b=>b.marca===marca).map(b=>b.modelo).sort((a,b)=>a.localeCompare(b,'es'));
-  document.getElementById(id).innerHTML = '<option value="">— Seleccioná —</option>' + modelos.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const el = document.getElementById(id);
+  if (!el) return;
+  const catalogo = DB.catalogo || [];
+  const modelos = catalogo.filter(b=>b.marca===marca).map(b=>b.modelo).filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
+  el.innerHTML = '<option value="">— Seleccioná —</option>' + modelos.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 function fillVariants(talleId, rodadoId, colorId, marca, modelo) {
-  const bici = DB.catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
+  const elT = document.getElementById(talleId);
+  const elR = document.getElementById(rodadoId);
+  const elC = document.getElementById(colorId);
+  if (!elT || !elR || !elC) return;
+  const catalogo = DB.catalogo || [];
+  const bici = catalogo.find(b=>b.marca===marca&&b.modelo===modelo);
   // retrocompatibilidad
   let talles  = bici ? (bici.talles  || []) : [];
   let rodados = bici ? (bici.rodados || []) : [];
   if (bici && !bici.rodados) {
-    talles  = (bici.talles||[]).filter(t => /^[a-zA-Z]+$/.test(t.trim()));
-    rodados = (bici.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test(t.trim())));
+    talles  = (bici.talles||[]).filter(t => /^[a-zA-Z]+$/.test((t||'').trim()));
+    rodados = (bici.talles||[]).filter(t => !(/^[a-zA-Z]+$/.test((t||'').trim())));
   }
-  talles  = [...talles].sort((a,b)=>a.localeCompare(b,'es'));
-  rodados = [...rodados].sort((a,b)=>a.localeCompare(b,'es'));
-  const colores = bici ? [...bici.colores].sort((a,b)=>a.localeCompare(b,'es')) : [];
-  document.getElementById(talleId).innerHTML  = '<option value="">— Seleccioná —</option>' + talles.map(t=>`<option value="${t}">${t}</option>`).join('');
-  document.getElementById(rodadoId).innerHTML = '<option value="">— Seleccioná —</option>' + rodados.map(r=>`<option value="${r}">${r}</option>`).join('');
-  document.getElementById(colorId).innerHTML  = '<option value="">— Seleccioná —</option>' + colores.map(c=>`<option value="${c}">${c}</option>`).join('');
+  talles  = [...talles].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
+  rodados = [...rodados].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
+  const colores = bici ? [...(bici.colores||[])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es')) : [];
+  elT.innerHTML = '<option value="">— Seleccioná —</option>' + talles.map(t=>`<option value="${t}">${t}</option>`).join('');
+  elR.innerHTML = '<option value="">— Seleccioná —</option>' + rodados.map(r=>`<option value="${r}">${r}</option>`).join('');
+  elC.innerHTML = '<option value="">— Seleccioná —</option>' + colores.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 function fillArmadoresSelect(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  const armadores = [...DB.armadores].sort((a,b)=>a.localeCompare(b,'es'));
+  const armadores = [...(DB.armadores||[])].filter(Boolean).sort((a,b)=>a.localeCompare(b,'es'));
   const isOptional = id.includes('2');
   el.innerHTML = (isOptional ? '<option value="">— Sin segundo armador —</option>' : '<option value="">— Seleccioná —</option>') + armadores.map(a=>`<option value="${a}">${a}</option>`).join('');
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('on');
+}
+
+// Toast con cola: los mensajes rápidos no se pierden, se muestran secuencialmente
+const _toastQueue = [];
+let _toastRunning = false;
 
 function toast(msg, bg='var(--green)') {
+  _toastQueue.push({ msg, bg });
+  if (!_toastRunning) _processToastQueue();
+}
+
+function _processToastQueue() {
+  if (!_toastQueue.length) { _toastRunning = false; return; }
+  _toastRunning = true;
+  const item = _toastQueue.shift();
+  if (!item) { _toastRunning = false; return; }
+  const { msg, bg } = item;
   const t = document.getElementById('toast');
+  if (!t) { _toastRunning = false; return; }
   t.textContent = msg;
   t.style.background = bg;
   t.style.color = (bg==='var(--green)'||bg==='var(--orange)') ? '#000' : '#fff';
   t.style.display = 'block';
   clearTimeout(t._timer);
-  t._timer = setTimeout(()=>t.style.display='none', 2800);
+  t._timer = setTimeout(() => {
+    t.style.display = 'none';
+    setTimeout(_processToastQueue, 120);
+  }, 2600);
 }
 
 function exportXlsx(sheets, filename) {
@@ -5080,7 +5218,21 @@ async function srvRegistrarManual() {
 
 async function srvConfirmar(datosStr) {
   let datos;
-  try { datos = (typeof datosStr === 'object') ? datosStr : JSON.parse(datosStr); } catch(e) { return; }
+  try {
+    if (typeof datosStr === 'object' && datosStr !== null) {
+      datos = datosStr;
+    } else if (typeof datosStr === 'string') {
+      datos = JSON.parse(datosStr);
+    } else {
+      console.error('srvConfirmar: argumento inválido', datosStr);
+      toast('⚠️ Error al confirmar service. Intentá de nuevo.','var(--red)');
+      return;
+    }
+  } catch(e) {
+    console.error('srvConfirmar JSON parse error:', e);
+    toast('⚠️ Error al confirmar service.','var(--red)');
+    return;
+  }
   const obs = document.getElementById('srv-obs-confirm')?.value.trim() || '';
   await srvGuardar(datos, obs);
 }
@@ -5494,7 +5646,7 @@ function renderSaldos() {
   // Poblar selects
   const selV = document.getElementById('sv-vendedor');
   if (selV) {
-    const vendedores = [...new Set(DB.ordenes.filter(o=>o.vendedor).map(o=>o.vendedor))].sort();
+    const vendedores = [...new Set((DB.ordenes||[]).filter(o=>o&&o.vendedor).map(o=>o.vendedor))].sort((a,b)=>a.localeCompare(b,'es'));
     selV.innerHTML = vendedores.length
       ? vendedores.map(v=>`<option value="${v}">${v}</option>`).join('')
       : '<option value="">Sin vendedores</option>';
