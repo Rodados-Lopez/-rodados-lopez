@@ -1043,7 +1043,6 @@ input[type=file]{display:none;}
             <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);border:1px solid var(--green);padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;display:inline-block"></span>EN VIVO</span>
             <button class="btn btn-ghost btn-sm" onclick="renderReporte()">🔄 Actualizar</button>
             <button class="btn btn-b btn-sm" onclick="exportarReporteSemanal()">⬇️ Exportar Excel</button>
-            <button class="btn btn-r btn-sm" onclick="confirmarReset()">🗑️ Resetear Período</button>
           </div>
         </div>
 
@@ -1381,18 +1380,6 @@ input[type=file]{display:none;}
     <div id="completar-actions" style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="closeModal('modal-completar')">Cerrar</button>
       <button class="btn btn-g" style="flex:1" onclick="confirmarCompletado()">🎉 COMPLETADO</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL RESET -->
-<div id="modal-reset" class="modal-bg">
-  <div class="modal">
-    <h3 style="color:var(--red)">⚠️ Resetear Período</h3>
-    <p>Esto <strong>archiva</strong> todos los registros completados del período visible actualmente. Los datos históricos se conservan en el historial completo. El catálogo y armadores no se modifican.</p>
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-ghost" onclick="closeModal('modal-reset')">Cancelar</button>
-      <button class="btn btn-r" style="flex:1" onclick="ejecutarReset()">Sí, resetear semana</button>
     </div>
   </div>
 </div>
@@ -1967,7 +1954,6 @@ async function getNextId() {
 
 async function saveKey(key) {
   if (!isOnline) {
-    // Guardar localmente y encolar
     queueOfflineOp(key);
     updateConnectionBadge();
     return;
@@ -1978,7 +1964,99 @@ async function saveKey(key) {
     updateConnectionBadge();
     toast('📶 Sin internet — guardado localmente','var(--yellow)');
   } else {
-    saveOfflineDB(); // mantener copia local actualizada
+    saveOfflineDB();
+  }
+}
+
+// ── GUARDAR / ELIMINAR ORDEN INDIVIDUAL ─────────────────────
+// Escribe solo el nodo de esa orden en Firebase, evitando el
+// race condition de sobrescribir el array completo.
+async function saveOrden(orden) {
+  if (!fbDB) { console.warn('saveOrden: fbDB no disponible'); return; }
+  if (!isOnline) {
+    queueOfflineOp('orden:set:' + orden.id);
+    saveOfflineDB();
+    updateConnectionBadge();
+    return;
+  }
+  try {
+    await fbDB.ref('ordenes/' + orden.id).set(orden);
+    saveOfflineDB();
+  } catch(e) {
+    console.warn('saveOrden error:', e);
+    queueOfflineOp('orden:set:' + orden.id);
+    updateConnectionBadge();
+    toast('📶 Sin internet — guardado localmente','var(--yellow)');
+  }
+}
+
+async function removeOrden(id) {
+  DB.ordenes = DB.ordenes.filter(o => o.id !== id);
+  if (!fbDB) { console.warn('removeOrden: fbDB no disponible'); return; }
+  if (!isOnline) {
+    queueOfflineOp('orden:remove:' + id);
+    saveOfflineDB();
+    updateConnectionBadge();
+    return;
+  }
+  try {
+    await fbDB.ref('ordenes/' + id).remove();
+    saveOfflineDB();
+  } catch(e) {
+    console.warn('removeOrden error:', e);
+    queueOfflineOp('orden:remove:' + id);
+    updateConnectionBadge();
+  }
+}
+
+// ── MIGRACIÓN ÚNICA: array → objeto clave por ID ─────────────
+// Convierte la estructura vieja (array) a la nueva (objeto {id: orden}).
+// También corrige IDs duplicados asignando un nuevo ID al segundo.
+async function migrarOrdenesAObjecto() {
+  if (!fbDB || !isOnline) return;
+  try {
+    const snap = await fbDB.ref('ordenes').once('value');
+    const val = snap.val();
+    if (!val || !Array.isArray(val)) return; // ya está migrado o vacío
+
+    const asObj = {};
+    let maxId = 0;
+
+    val.forEach(o => {
+      if (!o || o.id === undefined) return;
+      const id = o.id;
+      if (asObj[id]) {
+        // ID duplicado: asignar nuevo ID al que se registró después
+        const existDate = new Date(asObj[id].fechaCreacion || 0);
+        const thisDate  = new Date(o.fechaCreacion || 0);
+        const newId = Math.max(...Object.keys(asObj).map(Number), maxId) + 1;
+        if (thisDate >= existDate) {
+          asObj[newId] = { ...o, id: newId };
+        } else {
+          asObj[newId] = { ...asObj[id], id: newId };
+          asObj[id] = o;
+        }
+        if (newId > maxId) maxId = newId;
+        console.warn(`migrarOrdenesAObjecto: ID duplicado ${id} → uno renombrado a ${newId}`);
+      } else {
+        asObj[id] = o;
+        if (id > maxId) maxId = id;
+      }
+    });
+
+    // Actualizar counter si hace falta
+    const cSnap = await fbDB.ref('counter').once('value');
+    const counterActual = cSnap.val() || 1;
+    const nuevoCounter = Math.max(counterActual, maxId + 1);
+
+    await fbDB.ref('ordenes').set(asObj);
+    if (nuevoCounter > counterActual) await fbDB.ref('counter').set(nuevoCounter);
+
+    DB.ordenes = Object.values(asObj).filter(Boolean);
+    DB.counter = nuevoCounter;
+    console.log(`✅ Migración completada: ${Object.keys(asObj).length} órdenes. Counter: ${nuevoCounter}`);
+  } catch(e) {
+    console.error('Error en migración de órdenes:', e);
   }
 }
 
@@ -1995,7 +2073,16 @@ async function syncOfflineQueue() {
   const pendingKeys = [...new Set(q)]; // deduplicar
   for (const key of pendingKeys) {
     try {
-      await fbDB.ref(key).set(DB[key]);
+      if (key.startsWith('orden:set:')) {
+        const id = parseInt(key.split(':')[2]);
+        const orden = DB.ordenes.find(o => o.id === id);
+        if (orden) await fbDB.ref('ordenes/' + id).set(orden);
+      } else if (key.startsWith('orden:remove:')) {
+        const id = parseInt(key.split(':')[2]);
+        await fbDB.ref('ordenes/' + id).remove();
+      } else {
+        await fbDB.ref(key).set(DB[key]);
+      }
     } catch(e) {
       console.error('Sync error for key:', key, e);
       allOk = false;
@@ -2141,16 +2228,16 @@ function startPolling() {
     // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
     // Usamos un pequeño debounce para no disparar escrituras múltiples en rápida sucesión
     const ahora10 = Date.now();
-    let autoEntregaHecha = false;
+    const autoEntregadas = [];
     DB.ordenes.forEach(o => {
       if (o.estado === 'completada' && !o.entregada && o.fechaCompletado) {
         const diff = ahora10 - new Date(o.fechaCompletado).getTime();
-        if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregaHecha = true; }
+        if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregadas.push(o); }
       }
     });
-    if (autoEntregaHecha) {
+    if (autoEntregadas.length) {
       clearTimeout(window._autoEntregaTimer);
-      window._autoEntregaTimer = setTimeout(() => saveKey('ordenes'), 2000);
+      window._autoEntregaTimer = setTimeout(() => Promise.all(autoEntregadas.map(o => saveOrden(o))), 2000);
     }
 
     if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
@@ -2557,7 +2644,7 @@ async function vEnviarOrden() {
 
   // getNextId() ya persistió el counter de forma atómica en Firebase
   DB.ordenes.push(orden);
-  await saveKey('ordenes');
+  await saveOrden(orden);
 
   // limpiar
   ['v-cliente','v-obs'].forEach(id => document.getElementById(id).value = '');
@@ -2705,7 +2792,7 @@ async function marcarEntregada(id) {
   if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); return; }
   o.entregada = true;
   o.fechaEntregada = new Date().toISOString();
-  await saveKey('ordenes');
+  await saveOrden(o);
   vRenderOrdenes();
   toast('✅ Bicicleta marcada como entregada');
 }
@@ -2760,12 +2847,12 @@ async function confirmarCambioCliente() {
   }
 
   // 1. La bici armada pasa al salón como stock disponible
+  let ordenSalon = null;
   if (o.cuadro) {
-    // Buscar si ya hay una entrada de salón con ese cuadro; si no, crear una nueva
     const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
     if (!yaEnSalon) {
       const idSalon = await getNextId();
-      DB.ordenes.push({
+      ordenSalon = {
         id: idSalon,
         cliente: '', marca: o.marca, modelo: o.modelo,
         talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
@@ -2777,7 +2864,8 @@ async function confirmarCambioCliente() {
         fechaCreacion: new Date().toISOString(),
         fechaCompletado: new Date().toISOString(),
         notaSalon: `Vuelta del pedido #${o.id} — cliente arrepentido`,
-      });
+      };
+      DB.ordenes.push(ordenSalon);
     }
   }
 
@@ -2802,7 +2890,10 @@ async function confirmarCambioCliente() {
     notaOrigen: `Reemplazo de orden #${o.id} por cambio de opinión del cliente`,
   };
   DB.ordenes.push(nuevaOrden);
-  await saveKey('ordenes');
+  // Guardar cada orden individualmente (evita race condition)
+  const guardados = [saveOrden(o), saveOrden(nuevaOrden)];
+  if (ordenSalon) guardados.push(saveOrden(ordenSalon));
+  await Promise.all(guardados);
   closeModal('modal-cambio-cliente');
   vRenderOrdenes();
   tRenderAll();
@@ -2863,17 +2954,16 @@ async function confirmarEdicionEntregada() {
   o.editadoPor = sesionActual ? sesionActual.usuario : 'vendedor';
 
   if (estadoReal === 'quedo_salon') {
-    // Si en realidad quedó en el salón, pasar la orden a cancelada y crear entrada de salón
     o.estado = 'cancelada';
     o.entregada = false;
     o.motivoCancelacion = 'Corrección: bici no entregada — derivada al salón';
     o.fechaCompletado = new Date().toISOString();
-    // Registrar en salón si tiene cuadro y no existe ya
+    let ordenSalonCorr = null;
     if (o.cuadro) {
       const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === o.cuadro.toLowerCase());
       if (!yaEnSalon) {
         const idSalonCorr = await getNextId();
-        DB.ordenes.push({
+        ordenSalonCorr = {
           id: idSalonCorr,
           cliente: '', marca: o.marca, modelo: o.modelo,
           talle: o.talle || '', rodado: o.rodado || '', color: o.color || '-',
@@ -2885,15 +2975,19 @@ async function confirmarEdicionEntregada() {
           fechaCreacion: new Date().toISOString(),
           fechaCompletado: new Date().toISOString(),
           notaSalon: `Corrección retroactiva de orden #${o.id}`,
-        });
+        };
+        DB.ordenes.push(ordenSalonCorr);
       }
     }
+    const saves = [saveOrden(o)];
+    if (ordenSalonCorr) saves.push(saveOrden(ordenSalonCorr));
+    await Promise.all(saves);
     toast('🔄 Orden corregida: bici movida al salón','var(--blue)');
   } else {
+    await saveOrden(o);
     toast('✅ Corrección guardada en la base de datos','var(--green)');
   }
 
-  await saveKey('ordenes');
   closeModal('modal-editar-entregada');
   vRenderOrdenes();
   if (isScreen('taller')) tRenderAll();
@@ -3003,7 +3097,7 @@ async function reenviarDesdeAlerta() {
     comisionDuplicada: false,
   };
   DB.ordenes.push(nuevaOrden);
-  await saveKey('ordenes');
+  await saveOrden(nuevaOrden);
 
   // Marcar alerta como resuelta
   if (alertaVendedorIdx >= 0) {
@@ -3276,7 +3370,7 @@ async function confirmarAsignacion() {
   o.esRetoque = (tipoArmado === 'retoque');
   o.fechaAsignado=new Date().toISOString();
   if(cuadro) o.cuadro=cuadro;
-  await saveKey('ordenes');
+  await saveOrden(o);
   closeModal('modal-asignar');
   tRenderAll(); vRenderOrdenes();
   let msg = `✅ ${armador} asignado — ${tipoArmado==='kit'?'📦 Kit':tipoArmado==='retoque'?'✨ Retoque Final':'🚲 Prearmada'}`;
@@ -3390,7 +3484,7 @@ async function confirmarCompletado() {
       const yaEnSalon = DB.ordenes.some(x => x.esSalon && x.cuadro && x.cuadro.toLowerCase() === cuadro.toLowerCase() && x.estado==='completada' && x.id !== o.id);
       o.comisionDuplicada = yaEnSalon;
     }
-    await saveKey('ordenes');
+    await saveOrden(o);
     closeModal('modal-completar');
     tRenderAll(); vRenderOrdenes();
     if (o.esRetoque) {
@@ -3447,9 +3541,18 @@ function cancelarSinStock() {
 }
 
 async function confirmarDevolverSinStock() {
-  const motivo = document.getElementById('sinstock-obs').value.trim();
-  if (!motivo) { toast('⚠️ Escribí el motivo de la devolución (obligatorio)','var(--red)'); document.getElementById('sinstock-obs').focus(); return; }
-  await devolverSinStock(motivo);
+  if (_completandoBici) { toast('⏳ Ya se está guardando, esperá...','var(--yellow)'); return; }
+  _completandoBici = true;
+  const btnSS = document.querySelector('[onclick="confirmarDevolverSinStock()"]');
+  if (btnSS) { btnSS.disabled = true; btnSS.style.opacity = '0.5'; }
+  try {
+    const motivo = document.getElementById('sinstock-obs').value.trim();
+    if (!motivo) { toast('⚠️ Escribí el motivo de la devolución (obligatorio)','var(--red)'); document.getElementById('sinstock-obs').focus(); return; }
+    await devolverSinStock(motivo);
+  } finally {
+    _completandoBici = false;
+    if (btnSS) { btnSS.disabled = false; btnSS.style.opacity = ''; }
+  }
 }
 
 async function devolverSinStock(motivo) {
@@ -3479,7 +3582,7 @@ async function devolverSinStock(motivo) {
   if (!DB.sinStockAlertas) DB.sinStockAlertas = [];
   DB.sinStockAlertas.push(alerta);
 
-  await saveKey('ordenes');
+  await saveOrden(o);
   await saveKey('sinStockAlertas');
   closeModal('modal-completar');
   tRenderAll();
@@ -3558,7 +3661,7 @@ async function confirmarEdicion() {
   else if (!armador && o.estado === 'en-proceso') { o.armador = null; o.estado = 'pendiente'; }
   o.ultimaEdicion = new Date().toISOString();
   o.editadoPor = sesionActual ? sesionActual.usuario : 'desconocido';
-  await saveKey('ordenes');
+  await saveOrden(o);
   closeModal('modal-editar');
   tRenderAll(); vRenderOrdenes();
   toast('✅ Orden modificada');
@@ -3580,7 +3683,7 @@ async function confirmarCancelacion() {
   const o = (DB.ordenes||[]).find(x => x && x.id===ordenEditarId);
   if (!o) { toast('⚠️ Orden no encontrada','var(--red)'); closeModal('modal-cancelar'); return; }
   o.estado = 'cancelada'; o.motivoCancelacion = motivo; o.fechaCompletado = new Date().toISOString();
-  await saveKey('ordenes');
+  await saveOrden(o);
   closeModal('modal-cancelar');
   closeModal('modal-editar');
   tRenderAll(); vRenderOrdenes();
@@ -3689,7 +3792,7 @@ async function sRegistrar() {
   const comisionDuplicada = yaEnSalon && !esRetoque;
 
   const idSalon = await getNextId();
-  DB.ordenes.push({
+  const salonOrden = {
     id: idSalon, cliente:'', marca, modelo,
     talle: talle||'', rodado: rodado||'', color: color||'-', cantidad, obs:'', armador,
     armador2: armador2 || null,
@@ -3698,8 +3801,9 @@ async function sRegistrar() {
     estado:'completada', esSalon:true,
     fechaCreacion: new Date().toISOString(),
     fechaCompletado: new Date().toISOString(),
-  });
-  await saveKey('ordenes');
+  };
+  DB.ordenes.push(salonOrden);
+  await saveOrden(salonOrden);
   ['s-armador','s-marca','s-cuadro'].forEach(id => document.getElementById(id).value='');
   document.getElementById('s-modelo').innerHTML='<option value="">— Seleccioná —</option>';
   document.getElementById('s-talle').innerHTML='<option value="">— Seleccioná —</option>';
@@ -3835,7 +3939,7 @@ async function marcarViaCargoProceso(id) {
   o.estado = 'en-proceso';
   o.fechaAsignado = new Date().toISOString();
   o.armador = sesionActual ? sesionActual.usuario : 'taller';
-  await saveKey('ordenes');
+  await saveOrden(o);
   renderViaCargo();
   toast('📦 Marcado como en preparación');
 }
@@ -3846,7 +3950,7 @@ async function marcarViaCargoCerrado(id) {
   o.estado = 'completada';
   o.fechaCompletado = new Date().toISOString();
   o.armador = o.armador || (sesionActual ? sesionActual.usuario : 'taller');
-  await saveKey('ordenes');
+  await saveOrden(o);
   renderViaCargo();
   tRenderAll();
   toast('✅ Caja lista para despacho');
@@ -4529,16 +4633,7 @@ function exportarReporteSemanal() {
   toast('⬇️ Reporte exportado');
 }
 
-function confirmarReset() { document.getElementById('modal-reset').classList.add('on'); }
-
-async function ejecutarReset() {
-  // resetear solo los de la semana actual (completados)
-  DB.ordenes = DB.ordenes.filter(o => o.estado !== 'completada');
-  await saveKey('ordenes');
-  closeModal('modal-reset');
-  renderReporte();
-  toast('✅ Semana reseteada','var(--red)');
-}
+// (Botón de reseteo de período eliminado — no se utilizaba)
 
 // ════════════════════════════════════════════════════════════
 //  HISTORIAL
@@ -4642,8 +4737,8 @@ async function borrarOrdenesSeleccionadas() {
   if (!checks.length) return;
   const ids = checks.map(c => parseInt(c.dataset.id));
   if (!confirm(`¿Borrar ${ids.length} registro(s) seleccionado(s) del historial? Esta acción no se puede deshacer.`)) return;
-  DB.ordenes = DB.ordenes.filter(o => !ids.includes(o.id));
-  await saveKey('ordenes');
+  // Eliminar cada orden individualmente en Firebase (no sobreescribe el array completo)
+  await Promise.all(ids.map(id => removeOrden(id)));
   renderHistorial();
   renderReporte();
   toast(`🗑️ ${ids.length} registro(s) eliminado(s)`, 'var(--red)');
@@ -4937,7 +5032,7 @@ async function confirmarEditarBD() {
     if (o.entregada && !o.fechaEntregada) o.fechaEntregada = new Date().toISOString();
   }
 
-  await saveKey('ordenes');
+  await saveOrden(o);
   closeModal('modal-editar-bd');
   renderBD(_editarBDCtx);
   if (isScreen('vendedor')) vRenderOrdenes();
@@ -5408,8 +5503,11 @@ function tblGetRango() {
     return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
   }
   if (tblPeriodo === 'semana') {
-    const ini = new Date(ahora); ini.setDate(ahora.getDate() - ahora.getDay()); ini.setHours(0,0,0,0);
-    return { desde: ini, hasta: new Date(ahora.getTime()+86400000) };
+    const dow = ahora.getDay();
+    const lunes = new Date(ahora);
+    lunes.setDate(ahora.getDate() - (dow === 0 ? 6 : dow - 1));
+    lunes.setHours(0,0,0,0);
+    return { desde: lunes, hasta: new Date(ahora.getTime()+86400000) };
   }
   if (tblPeriodo === 'mes') {
     const ini = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
@@ -5435,10 +5533,11 @@ function renderTableroCuadro() {
 
   const { desde, hasta } = tblGetRango();
 
-  // Filtrar órdenes completadas en el período que GENERAN COMISIÓN
+  // Filtrar órdenes completadas en el período (todas las armadas, incluyendo retoques)
+  // Los retoques no generan comisión pero SÍ cuentan como bicis armadas en el tablero
   const ordenes = DB.ordenes.filter(o =>
     o.estado === 'completada' && o.armador &&
-    !o.comisionDuplicada && !o.esRetoque && o.tipoArmado !== 'retoque' &&
+    !o.comisionDuplicada &&
     new Date(o.fechaCompletado || o.fechaCreacion) >= desde &&
     new Date(o.fechaCompletado || o.fechaCreacion) <= hasta
   );
@@ -5909,6 +6008,7 @@ async function eliminarPagoArmador(id) {
   // Verificar conectividad real antes de cargar
   try {
     await loadDB();
+    await migrarOrdenesAObjecto(); // migración única array → objeto (no-op si ya está migrado)
     saveOfflineDB(); // guardar copia local tras carga exitosa
   } catch(e) {
     // Sin internet: usar caché local si existe
