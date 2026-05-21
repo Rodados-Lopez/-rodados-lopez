@@ -485,6 +485,7 @@ input[type=file]{display:none;}
 <div id="screen-inicio" style="display:none;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:32px;">
   <div class="brand">
     <h1>RODADOS <em>LOPEZ</em></h1>
+    <p style="font-size:15px;letter-spacing:4px;text-transform:uppercase;color:var(--orange);font-weight:700;margin-top:4px;margin-bottom:0">SUCURSAL LANÚS</p>
     <p>Sistema de Armado · Tiempo Real · Cloud</p>
   </div>
   <div class="inicio-btns">
@@ -2148,7 +2149,7 @@ function initFirebase() {
   }
 }
 
-// ── LOAD: lectura única al inicio ──
+// ── LOAD: lectura única (usada internamente y en syncOfflineQueue) ──
 async function loadDB() {
   if (!fbDB) throw new Error('Firebase no inicializado');
   const keys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores','ordenes','counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
@@ -2156,13 +2157,10 @@ async function loadDB() {
     fbDB.ref(key).once('value').then(snap => {
       const val = snap.val();
       if (val !== null) {
-        // Normalizar: filtrar nulls que Firebase puede insertar en arrays
         if (Array.isArray(val)) {
           DB[key] = val.filter(item => item !== null && item !== undefined);
         } else if (typeof val === 'object' && val !== null && key !== 'comisiones' && key !== 'comisionesKit' && key !== 'comisionesPre' && key !== 'comisionVendedorConfig') {
-          // Si Firebase devolvió un objeto en vez de array, convertir y filtrar
           const asArr = Object.values(val).filter(item => item !== null && item !== undefined);
-          // Solo convertir a array si parece que debería serlo (tiene propiedad 'id' o es lista)
           DB[key] = (asArr.length && asArr[0] && typeof asArr[0] === 'object' && ('id' in asArr[0] || 'marca' in asArr[0] || 'usuario' in asArr[0])) ? asArr : val;
         } else {
           DB[key] = val;
@@ -2171,13 +2169,14 @@ async function loadDB() {
     }).catch(e => { console.warn(`loadDB: error al leer clave "${key}":`, e); })
   );
   await Promise.all(promises);
+  _aplicarDefaultsDB();
+}
 
-  // Asegurar que los campos de array siempre sean arrays válidos
+// ── DEFAULTS post-carga (compartido entre loadDB y listenToDB) ──
+function _aplicarDefaultsDB() {
   ['catalogo','armadores','ordenes','usuarios','sinStockAlertas','services','pagosArmadores','pagosVendedor'].forEach(k => {
     if (!Array.isArray(DB[k])) DB[k] = [];
   });
-
-  // defaults si la BD está vacía
   if (!DB.catalogo || !DB.catalogo.length)   DB.catalogo   = getDefaultCatalogo();
   if (!Object.keys(DB.comisionesKit||{}).length) {
     if (Object.keys(DB.comisiones||{}).length) {
@@ -2195,6 +2194,104 @@ async function loadDB() {
   if (DB.counter == null || isNaN(Number(DB.counter))) DB.counter = 1;
 }
 
+// ── ESCUCHA ACTIVA: carga inicial + tiempo real (reemplaza await loadDB() en el boot) ──
+// Resuelve la promesa en la primera snapshot (igual que loadDB) y luego actualiza
+// automáticamente la UI en cada cambio de Firebase, respetando la protección UX del modal.
+function listenToDB() {
+  if (!fbDB) return Promise.reject(new Error('Firebase no inicializado'));
+  return new Promise((resolve, reject) => {
+    const tOut = setTimeout(() => reject(new Error('listenToDB: timeout de conexión')), 15000);
+    let primeraVez = true;
+
+    // Claves estáticas: carga única con .once (cambian sólo por acción del admin)
+    const staticKeys = ['catalogo','comisiones','comisionesKit','comisionesPre','armadores',
+      'counter','usuarios','sinStockAlertas','services','comisionVendedorConfig','pagosArmadores','pagosVendedor'];
+    const staticPromises = staticKeys.map(key =>
+      fbDB.ref(key).once('value').then(snap => {
+        const val = snap.val();
+        if (val !== null) {
+          if (Array.isArray(val)) {
+            DB[key] = val.filter(item => item !== null && item !== undefined);
+          } else if (typeof val === 'object' && val !== null &&
+              key !== 'comisiones' && key !== 'comisionesKit' &&
+              key !== 'comisionesPre' && key !== 'comisionVendedorConfig') {
+            const asArr = Object.values(val).filter(item => item !== null && item !== undefined);
+            DB[key] = (asArr.length && asArr[0] && typeof asArr[0] === 'object' &&
+              ('id' in asArr[0] || 'marca' in asArr[0] || 'usuario' in asArr[0])) ? asArr : val;
+          } else {
+            DB[key] = val;
+          }
+        }
+      }).catch(e => console.warn(`listenToDB: error leyendo "${key}":`, e))
+    );
+
+    // ordenes: escucha activa — resuelve en primera snapshot, actualiza UI en las siguientes
+    if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
+    fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
+      try {
+        const fresh = snap.val();
+        const rawArr = fresh ? (Array.isArray(fresh) ? fresh : Object.values(fresh)) : [];
+        const freshArr = rawArr.filter(o => o !== null && o !== undefined && o.id !== undefined);
+
+        if (primeraVez) {
+          // Primera snapshot → resolver promesa de carga
+          DB.ordenes = freshArr;
+          primeraVez = false;
+          clearTimeout(tOut);
+          Promise.all(staticPromises).then(() => {
+            _aplicarDefaultsDB();
+            saveOfflineDB();
+            resolve();
+          }).catch(reject);
+          return;
+        }
+
+        // ── Actualizaciones en background ────────────────────────────────
+        // Protección UX: si el modal de 'Completar Cuadro' está abierto,
+        // NO re-renderizar el taller (los <input> activos no se tocan).
+        const modalAbierto = document.getElementById('modal-completar')?.classList.contains('on');
+
+        // Detectar nuevas órdenes de venta para alerta sonora del taller
+        if (isScreen('taller')) {
+          const idsActuales = new Set(DB.ordenes.map(x => x.id));
+          freshArr.filter(o => !idsActuales.has(o.id))
+            .forEach(o => { if (!o.esSalon && !o.esSalonPedido && !o.esViaCargo) mostrarAlerta(o); });
+        }
+
+        // Auto-entrega: marcar completadas con >10 min sin retirar
+        const ahora10 = Date.now();
+        const autoEntregadas = [];
+        freshArr.forEach(o => {
+          if (o.estado === 'completada' && !o.entregada && o.fechaCompletado) {
+            if (ahora10 - new Date(o.fechaCompletado).getTime() >= 10 * 60 * 1000) {
+              o.entregada = true;
+              o.fechaEntregada = new Date().toISOString();
+              autoEntregadas.push(o);
+            }
+          }
+        });
+        if (autoEntregadas.length) {
+          clearTimeout(window._autoEntregaTimer);
+          window._autoEntregaTimer = setTimeout(() => Promise.all(autoEntregadas.map(o => saveOrden(o))), 2000);
+        }
+
+        DB.ordenes = freshArr;
+        saveOfflineDB();
+
+        // Re-render según pantalla activa
+        if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
+        if (isScreen('taller') && !modalAbierto) {
+          tRenderAll();
+          if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro();
+          if (document.getElementById('bd-tab-t')?.classList.contains('on')) renderBD('t');
+        }
+        if (isScreen('admin')) { adminAutoRefresh(); }
+
+      } catch(e) { console.error('listenToDB ordenes listener error:', e); }
+    }, err => { clearTimeout(tOut); reject(err); });
+  });
+}
+
 // saveKey con soporte offline está definida arriba — esta es su implementación completa.
 // saveAll: guarda todas las claves conocidas
 async function saveAll() {
@@ -2202,51 +2299,10 @@ async function saveAll() {
   await Promise.all(keys.map(k => saveKey(k)));
 }
 
-// ── TIEMPO REAL: listeners Firebase (reemplazan el polling) ──
+// ── TIEMPO REAL: listeners Firebase secundarios (ordenes gestionado por listenToDB) ──
 function startPolling() {
   if (!fbDB) { console.warn('startPolling: fbDB no inicializado, se omite.'); return; }
-  // Escuchar cambios en órdenes en tiempo real
-  if (fbListeners.ordenes) fbDB.ref('ordenes').off('value', fbListeners.ordenes);
-  fbListeners.ordenes = fbDB.ref('ordenes').on('value', snap => {
-    try {
-    const fresh = snap.val();
-    if (fresh === null) return;
-    // FIX: Firebase puede devolver objetos con claves numéricas o arrays con nulls.
-    // Normalizamos filtrando nulls/undefined para evitar órdenes fantasma.
-    const rawArr = Array.isArray(fresh) ? fresh : Object.values(fresh);
-    const freshArr = rawArr.filter(o => o !== null && o !== undefined && o.id !== undefined);
-
-    // alerta taller: nuevas órdenes de venta (comparar por ID, no por longitud)
-    if (isScreen('taller')) {
-      const idsActuales = new Set(DB.ordenes.map(x => x.id));
-      const nuevas = freshArr.filter(o => !idsActuales.has(o.id));
-      nuevas.forEach(o => { if (!o.esSalon && !o.esSalonPedido && !o.esViaCargo) mostrarAlerta(o); });
-    }
-    DB.ordenes = freshArr;
-    saveOfflineDB(); // mantener caché local actualizado
-
-    // Auto-marcar como entregada si pasaron 10 minutos desde completada (para limpiar el monitor)
-    // Usamos un pequeño debounce para no disparar escrituras múltiples en rápida sucesión
-    const ahora10 = Date.now();
-    const autoEntregadas = [];
-    DB.ordenes.forEach(o => {
-      if (o.estado === 'completada' && !o.entregada && o.fechaCompletado) {
-        const diff = ahora10 - new Date(o.fechaCompletado).getTime();
-        if (diff >= 10 * 60 * 1000) { o.entregada = true; o.fechaEntregada = new Date().toISOString(); autoEntregadas.push(o); }
-      }
-    });
-    if (autoEntregadas.length) {
-      clearTimeout(window._autoEntregaTimer);
-      window._autoEntregaTimer = setTimeout(() => Promise.all(autoEntregadas.map(o => saveOrden(o))), 2000);
-    }
-
-    if (isScreen('vendedor')) { vRenderOrdenes(); vRenderInbox(); }
-    if (isScreen('taller'))   { tRenderAll(); if (document.getElementById('tablero-tab')?.classList.contains('on')) renderTableroCuadro(); if (document.getElementById('bd-tab-t')?.classList.contains('on')) renderBD('t'); }
-    if (isScreen('admin'))    { adminAutoRefresh(); }
-    } catch(e) { console.error('ordenes listener error:', e); }
-  });
-
-  // Escuchar sinStockAlertas en tiempo real
+  // Nota: el listener de 'ordenes' vive en listenToDB() — no duplicar aquí.
   if (fbListeners.sinStock) fbDB.ref('sinStockAlertas').off('value', fbListeners.sinStock);
   fbListeners.sinStock = fbDB.ref('sinStockAlertas').on('value', snap => {
     try {
@@ -5533,11 +5589,12 @@ function renderTableroCuadro() {
 
   const { desde, hasta } = tblGetRango();
 
-  // Filtrar órdenes completadas en el período (todas las armadas, incluyendo retoques)
-  // Los retoques no generan comisión pero SÍ cuentan como bicis armadas en el tablero
+  // Filtrar órdenes completadas en el período — SOLO las que generan comisión
+  // Los retoques NO se cuentan: el tablero muestra únicamente bicis con comisión
   const ordenes = DB.ordenes.filter(o =>
     o.estado === 'completada' && o.armador &&
     !o.comisionDuplicada &&
+    !o.esRetoque && o.tipoArmado !== 'retoque' &&
     new Date(o.fechaCompletado || o.fechaCreacion) >= desde &&
     new Date(o.fechaCompletado || o.fechaCreacion) <= hasta
   );
@@ -5551,30 +5608,29 @@ function renderTableroCuadro() {
   const byArmador = {};
   ordenes.forEach(o => {
     const arm = o.armador;
-    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, retoque: 0, detalle: {} };
+    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, detalle: {} };
     const cantNum = parseInt(o.cantidad) || 1;
     byArmador[arm].total++;
     byArmador[arm].bicis += cantNum;
-    const tipo = o.esRetoque || o.tipoArmado === 'retoque' ? 'retoque' : o.tipoArmado === 'kit' ? 'kit' : 'prearmada';
+    const tipo = o.tipoArmado === 'kit' ? 'kit' : 'prearmada';
     byArmador[arm][tipo] += cantNum;
     const key = `${o.marca} ${o.modelo}`;
-    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0, ret: 0 };
+    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0 };
     byArmador[arm].detalle[key].total += cantNum;
     if (tipo === 'kit') byArmador[arm].detalle[key].kit += cantNum;
-    else if (tipo === 'prearmada') byArmador[arm].detalle[key].pre += cantNum;
-    else byArmador[arm].detalle[key].ret += cantNum;
+    else byArmador[arm].detalle[key].pre += cantNum;
   });
 
   // También sumar armador2 (kit en equipo)
   ordenes.filter(o => o.armador2 && (o.tipoArmado === 'kit')).forEach(o => {
     const arm = o.armador2;
-    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, retoque: 0, detalle: {} };
+    if (!byArmador[arm]) byArmador[arm] = { total: 0, bicis: 0, kit: 0, prearmada: 0, detalle: {} };
     const cantNum = parseInt(o.cantidad) || 1;
     byArmador[arm].total++;
     byArmador[arm].bicis += cantNum;
     byArmador[arm].kit += cantNum;
     const key = `${o.marca} ${o.modelo}`;
-    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0, ret: 0 };
+    if (!byArmador[arm].detalle[key]) byArmador[arm].detalle[key] = { total: 0, kit: 0, pre: 0 };
     byArmador[arm].detalle[key].total += cantNum;
     byArmador[arm].detalle[key].kit += cantNum;
   });
@@ -5585,18 +5641,16 @@ function renderTableroCuadro() {
   const medallas = ['🥇','🥈','🥉'];
   const coloresPod = ['var(--yellow)','var(--text2)','#cd7f32'];
 
-  // Stats globales
+  // Stats globales (solo bicis con comisión)
   const totalBicis = ranking.reduce((s,[,d])=>s+d.bicis,0);
   const totalKit = ranking.reduce((s,[,d])=>s+d.kit,0);
   const totalPre = ranking.reduce((s,[,d])=>s+d.prearmada,0);
-  const totalRet = ranking.reduce((s,[,d])=>s+d.retoque,0);
 
   let html = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
-      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--green)">${totalBicis}</div><div class="tbl-stat-mini-lbl">Total bicis</div></div>
+      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--green)">${totalBicis}</div><div class="tbl-stat-mini-lbl">Con comisión</div></div>
       <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--blue)">${totalKit}</div><div class="tbl-stat-mini-lbl">De kit</div></div>
       <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--purple)">${totalPre}</div><div class="tbl-stat-mini-lbl">Prearmadas</div></div>
-      <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--text2)">${totalRet}</div><div class="tbl-stat-mini-lbl">Retoques</div></div>
       <div class="tbl-stat-mini"><div class="tbl-stat-mini-num" style="color:var(--orange)">${ranking.length}</div><div class="tbl-stat-mini-lbl">Armadores</div></div>
     </div>`;
 
@@ -5612,7 +5666,6 @@ function renderTableroCuadro() {
           🚲 ${modelo} <strong style="color:var(--text);margin-left:3px">${d.total}</strong>
           ${d.kit?`<span style="color:var(--blue);font-size:10px"> · ${d.kit}kit</span>`:''}
           ${d.pre?`<span style="color:var(--purple);font-size:10px"> · ${d.pre}pre</span>`:''}
-          ${d.ret?`<span style="color:var(--text3);font-size:10px"> · ${d.ret}ret</span>`:''}
         </span>`).join('');
 
     html += `
@@ -5624,7 +5677,6 @@ function renderTableroCuadro() {
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
               ${datos.kit?`<span style="font-size:11px;color:var(--blue);font-weight:700">📦 ${datos.kit} kit</span>`:''}
               ${datos.prearmada?`<span style="font-size:11px;color:var(--purple);font-weight:700">🚲 ${datos.prearmada} pre</span>`:''}
-              ${datos.retoque?`<span style="font-size:11px;color:var(--text2);font-weight:700">✨ ${datos.retoque} ret</span>`:''}
             </div>
           </div>
           <div style="text-align:right">
@@ -6007,9 +6059,9 @@ async function eliminarPagoArmador(id) {
 
   // Verificar conectividad real antes de cargar
   try {
-    await loadDB();
+    await listenToDB(); // escucha activa: carga inicial + tiempo real
     await migrarOrdenesAObjecto(); // migración única array → objeto (no-op si ya está migrado)
-    saveOfflineDB(); // guardar copia local tras carga exitosa
+    // saveOfflineDB() ya fue llamado dentro de listenToDB() al resolver la primera snapshot
   } catch(e) {
     // Sin internet: usar caché local si existe
     if (loadOfflineDB()) {
